@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, RefreshCw, Sliders } from "lucide-react";
+import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye } from "lucide-react";
 
 export default function MobileCompassSyncPage() {
   const searchParams = useSearchParams();
@@ -11,14 +11,19 @@ export default function MobileCompassSyncPage() {
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [heading, setHeading] = useState<number>(0);
-  const [pitch, setPitch] = useState<number>(45);
+  const [pitch, setPitch] = useState<number>(0);
   const [roll, setRoll] = useState<number>(0);
+  const [rawSensors, setRawSensors] = useState<{ alpha: number; beta: number; gamma: number }>({
+    alpha: 0,
+    beta: 90,
+    gamma: 0,
+  });
   const [isSending, setIsSending] = useState<boolean>(false);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [manualMode, setManualMode] = useState<boolean>(false);
 
   const headingRef = useRef<number>(0);
-  const pitchRef = useRef<number>(45);
+  const pitchRef = useRef<number>(0);
   const rollRef = useRef<number>(0);
   const lastSendTime = useRef<number>(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -35,44 +40,47 @@ export default function MobileCompassSyncPage() {
   }, [roll]);
 
   // Transmit orientation data over HTTP POST and BroadcastChannel
-  const sendOrientationData = useCallback(async (h: number, p: number, r: number) => {
-    setIsSending(true);
+  const sendOrientationData = useCallback(
+    async (h: number, p: number, r: number) => {
+      setIsSending(true);
 
-    // 1. BroadcastChannel local tab sync fallback
-    try {
-      if (channelRef.current) {
-        channelRef.current.postMessage({
-          type: "COMPASS_TELEMETRY",
-          sessionId,
-          heading: h,
-          pitch: p,
-          roll: r,
-          timestamp: Date.now(),
-        });
+      // 1. BroadcastChannel local tab sync fallback
+      try {
+        if (channelRef.current) {
+          channelRef.current.postMessage({
+            type: "COMPASS_TELEMETRY",
+            sessionId,
+            heading: h,
+            pitch: p,
+            roll: r,
+            timestamp: Date.now(),
+          });
+        }
+      } catch {
+        /* channel error */
       }
-    } catch {
-      /* channel error */
-    }
 
-    // 2. Remote HTTP API sync
-    try {
-      await fetch("/api/stargaze/compass-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          heading: h,
-          pitch: p,
-          roll: r,
-        }),
-      });
-      setPacketCount((c) => c + 1);
-    } catch {
-      /* ignore transient network drops */
-    } finally {
-      setIsSending(false);
-    }
-  }, [sessionId]);
+      // 2. Remote HTTP API sync
+      try {
+        await fetch("/api/stargaze/compass-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            heading: h,
+            pitch: p,
+            roll: r,
+          }),
+        });
+        setPacketCount((c) => c + 1);
+      } catch {
+        /* skip network hiccups */
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [sessionId]
+  );
 
   // Start BroadcastChannel on mount
   useEffect(() => {
@@ -86,11 +94,10 @@ export default function MobileCompassSyncPage() {
     };
   }, []);
 
-  // Send initial handshake immediately on page load to confirm pairing with desktop
+  // Send initial handshake immediately on page load
   useEffect(() => {
     sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
 
-    // Heartbeat transmission every 300ms to guarantee live connectivity state on desktop
     const heartbeat = setInterval(() => {
       sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
     }, 300);
@@ -98,54 +105,79 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Device orientation listener
+  // Device orientation listener with Stellarium sensor fusion algorithm
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
 
-      let compassHeading = 0;
+      let alpha = e.alpha;
+      const beta = e.beta;
+      const gamma = e.gamma;
+
+      // iOS Safari webkitCompassHeading (0 to 360 degrees magnetic North)
       // @ts-expect-error iOS webkitCompassHeading
       if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading)) {
         // @ts-expect-error iOS webkitCompassHeading
-        compassHeading = e.webkitCompassHeading;
-      } else if (e.alpha !== null) {
-        compassHeading = (360 - e.alpha) % 360;
+        alpha = e.webkitCompassHeading;
       }
 
-      // STELLARIUM / ASTRONOMY APP SENSOR PHYSICS CALCULATION:
-      // In DeviceOrientation API:
-      // beta = 90° (phone held vertically in front of user's face) -> Elevation = 0° (Horizon)
-      // beta = 0° (phone flat facing sky) -> Elevation = 90° (Zenith)
-      // Elevation = arcsin( clamp( cos(beta) * cos(gamma), -1, 1 ) )
-      let calculatedElevation = 45;
-      if (e.beta !== null && e.gamma !== null) {
-        const betaRad = (e.beta * Math.PI) / 180;
-        const gammaRad = (e.gamma * Math.PI) / 180;
-        const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-        calculatedElevation = (Math.asin(sinEl) * 180) / Math.PI;
-      } else if (e.beta !== null) {
-        calculatedElevation = 90 - Math.abs(e.beta);
+      if (beta === null || beta === undefined) return;
+
+      // Compass Heading: 0 to 360°
+      let compassHeading = 0;
+      if (typeof alpha === "number" && !isNaN(alpha)) {
+        compassHeading = (alpha % 360 + 360) % 360;
       }
 
-      const normHeading = Math.round((compassHeading % 360 + 360) % 360);
-      const normPitch = Math.round(Math.max(0, Math.min(90, calculatedElevation)));
-      const calculatedRoll = e.gamma !== null ? Math.round(e.gamma) : 0;
+      // STELLARIUM / ASTRONOMY SENSOR PHYSICS FORMULA:
+      // Phone held vertically in portrait facing horizon (beta = 90°, gamma = 0°) -> Elevation = 0° (Horizon)
+      // Phone top tilted backward towards sky (beta = 0°, gamma = 0°) -> Elevation = 90° (Zenith)
+      // Line of sight elevation: arcsin( clamp( cos(beta) * cos(gamma), -1, 1 ) )
+      const betaRad = (beta * Math.PI) / 180;
+      const gammaRad = ((gamma || 0) * Math.PI) / 180;
+      const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
+      let calculatedElevation = (Math.asin(sinEl) * 180) / Math.PI;
+
+      if (beta > 90 || beta < -90) {
+        calculatedElevation = 0;
+      } else {
+        calculatedElevation = Math.max(0, Math.min(90, calculatedElevation));
+      }
+
+      const normHeading = Math.round(compassHeading);
+      const normElevation = Math.round(calculatedElevation);
+      const normRoll = Math.round(gamma || 0);
 
       setHeading(normHeading);
-      setPitch(normPitch);
-      setRoll(calculatedRoll);
+      setPitch(normElevation);
+      setRoll(normRoll);
+      setRawSensors({
+        alpha: Math.round(alpha || 0),
+        beta: Math.round(beta),
+        gamma: Math.round(gamma || 0),
+      });
 
-      // Throttle immediate orientation posts to 20Hz (50ms)
       const now = Date.now();
       if (now - lastSendTime.current >= 50) {
         lastSendTime.current = now;
-        sendOrientationData(normHeading, normPitch, Math.round(calculatedRoll));
+        sendOrientationData(normHeading, normElevation, normRoll);
       }
     };
 
-    window.addEventListener("deviceorientation", handleOrientation, true);
+    if (typeof window !== "undefined") {
+      if ("ondeviceorientationabsolute" in window) {
+        window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+      }
+      window.addEventListener("deviceorientation", handleOrientation as EventListener, true);
+    }
+
     return () => {
-      window.removeEventListener("deviceorientation", handleOrientation, true);
+      if (typeof window !== "undefined") {
+        if ("ondeviceorientationabsolute" in window) {
+          window.removeEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+        }
+        window.removeEventListener("deviceorientation", handleOrientation as EventListener, true);
+      }
     };
   }, [manualMode, sendOrientationData]);
 
@@ -199,7 +231,7 @@ export default function MobileCompassSyncPage() {
         <div className="flex items-center gap-2">
           <Smartphone className="h-6 w-6 text-emerald-400 animate-pulse" />
           <div>
-            <h1 className="font-extrabold text-sm text-white tracking-wide">STARGAZER MOBILE SENSOR</h1>
+            <h1 className="font-extrabold text-sm text-white tracking-wide">STARGAZER STELLARIUM SENSOR</h1>
             <div className="text-[10px] font-mono text-emerald-400">SESSION: #{sessionId.slice(0, 10)}</div>
           </div>
         </div>
@@ -219,7 +251,7 @@ export default function MobileCompassSyncPage() {
           <div className="absolute inset-12 rounded-full border border-emerald-500/20" />
           <div className="absolute inset-20 rounded-full border border-white/10" />
 
-          {/* Compass Needle (Rotates according to device heading) */}
+          {/* Compass Needle */}
           <div
             style={{ transform: `rotate(${-heading}deg)` }}
             className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-100 ease-out"
@@ -252,7 +284,7 @@ export default function MobileCompassSyncPage() {
           </div>
         </div>
 
-        {/* Dynamic Telemetry Stats Grid */}
+        {/* Live Telemetry HUD Grid */}
         <div className="w-full grid grid-cols-3 gap-2 mt-4 font-mono text-xs">
           <div className="p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-center">
             <div className="text-[10px] text-slate-400">AZIMUTH</div>
@@ -260,7 +292,7 @@ export default function MobileCompassSyncPage() {
           </div>
           <div className="p-2.5 rounded-xl bg-slate-900/90 border border-pink-500/30 text-center">
             <div className="text-[10px] text-slate-400">ELEVATION</div>
-            <div className="font-extrabold text-pink-400 text-sm">{pitch}°</div>
+            <div className="font-extrabold text-pink-400 text-sm">{pitch}° {pitch === 0 ? "(Horizon)" : pitch === 90 ? "(Zenith)" : ""}</div>
           </div>
           <div className="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/30 text-center">
             <div className="text-[10px] text-slate-400">PACKETS</div>
@@ -268,8 +300,18 @@ export default function MobileCompassSyncPage() {
           </div>
         </div>
 
+        {/* Live Raw Sensor Debug Banner */}
+        <div className="w-full mt-2 p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+          <span className="flex items-center gap-1">
+            <Eye className="h-3 w-3 text-cyan-400" /> Sensor Fusion:
+          </span>
+          <span className="text-cyan-300 font-bold">
+            α: {rawSensors.alpha}° | β: {rawSensors.beta}° | γ: {rawSensors.gamma}°
+          </span>
+        </div>
+
         {/* Interactive Manual Sliders (For Desktop/Testing & Manual Overrides) */}
-        <div className="w-full mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
+        <div className="w-full mt-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
             <span className="flex items-center gap-1">
               <Sliders className="h-3.5 w-3.5 text-emerald-400" /> Manual Sensor Controls
@@ -280,7 +322,7 @@ export default function MobileCompassSyncPage() {
                 manualMode ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400 hover:text-white"
               }`}
             >
-              {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
+              {manualMode ? "MANUAL OVERRIDE ON" : "STELLARIUM AUTO"}
             </button>
           </div>
 
@@ -341,7 +383,7 @@ export default function MobileCompassSyncPage() {
         {hasPermission === true && (
           <div className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-center text-xs font-mono text-emerald-300 flex items-center justify-center gap-2 shadow-inner">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            <span>Transmitting Live Compass Telemetry to Dome</span>
+            <span>Transmitting Live Stellarium Telemetry to 3D Dome</span>
           </div>
         )}
 
@@ -351,7 +393,7 @@ export default function MobileCompassSyncPage() {
               <AlertCircle className="h-3.5 w-3.5" /> Sensor permission denied (use sliders above)
             </span>
           ) : (
-            <span>Point phone towards sky or use sliders to tilt 3D Dome view</span>
+            <span>Hold phone vertically to view horizon, tilt up to view zenith</span>
           )}
         </div>
       </footer>
