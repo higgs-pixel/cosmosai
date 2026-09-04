@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050010"/>
+      <stop offset="50%" stop-color="#12002b"/>
+      <stop offset="100%" stop-color="#030008"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe600"/>
+      <stop offset="50%" stop-color="#ffb700"/>
+      <stop offset="100%" stop-color="#cc8800"/>
+    </linearGradient>
+    <linearGradient id="sunshield" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#bg)"/>
+  
+  <!-- Deep Space Stars -->
+  <g fill="#ffffff" opacity="0.8">
+    <circle cx="120" cy="90" r="1.5"/>
+    <circle cx="340" cy="50" r="2"/>
+    <circle cx="580" cy="110" r="1"/>
+    <circle cx="710" cy="70" r="1.5"/>
+    <circle cx="200" cy="380" r="1.2"/>
+    <circle cx="650" cy="430" r="1.8"/>
+  </g>
+
+  <!-- JWST Craft -->
+  <g transform="translate(400,240) rotate(5)">
+    <!-- 5-Layer Sunshield Diamond -->
+    <polygon points="0,-140 240,0 0,140 -240,0" fill="url(#sunshield)" stroke="#00e5ff" stroke-width="1.5"/>
+    <polygon points="0,-130 220,0 0,130 -220,0" fill="#334155" opacity="0.6"/>
+    <polygon points="0,-120 200,0 0,120 -200,0" fill="#1e293b" opacity="0.8"/>
+
+    <!-- Gold Segmented Hexagonal Primary Mirror -->
+    <g transform="translate(0,-20)">
+      <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30" fill="url(#gold)" stroke="#ffffff" stroke-width="2"/>
+      <!-- Hexagon Segments -->
+      <circle cx="0" cy="0" r="15" fill="#1e293b" stroke="#ffb700" stroke-width="1.5"/>
+      <line x1="0" y1="-60" x2="0" y2="60" stroke="#cc8800" stroke-width="1"/>
+      <line x1="-52" y1="-30" x2="52" y2="30" stroke="#cc8800" stroke-width="1"/>
+      <line x1="-52" y1="30" x2="52" y2="-30" stroke="#cc8800" stroke-width="1"/>
+    </g>
+
+    <!-- Secondary Mirror Struts & Tower -->
+    <line x1="0" y1="-20" x2="0" y2="-120" stroke="#00e5ff" stroke-width="2"/>
+    <circle cx="0" cy="-120" r="8" fill="url(#gold)" stroke="#00e5ff" stroke-width="1"/>
+  </g>
+
+  <!-- Text Overlay -->
+  <text x="30" y="450" font-family="monospace" font-size="14" font-weight="bold" fill="#ffb700" letter-spacing="2">JAMES WEBB SPACE TELESCOPE (JWST)</text>
+  <text x="30" y="470" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="1">NASA / ESA / CSA INFRARED OBSERVATORY • LAGRANGE L2</text>
+</svg>

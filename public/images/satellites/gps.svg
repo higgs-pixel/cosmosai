@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#030712"/>
+      <stop offset="50%" stop-color="#0b1329"/>
+      <stop offset="100%" stop-color="#02040a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#bg)"/>
+
+  <!-- Earth Orbital Ring Grid -->
+  <ellipse cx="400" cy="300" rx="350" ry="120" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.4"/>
+  <ellipse cx="400" cy="300" rx="200" ry="60" fill="#0284c7" opacity="0.2"/>
+
+  <!-- GPS Satellite Craft (Block IIF / III) -->
+  <g transform="translate(400,200) rotate(-15)">
+    <!-- Main Box Body -->
+    <rect x="-40" y="-40" width="80" height="80" fill="#1e293b" stroke="#00e5ff" stroke-width="2" rx="4"/>
+    <rect x="-30" y="-30" width="60" height="60" fill="#334155" stroke="#ffffff" stroke-width="1" rx="2"/>
+
+    <!-- L-band Helical Antenna Array Panel -->
+    <circle cx="0" cy="0" r="22" fill="#00e5ff" opacity="0.3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#00e5ff" stroke-width="2"/>
+    <circle cx="0" cy="0" r="6" fill="#ff3366"/>
+
+    <!-- Dual Solar Panel Wings -->
+    <g transform="translate(-180, -20)">
+      <rect x="0" y="0" width="135" height="40" fill="url(#gold)" stroke="#fbbf24" stroke-width="1.5" rx="2"/>
+      <line x1="45" y1="0" x2="45" y2="40" stroke="#000" stroke-width="1"/>
+      <line x1="90" y1="0" x2="90" y2="40" stroke="#000" stroke-width="1"/>
+    </g>
+
+    <g transform="translate(45, -20)">
+      <rect x="0" y="0" width="135" height="40" fill="url(#gold)" stroke="#fbbf24" stroke-width="1.5" rx="2"/>
+      <line x1="45" y1="0" x2="45" y2="40" stroke="#000" stroke-width="1"/>
+      <line x1="90" y1="0" x2="90" y2="40" stroke="#000" stroke-width="1"/>
+    </g>
+
+    <!-- Signal Cones Emitted -->
+    <polygon points="0,40 -180,260 180,260" fill="#00e5ff" opacity="0.12"/>
+    <line x1="0" y1="40" x2="-180" y2="260" stroke="#00e5ff" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+    <line x1="0" y1="40" x2="180" y2="260" stroke="#00e5ff" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+  </g>
+
+  <!-- Text Overlay -->
+  <text x="30" y="450" font-family="monospace" font-size="14" font-weight="bold" fill="#00e5ff" letter-spacing="2">GLOBAL POSITIONING SYSTEM (GPS BLOCK III / IIF)</text>
+  <text x="30" y="470" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="1">US SPACE FORCE NAVIGATION &amp; TIMING CONSTELLATION • MEO 20,200 KM</text>
+</svg>

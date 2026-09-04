@@ -1,0 +1,1024 @@
+{
+  "generatedAt": "2026-07-26T09:15:29.549Z",
+  "evaluationType": "offline deterministic scholarly-retrieval evaluation with labeled adversarial fixtures",
+  "benchmarkCount": 8,
+  "passed": 8,
+  "failed": 0,
+  "results": [
+    {
+      "query": "Give me five recent papers on exoplanet atmospheric biosignatures.",
+      "parsedIntent": "recent",
+      "topic": "exoplanet atmospheric biosignatures",
+      "dateRange": {
+        "startYear": 2023,
+        "endYear": 2026
+      },
+      "queryVariants": [
+        {
+          "query": "exoplanet atmospheric biosignatures",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "biosignature gases exoplanet atmospheres",
+          "purpose": "synonym"
+        },
+        {
+          "query": "exoplanet biosignature false positives",
+          "purpose": "narrow-subtopic"
+        },
+        {
+          "query": "exoplanet atmospheric biosignatures recent developments",
+          "purpose": "recent-development"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 2,
+        "OpenAlex": 5,
+        "CORE": 0
+      },
+      "deduplicatedCount": 7,
+      "filteredCount": 2,
+      "selectedPapers": [
+        {
+          "id": "exobio-4",
+          "title": "Exoplanet atmospheric biosignature gases under stellar activity",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.83,
+          "relevanceReason": "The title covers every central concept in exoplanet atmospheric biosignatures; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "exobio-1",
+          "title": "Exoplanet atmospheric biosignatures in temperate worlds",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.03,
+          "relevanceReason": "The title directly names exoplanet atmospheric biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "exobio-2",
+          "title": "Atmospheric biosignatures and false positives on exoplanets",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 87.92,
+          "relevanceReason": "The title covers every central concept in exoplanet atmospheric biosignatures; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "exobio-5",
+          "title": "Statistical evidence for atmospheric biosignatures on exoplanets",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 87.38,
+          "relevanceReason": "The title covers every central concept in exoplanet atmospheric biosignatures; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2025]"
+        },
+        {
+          "id": "exobio-3",
+          "title": "Detecting exoplanet atmospheric biosignatures with transmission spectra",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 84.2,
+          "relevanceReason": "The title directly names exoplanet atmospheric biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "tangential-ml",
+          "title": "A highly cited machine-learning classifier",
+          "reasons": [
+            "below_direct_relevance_threshold"
+          ]
+        },
+        {
+          "id": "retracted-record",
+          "title": "A retracted result with broad astronomy keywords",
+          "reasons": [
+            "retracted",
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 29.85,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me five foundational papers on the black hole information paradox.",
+      "parsedIntent": "foundational",
+      "topic": "black hole information paradox",
+      "dateRange": {},
+      "queryVariants": [
+        {
+          "query": "black hole information paradox",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "\"Breakdown of Predictability in Gravitational Collapse\"",
+          "purpose": "landmark-author"
+        },
+        {
+          "query": "\"Information in Black Hole Radiation\"",
+          "purpose": "landmark-author"
+        },
+        {
+          "query": "\"Black Holes Complementarity or Firewalls\"",
+          "purpose": "narrow-subtopic"
+        },
+        {
+          "query": "\"The Large N Limit of Superconformal Field Theories and Supergravity\"",
+          "purpose": "narrow-subtopic"
+        },
+        {
+          "query": "\"Replica Wormholes and the Entropy of Hawking Radiation\"",
+          "purpose": "recent-development"
+        },
+        {
+          "query": "black hole information loss paradox",
+          "purpose": "synonym"
+        },
+        {
+          "query": "black hole unitarity",
+          "purpose": "canonical-term"
+        },
+        {
+          "query": "black hole complementarity",
+          "purpose": "narrow-subtopic"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 6,
+        "OpenAlex": 2,
+        "CORE": 0
+      },
+      "deduplicatedCount": 10,
+      "filteredCount": 5,
+      "selectedPapers": [
+        {
+          "id": "foundational-hawking-particle-creation-1975",
+          "title": "Particle Creation by Black Holes",
+          "authors": [
+            "Stephen W. Hawking"
+          ],
+          "year": 1975,
+          "provider": "Springer",
+          "sourceClass": "foundational",
+          "relevanceScore": 79.6,
+          "relevanceReason": "Established the semiclassical thermal-radiation result that creates the physical setup for the information paradox.",
+          "citationLabel": "[Hawking 1975]"
+        },
+        {
+          "id": "foundational-page-radiation-1993",
+          "title": "Information in Black Hole Radiation",
+          "authors": [
+            "Don N. Page"
+          ],
+          "year": 1993,
+          "provider": "arXiv",
+          "sourceClass": "foundational",
+          "relevanceScore": 84.3,
+          "relevanceReason": "Provides the foundational unitary-evaporation argument behind the Page curve and information-recovery timescale.",
+          "citationLabel": "[Page 1993]"
+        },
+        {
+          "id": "foundational-complementarity-1993",
+          "title": "The Stretched Horizon and Black Hole Complementarity",
+          "authors": [
+            "Leonard Susskind",
+            "Larus Thorlacius",
+            "John Uglum"
+          ],
+          "year": 1993,
+          "provider": "arXiv",
+          "sourceClass": "landmark-development",
+          "relevanceScore": 83.4,
+          "relevanceReason": "Introduced the principal complementarity framework for reconciling unitary exterior evolution with a smooth infalling experience.",
+          "citationLabel": "[Susskind et al. 1993]"
+        },
+        {
+          "id": "foundational-maldacena-ads-cft-1997",
+          "title": "The Large N Limit of Superconformal Field Theories and Supergravity",
+          "authors": [
+            "Juan M. Maldacena"
+          ],
+          "year": 1997,
+          "provider": "arXiv",
+          "sourceClass": "landmark-development",
+          "relevanceScore": 67.5,
+          "relevanceReason": "Underpins the strongest holographic evidence that a complete quantum-gravity description of black holes is unitary.",
+          "citationLabel": "[Maldacena 1997]"
+        },
+        {
+          "id": "modern-replica-wormholes-2019",
+          "title": "Replica Wormholes and the Black Hole Interior",
+          "authors": [
+            "Geoffrey Penington",
+            "Stephen H. Shenker",
+            "Douglas Stanford",
+            "Zhenbin Yang"
+          ],
+          "year": 2019,
+          "provider": "arXiv",
+          "sourceClass": "modern-resolution",
+          "relevanceScore": 65.7,
+          "relevanceReason": "Provides a gravitational path-integral derivation of replica-wormhole contributions associated with the Page transition.",
+          "citationLabel": "[Penington et al. 2019]"
+        }
+      ],
+      "sourceClasses": [
+        "foundational",
+        "foundational",
+        "landmark-development",
+        "landmark-development",
+        "modern-resolution"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "tangential-ml",
+          "title": "A highly cited machine-learning classifier",
+          "reasons": [
+            "foundational_authority_required",
+            "below_direct_relevance_threshold"
+          ]
+        },
+        {
+          "id": "retracted-record",
+          "title": "A retracted result with broad astronomy keywords",
+          "reasons": [
+            "retracted",
+            "foundational_authority_required",
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 1,
+      "citationIntegrity": true,
+      "latencyMs": 10.55,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me the best review papers on gravitational lensing.",
+      "parsedIntent": "review",
+      "topic": "gravitational lensing",
+      "dateRange": {},
+      "queryVariants": [
+        {
+          "query": "gravitational lensing",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "gravitational lensing review",
+          "purpose": "review"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 1,
+        "OpenAlex": 3,
+        "CORE": 0
+      },
+      "deduplicatedCount": 4,
+      "filteredCount": 1,
+      "selectedPapers": [
+        {
+          "id": "lensing-review-2",
+          "title": "A review of gravitational lensing in cosmology",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 84.67,
+          "relevanceReason": "Review focused on gravitational lensing, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "lensing-review-1",
+          "title": "Gravitational lensing: a review of strong and weak regimes",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 81.9,
+          "relevanceReason": "Review focused on gravitational lensing, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "lensing-review-3",
+          "title": "Gravitational lensing methods and applications: a review",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 80.83,
+          "relevanceReason": "Review focused on gravitational lensing, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "review",
+        "review",
+        "review"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "lensing-article-1",
+          "title": "A gravitational lensing measurement in one cluster",
+          "reasons": [
+            "paper_type_mismatch",
+            "review_required",
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 2.8,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me five peer-reviewed papers published after 2023 on dark-matter direct detection.",
+      "parsedIntent": "recent",
+      "topic": "dark-matter direct detection",
+      "dateRange": {
+        "startYear": 2024,
+        "endYear": 2026
+      },
+      "queryVariants": [
+        {
+          "query": "dark-matter direct detection",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "WIMP nuclear recoil direct detection",
+          "purpose": "narrow-subtopic"
+        },
+        {
+          "query": "dark matter detector experimental limits",
+          "purpose": "synonym"
+        },
+        {
+          "query": "dark-matter direct detection recent developments",
+          "purpose": "recent-development"
+        }
+      ],
+      "providerResults": {
+        "OpenAlex": 6,
+        "CORE": 0,
+        "arXiv": 2
+      },
+      "deduplicatedCount": 8,
+      "filteredCount": 3,
+      "selectedPapers": [
+        {
+          "id": "dark-matter-direct-1",
+          "title": "Dark-matter direct detection with xenon nuclear recoils",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.83,
+          "relevanceReason": "The title directly names dark-matter direct detection, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "dark-matter-direct-4",
+          "title": "Dark-matter direct detection using electronic recoils",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.1,
+          "relevanceReason": "The title directly names dark-matter direct detection, and the abstract treats it as a central objective.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "dark-matter-direct-5",
+          "title": "Combined constraints from dark-matter direct-detection experiments",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 86.46,
+          "relevanceReason": "The title directly names dark-matter direct detection, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2025]"
+        },
+        {
+          "id": "dark-matter-direct-2",
+          "title": "Dark-matter direct-detection limits from cryogenic sensors",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 85.19,
+          "relevanceReason": "The title directly names dark-matter direct detection, and the abstract treats it as a central objective.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "dark-matter-direct-3",
+          "title": "A low-threshold dark-matter direct-detection experiment",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 82.08,
+          "relevanceReason": "The title directly names dark-matter direct detection, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "old-direct-1",
+          "title": "Dark-matter direct detection in an older experiment",
+          "reasons": [
+            "outside_requested_date_range"
+          ]
+        },
+        {
+          "id": "tangential-ml",
+          "title": "A highly cited machine-learning classifier",
+          "reasons": [
+            "below_direct_relevance_threshold"
+          ]
+        },
+        {
+          "id": "retracted-record",
+          "title": "A retracted result with broad astronomy keywords",
+          "reasons": [
+            "retracted",
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 5.93,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me recent papers about Mars biosignatures.",
+      "parsedIntent": "recent",
+      "topic": "Mars biosignatures",
+      "dateRange": {
+        "startYear": 2023,
+        "endYear": 2026
+      },
+      "queryVariants": [
+        {
+          "query": "Mars biosignatures",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "Mars biosignature preservation",
+          "purpose": "canonical-term"
+        },
+        {
+          "query": "Martian astrobiology biosignatures",
+          "purpose": "synonym"
+        },
+        {
+          "query": "Mars biosignatures recent developments",
+          "purpose": "recent-development"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 2,
+        "OpenAlex": 4,
+        "CORE": 0
+      },
+      "deduplicatedCount": 6,
+      "filteredCount": 1,
+      "selectedPapers": [
+        {
+          "id": "mars-bio-4",
+          "title": "Assessing organic Mars biosignatures under radiation",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.83,
+          "relevanceReason": "The title directly names Mars biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "mars-bio-1",
+          "title": "Mars biosignatures in Jezero crater sediments",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.03,
+          "relevanceReason": "The title directly names Mars biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "mars-bio-2",
+          "title": "Preservation of Mars biosignatures in sulfate minerals",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 87.92,
+          "relevanceReason": "The title directly names Mars biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "mars-bio-5",
+          "title": "Mars biosignature detection in returned samples",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 87.38,
+          "relevanceReason": "The title covers every central concept in Mars biosignatures; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2025]"
+        },
+        {
+          "id": "mars-bio-3",
+          "title": "Mars biosignatures and rover sampling strategies",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 84.2,
+          "relevanceReason": "The title directly names Mars biosignatures, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "mars-geology-1",
+          "title": "Recent sediment transport on Mars",
+          "reasons": [
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 3.36,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me papers on JWST observations of early galaxies.",
+      "parsedIntent": "general",
+      "topic": "JWST observations of early galaxies",
+      "dateRange": {},
+      "queryVariants": [
+        {
+          "query": "JWST observations of early galaxies",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "JWST early galaxies high redshift observations",
+          "purpose": "canonical-term"
+        },
+        {
+          "query": "James Webb cosmic dawn galaxy observations",
+          "purpose": "synonym"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 2,
+        "OpenAlex": 4,
+        "CORE": 0
+      },
+      "deduplicatedCount": 6,
+      "filteredCount": 1,
+      "selectedPapers": [
+        {
+          "id": "jwst-galaxies-4",
+          "title": "Early galaxies in deep JWST observations",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 89,
+          "relevanceReason": "The title covers every central concept in JWST observations of early galaxies; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "jwst-galaxies-2",
+          "title": "Spectroscopic JWST observations of early galaxies",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 88.33,
+          "relevanceReason": "The title directly names JWST observations of early galaxies, and the abstract treats it as a central objective.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "jwst-galaxies-1",
+          "title": "JWST observations of early galaxies at high redshift",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 88.04,
+          "relevanceReason": "The title directly names JWST observations of early galaxies, and the abstract treats it as a central objective.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "jwst-galaxies-3",
+          "title": "JWST observations reveal early-galaxy star formation",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 86.71,
+          "relevanceReason": "The title covers every central concept in JWST observations of early galaxies; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2024]"
+        },
+        {
+          "id": "jwst-galaxies-5",
+          "title": "JWST observational constraints on early galaxies",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 73.36,
+          "relevanceReason": "The abstract directly studies JWST observations of early galaxies and covers the central concepts requested by the user.",
+          "citationLabel": "[OpenAlex 2025]"
+        }
+      ],
+      "sourceClasses": [
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "jwst-instrument-1",
+          "title": "Calibration of a JWST detector",
+          "reasons": [
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 2.96,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me systematic reviews on astronomy education.",
+      "parsedIntent": "systematic-review",
+      "topic": "astronomy education",
+      "dateRange": {},
+      "queryVariants": [
+        {
+          "query": "astronomy education",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "astronomy education systematic review",
+          "purpose": "review"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 2,
+        "OpenAlex": 4,
+        "CORE": 0
+      },
+      "deduplicatedCount": 6,
+      "filteredCount": 1,
+      "selectedPapers": [
+        {
+          "id": "astro-education-review-5",
+          "title": "Inclusive astronomy education: a systematic review",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 82.32,
+          "relevanceReason": "Review focused on astronomy education, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[OpenAlex 2025]"
+        },
+        {
+          "id": "astro-education-review-4",
+          "title": "Digital tools in astronomy education: systematic evidence review",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 81.67,
+          "relevanceReason": "Review focused on astronomy education, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "astro-education-review-1",
+          "title": "A systematic review of astronomy education research",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 81.5,
+          "relevanceReason": "Review focused on astronomy education, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "astro-education-review-2",
+          "title": "Astronomy education interventions: a systematic review",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 80.49,
+          "relevanceReason": "Review focused on astronomy education, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "astro-education-review-3",
+          "title": "A systematic review of misconceptions in astronomy education",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "review",
+          "sourceClass": "review",
+          "relevanceScore": 80.41,
+          "relevanceReason": "Review focused on astronomy education, selected for direct coverage and synthesis rather than a passing keyword match.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "review",
+        "review",
+        "review",
+        "review",
+        "review"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "classroom-study-1",
+          "title": "One classroom study in astronomy education",
+          "reasons": [
+            "paper_type_mismatch",
+            "review_required",
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 2.01,
+      "pass": true,
+      "hardFailures": []
+    },
+    {
+      "query": "Give me the latest important papers on quantum gravity and black-hole entropy.",
+      "parsedIntent": "latest-developments",
+      "topic": "quantum gravity and black-hole entropy",
+      "dateRange": {
+        "startYear": 2023,
+        "endYear": 2026
+      },
+      "queryVariants": [
+        {
+          "query": "quantum gravity and black-hole entropy",
+          "purpose": "exact-phrase"
+        },
+        {
+          "query": "quantum gravity black hole entropy",
+          "purpose": "canonical-term"
+        },
+        {
+          "query": "Bekenstein Hawking entropy quantum gravity",
+          "purpose": "landmark-author"
+        },
+        {
+          "query": "black hole entropy microstates",
+          "purpose": "narrow-subtopic"
+        },
+        {
+          "query": "quantum gravity and black-hole entropy recent developments",
+          "purpose": "recent-development"
+        }
+      ],
+      "providerResults": {
+        "arXiv": 2,
+        "OpenAlex": 4,
+        "CORE": 0
+      },
+      "deduplicatedCount": 6,
+      "filteredCount": 1,
+      "selectedPapers": [
+        {
+          "id": "qg-entropy-4",
+          "title": "Recent quantum-gravity constraints from black-hole entropy",
+          "authors": [
+            "Benchmark Author 4"
+          ],
+          "year": 2026,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 94.17,
+          "relevanceReason": "The title covers every central concept in quantum gravity and black-hole entropy; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[arXiv 2026]"
+        },
+        {
+          "id": "qg-entropy-1",
+          "title": "Quantum gravity corrections to black-hole entropy",
+          "authors": [
+            "Benchmark Author 1"
+          ],
+          "year": 2026,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 93.37,
+          "relevanceReason": "The title covers every central concept in quantum gravity and black-hole entropy; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2026]"
+        },
+        {
+          "id": "qg-entropy-2",
+          "title": "Black-hole entropy microstates in quantum gravity",
+          "authors": [
+            "Benchmark Author 2"
+          ],
+          "year": 2025,
+          "provider": "arXiv",
+          "paperType": "preprint",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.67,
+          "relevanceReason": "The title covers every central concept in quantum gravity and black-hole entropy; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[arXiv 2025]"
+        },
+        {
+          "id": "qg-entropy-5",
+          "title": "Black-hole entropy beyond semiclassical quantum gravity",
+          "authors": [
+            "Benchmark Author 5"
+          ],
+          "year": 2025,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 90.13,
+          "relevanceReason": "The title covers every central concept in quantum gravity and black-hole entropy; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2025]"
+        },
+        {
+          "id": "qg-entropy-3",
+          "title": "Quantum gravity and the statistical origin of black-hole entropy",
+          "authors": [
+            "Benchmark Author 3"
+          ],
+          "year": 2024,
+          "provider": "OpenAlex",
+          "paperType": "journal-article",
+          "sourceClass": "specialist-application",
+          "relevanceScore": 86.37,
+          "relevanceReason": "The title covers every central concept in quantum gravity and black-hole entropy; the abstract confirms the paper's direct scientific focus.",
+          "citationLabel": "[OpenAlex 2024]"
+        }
+      ],
+      "sourceClasses": [
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application",
+        "specialist-application"
+      ],
+      "rejectionReasons": [
+        {
+          "id": "quantum-computing-1",
+          "title": "Quantum computing algorithms for optimisation",
+          "reasons": [
+            "below_direct_relevance_threshold"
+          ]
+        }
+      ],
+      "metadataCompleteness": 0.8333333333333334,
+      "citationIntegrity": true,
+      "latencyMs": 1.49,
+      "pass": true,
+      "hardFailures": []
+    }
+  ]
+}

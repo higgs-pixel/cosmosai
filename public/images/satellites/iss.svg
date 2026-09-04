@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#02040a"/>
+      <stop offset="50%" stop-color="#080d1e"/>
+      <stop offset="100%" stop-color="#010206"/>
+    </linearGradient>
+    <linearGradient id="earthGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#005580"/>
+      <stop offset="50%" stop-color="#00aaff"/>
+      <stop offset="100%" stop-color="#003366"/>
+    </linearGradient>
+    <linearGradient id="solarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffcc00"/>
+      <stop offset="50%" stop-color="#cc9900"/>
+      <stop offset="100%" stop-color="#664d00"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#bg)"/>
+
+  <!-- Earth Limb Curved Arc -->
+  <path d="M -100 650 A 600 600 0 0 1 900 650 Z" fill="url(#earthGrad)" opacity="0.4"/>
+  <path d="M -100 650 A 600 600 0 0 1 900 650" stroke="#00e5ff" stroke-width="3" fill="none" filter="blur(2px)"/>
+
+  <!-- ISS Main Truss Line -->
+  <g transform="translate(400,200) rotate(-8)">
+    <!-- Central Integrated Truss Structure -->
+    <line x1="-320" y1="0" x2="320" y2="0" stroke="#cbd5e1" stroke-width="8"/>
+    <line x1="-320" y1="0" x2="320" y2="0" stroke="#00e5ff" stroke-width="2" stroke-dasharray="8,4"/>
+
+    <!-- Left Solar Arrays (4 Wings) -->
+    <g transform="translate(-280,0)">
+      <rect x="-35" y="-140" width="70" height="110" fill="url(#solarGrad)" stroke="#ff3366" stroke-width="1.5" rx="2"/>
+      <rect x="-35" y="30" width="70" height="110" fill="url(#solarGrad)" stroke="#ff3366" stroke-width="1.5" rx="2"/>
+      <line x1="-35" y1="-85" x2="35" y2="-85" stroke="#000" stroke-width="1"/>
+      <line x1="-35" y1="85" x2="35" y2="85" stroke="#000" stroke-width="1"/>
+    </g>
+    <g transform="translate(-200,0)">
+      <rect x="-35" y="-140" width="70" height="110" fill="url(#solarGrad)" stroke="#ffcc00" stroke-width="1.5" rx="2"/>
+      <rect x="-35" y="30" width="70" height="110" fill="url(#solarGrad)" stroke="#ffcc00" stroke-width="1.5" rx="2"/>
+    </g>
+
+    <!-- Right Solar Arrays (4 Wings) -->
+    <g transform="translate(200,0)">
+      <rect x="-35" y="-140" width="70" height="110" fill="url(#solarGrad)" stroke="#ffcc00" stroke-width="1.5" rx="2"/>
+      <rect x="-35" y="30" width="70" height="110" fill="url(#solarGrad)" stroke="#ffcc00" stroke-width="1.5" rx="2"/>
+    </g>
+    <g transform="translate(280,0)">
+      <rect x="-35" y="-140" width="70" height="110" fill="url(#solarGrad)" stroke="#ff3366" stroke-width="1.5" rx="2"/>
+      <rect x="-35" y="30" width="70" height="110" fill="url(#solarGrad)" stroke="#ff3366" stroke-width="1.5" rx="2"/>
+    </g>
+
+    <!-- Pressurized Modules Core (Destiny, Unity, Zarya, Zvezda, Columbus, Kibo) -->
+    <rect x="-50" y="-15" width="100" height="30" fill="#94a3b8" stroke="#ffffff" stroke-width="2" rx="6"/>
+    <rect x="-20" y="15" width="40" height="70" fill="#64748b" stroke="#00e5ff" stroke-width="1.5" rx="4"/>
+    <rect x="-15" y="85" width="30" height="40" fill="#475569" stroke="#ffffff" stroke-width="1" rx="3"/>
+    
+    <!-- Cupola & Radiators -->
+    <polygon points="-120,-10 -120,-60 -70,-60 -70,-10" fill="#f8fafc" opacity="0.8"/>
+    <polygon points="70,-10 70,-60 120,-60 120,-10" fill="#f8fafc" opacity="0.8"/>
+  </g>
+
+  <!-- HUD Text Overlay -->
+  <text x="30" y="450" font-family="monospace" font-size="14" font-weight="bold" fill="#00e5ff" letter-spacing="2">INTERNATIONAL SPACE STATION (ISS)</text>
+  <text x="30" y="470" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="1">CREWED MICROGRAVITY LABORATORY • LEO 408 KM</text>
+</svg>

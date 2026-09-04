@@ -1,0 +1,75 @@
+{
+  "name": "cosmos-ai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-node-tests.mjs tests/retrieval.test.ts tests/scholarly-retrieval.test.ts tests/scholarly-hybrid-retrieval.test.ts tests/scientific-answer-policy.test.ts tests/query-intent.test.ts tests/response-quality.test.ts tests/source-quality.test.ts tests/security.test.ts tests/environment-config.test.ts tests/application-errors.test.ts tests/validation-foundations.test.ts tests/architecture-check.test.ts tests/earth-weather-route.test.ts tests/verification-scripts.test.ts tests/nasa-image-preview.test.ts tests/homepage-navigation.test.ts tests/homepage-nasa-previews.test.ts",
+    "test:foundations": "node scripts/run-node-tests.mjs tests/environment-config.test.ts tests/application-errors.test.ts tests/validation-foundations.test.ts tests/architecture-check.test.ts tests/verification-scripts.test.ts",
+    "test:integration": "node scripts/run-node-tests.mjs tests/earth-weather-route.test.ts tests/nasa-image-preview.test.ts tests/homepage-navigation.test.ts tests/homepage-nasa-previews.test.ts",
+    "architecture:check": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/architecture-check.ts",
+    "security:check": "node scripts/security-check.mjs",
+    "eval:cosmos": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval-cosmos.ts",
+    "eval:research": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval-research.ts",
+    "eval:research-retrieval": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval-research-retrieval.ts",
+    "research:integrity": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-research-integrity.ts"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@next/third-parties": "16.2.11",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "9.6.1",
+    "@react-three/postprocessing": "3.0.4",
+    "@types/leaflet": "^1.9.22",
+    "@types/qrcode": "^1.5.6",
+    "@types/suncalc": "^1.9.2",
+    "astronomy-engine": "^2.1.19",
+    "framer-motion": "^12.23.24",
+    "gsap": "^3.15.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "next": "16.2.11",
+    "openai": "^6.46.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "recharts": "^3.10.1",
+    "satellite.js": "^7.1.0",
+    "suncalc": "^2.0.1",
+    "three": "^0.171.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/three": "^0.171.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "16.2.11",
+    "postcss": "^8.5.26",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "@eslint/eslintrc": {
+      "js-yaml": "4.3.1"
+    },
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.18"
+    },
+    "minimatch@10.2.5": {
+      "brace-expansion": "5.0.9"
+    },
+    "next": {
+      "postcss": "$postcss",
+      "sharp": "0.35.3"
+    }
+  }
+}

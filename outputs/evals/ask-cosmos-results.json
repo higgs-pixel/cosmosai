@@ -1,0 +1,450 @@
+{
+  "generatedAt": "2026-07-24T10:21:15.726Z",
+  "evaluationType": "offline deterministic policy and retrieval evaluation",
+  "promptCount": 14,
+  "hardFailureCount": 0,
+  "results": [
+    {
+      "prompt": "Explain the black hole information paradox, including Hawking radiation, unitarity, and the major proposed resolutions.",
+      "queryMode": "advanced-scientific",
+      "generatedQueryVariants": [
+        "Explain the black hole information paradox, including Hawking radiation, unitarity, and the major proposed resolutions.",
+        "\"Explain the black hole information paradox, including Hawking radiation, unitarity, and the major proposed resolutions.\"",
+        "black hole information paradox",
+        "black hole information loss",
+        "Hawking information paradox",
+        "Hawking radiation information loss",
+        "black hole unitarity",
+        "Page curve black hole",
+        "black hole complementarity",
+        "black hole firewall",
+        "replica wormholes black hole",
+        "island formula black hole"
+      ],
+      "providersQueried": [
+        "arXiv",
+        "OpenAlex",
+        "CORE",
+        "NASA ADS",
+        "NASA"
+      ],
+      "retrievedSourceCount": 8,
+      "finalSourceCount": 8,
+      "filteredSourceCount": 0,
+      "sourceClasses": [
+        "foundational",
+        "foundational",
+        "landmark-development",
+        "landmark-development",
+        "modern-resolution",
+        "landmark-development",
+        "foundational",
+        "modern-resolution"
+      ],
+      "sourceScores": [
+        {
+          "title": "Breakdown of Predictability in Gravitational Collapse",
+          "score": 53
+        },
+        {
+          "title": "Information in Black Hole Radiation",
+          "score": 62
+        },
+        {
+          "title": "The Stretched Horizon and Black Hole Complementarity",
+          "score": 96
+        },
+        {
+          "title": "The Large N Limit of Superconformal Field Theories and Supergravity",
+          "score": 60
+        },
+        {
+          "title": "The Page Curve of Hawking Radiation from Semiclassical Geometry",
+          "score": 53
+        },
+        {
+          "title": "Black Holes: Complementarity or Firewalls?",
+          "score": 59
+        },
+        {
+          "title": "Particle Creation by Black Holes",
+          "score": 54
+        },
+        {
+          "title": "Replica Wormholes and the Black Hole Interior",
+          "score": 52
+        }
+      ],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 4.76,
+      "retrievalLatencyMs": 2.43,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Why did NASA confirm that aliens built structures on Mars?",
+      "queryMode": "false-premise",
+      "generatedQueryVariants": [
+        "Why did NASA confirm that aliens built structures on Mars?",
+        "\"Why did NASA confirm that aliens built structures on Mars?\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 3,
+      "responseLatencyMs": 2.26,
+      "retrievalLatencyMs": 0.08,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Give me five peer-reviewed or preprint sources specifically about the black hole information paradox. For each, explain why it is relevant.",
+      "queryMode": "scholarly-sources",
+      "generatedQueryVariants": [
+        "Give me five peer-reviewed or preprint sources specifically about the black hole information paradox. For each, explain why it is relevant.",
+        "\"Give me five peer-reviewed or preprint sources specifically about the black hole information paradox. For each, explain why it is relevant.\"",
+        "black hole information paradox",
+        "black hole information loss",
+        "Hawking information paradox",
+        "Hawking radiation information loss",
+        "black hole unitarity",
+        "Page curve black hole",
+        "black hole complementarity",
+        "black hole firewall",
+        "replica wormholes black hole",
+        "island formula black hole"
+      ],
+      "providersQueried": [
+        "arXiv",
+        "OpenAlex",
+        "CORE",
+        "NASA ADS",
+        "NASA"
+      ],
+      "retrievedSourceCount": 8,
+      "finalSourceCount": 5,
+      "filteredSourceCount": 3,
+      "sourceClasses": [
+        "foundational",
+        "foundational",
+        "landmark-development",
+        "landmark-development",
+        "modern-resolution"
+      ],
+      "sourceScores": [
+        {
+          "title": "Breakdown of Predictability in Gravitational Collapse",
+          "score": 53
+        },
+        {
+          "title": "Information in Black Hole Radiation",
+          "score": 62
+        },
+        {
+          "title": "The Stretched Horizon and Black Hole Complementarity",
+          "score": 96
+        },
+        {
+          "title": "The Large N Limit of Superconformal Field Theories and Supergravity",
+          "score": 60
+        },
+        {
+          "title": "The Page Curve of Hawking Radiation from Semiclassical Geometry",
+          "score": 53
+        }
+      ],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.69,
+      "retrievalLatencyMs": 0.5,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "What existed before the Big Bang?",
+      "queryMode": "uncertain-science",
+      "generatedQueryVariants": [
+        "What existed before the Big Bang?",
+        "\"What existed before the Big Bang?\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.2,
+      "retrievalLatencyMs": 0.03,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "What is the latest status of NASA's Artemis programme?",
+      "queryMode": "current-mission",
+      "generatedQueryVariants": [
+        "What is the latest status of NASA's Artemis programme?",
+        "\"What is the latest status of NASA's Artemis programme?\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.21,
+      "retrievalLatencyMs": 0.03,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Give me five sources on dark-matter direct detection",
+      "queryMode": "scholarly-sources",
+      "generatedQueryVariants": [
+        "Give me five sources on dark-matter direct detection",
+        "\"Give me five sources on dark-matter direct detection\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.27,
+      "retrievalLatencyMs": 0.05,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Give me five sources on exoplanet atmospheric biosignatures",
+      "queryMode": "scholarly-sources",
+      "generatedQueryVariants": [
+        "Give me five sources on exoplanet atmospheric biosignatures",
+        "\"Give me five sources on exoplanet atmospheric biosignatures\"",
+        "exoplanet atmospheric biosignatures",
+        "exoplanet atmosphere life detection",
+        "biosignature false positives exoplanets"
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.15,
+      "retrievalLatencyMs": 0.05,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Give me five sources on Mars sample-return science",
+      "queryMode": "scholarly-sources",
+      "generatedQueryVariants": [
+        "Give me five sources on Mars sample-return science",
+        "\"Give me five sources on Mars sample-return science\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.11,
+      "retrievalLatencyMs": 0.02,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Give me five sources on quantum gravity and black-hole entropy",
+      "queryMode": "scholarly-sources",
+      "generatedQueryVariants": [
+        "Give me five sources on quantum gravity and black-hole entropy",
+        "\"Give me five sources on quantum gravity and black-hole entropy\""
+      ],
+      "providersQueried": [
+        "arXiv",
+        "OpenAlex",
+        "CORE",
+        "NASA ADS",
+        "NASA"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.1,
+      "retrievalLatencyMs": 0.02,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Why did JWST prove the Big Bang was wrong?",
+      "queryMode": "false-premise",
+      "generatedQueryVariants": [
+        "Why did JWST prove the Big Bang was wrong?",
+        "\"Why did JWST prove the Big Bang was wrong?\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 1,
+      "responseLatencyMs": 0.3,
+      "retrievalLatencyMs": 0.02,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Why did NASA hide evidence of life on Mars?",
+      "queryMode": "false-premise",
+      "generatedQueryVariants": [
+        "Why did NASA hide evidence of life on Mars?",
+        "\"Why did NASA hide evidence of life on Mars?\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 3,
+      "responseLatencyMs": 0.13,
+      "retrievalLatencyMs": 0.02,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "What can I observe tonight in Gwalior?",
+      "queryMode": "live-data",
+      "generatedQueryVariants": [
+        "What can I observe tonight in Gwalior?",
+        "\"What can I observe tonight in Gwalior?\""
+      ],
+      "providersQueried": [
+        "7Timer",
+        "Open-Meteo",
+        "Weatherstack",
+        "PurpleAir"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.24,
+      "retrievalLatencyMs": 0.02,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Search NASA images of the Pillars of Creation",
+      "queryMode": "image-search",
+      "generatedQueryVariants": [
+        "Search NASA images of the Pillars of Creation",
+        "\"Search NASA images of the Pillars of Creation\""
+      ],
+      "providersQueried": [
+        "NASA Image Library",
+        "NASA APOD",
+        "NASA"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.1,
+      "retrievalLatencyMs": 0.01,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    },
+    {
+      "prompt": "Compare Venus and Earth",
+      "queryMode": "comparison",
+      "generatedQueryVariants": [
+        "Compare Venus and Earth",
+        "\"Compare Venus and Earth\""
+      ],
+      "providersQueried": [
+        "NASA",
+        "Wikidata",
+        "OpenAlex",
+        "arXiv"
+      ],
+      "retrievedSourceCount": 0,
+      "finalSourceCount": 0,
+      "filteredSourceCount": 0,
+      "sourceClasses": [],
+      "sourceScores": [],
+      "citationIntegrityStatus": "passed",
+      "authoritativeEvidenceCount": 0,
+      "responseLatencyMs": 0.03,
+      "retrievalLatencyMs": 0.01,
+      "providerUsed": "development-policy-evaluation",
+      "hardFailures": []
+    }
+  ]
+}

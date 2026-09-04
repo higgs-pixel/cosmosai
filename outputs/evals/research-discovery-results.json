@@ -1,0 +1,2320 @@
+{
+  "generatedAt": "2026-07-26T09:15:38.482Z",
+  "evaluationType": "offline deterministic candidate-discovery evaluation",
+  "corpusSize": 8,
+  "baseline": {
+    "caseCount": 14,
+    "recallAt": {
+      "1": 0.14285714285714285,
+      "3": 0.14285714285714285,
+      "5": 0.14285714285714285,
+      "10": 0.14285714285714285
+    },
+    "meanReciprocalRank": 0.14285714285714285,
+    "meanNdcgAt10": 0.14285714285714285,
+    "falseNegativeRate": 0.8571428571428571,
+    "irrelevantResultRate": 0,
+    "queryVariationStability": 1,
+    "successByQueryType": {
+      "exact-title": 1,
+      "doi": 0,
+      "author": 0,
+      "topic": 0,
+      "synonym": 0,
+      "natural-language": 0,
+      "acronym": 0,
+      "variation": 0.5
+    },
+    "results": [
+      {
+        "id": "page-title",
+        "query": "Information in Black Hole Radiation",
+        "queryType": "exact-title",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "page-doi",
+        "query": "10.1103/PhysRevLett.71.3743",
+        "queryType": "doi",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "page-author",
+        "query": "papers by Don N. Page",
+        "queryType": "author",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-topic",
+        "query": "black hole information paradox",
+        "queryType": "topic",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "variationGroup": "black-hole-information",
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-synonym",
+        "query": "Hawking information loss",
+        "queryType": "synonym",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-natural",
+        "query": "paper explaining when information returns during black-hole evaporation",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "ai-acronym",
+        "query": "AI attention architecture",
+        "queryType": "acronym",
+        "relevantIds": [
+          "vaswani-attention-2017"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "ir-acronym",
+        "query": "IR social construction of anarchy",
+        "queryType": "acronym",
+        "relevantIds": [
+          "wendt-anarchy-1992"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "climate-acronym",
+        "query": "IPCC AR6 physical climate report",
+        "queryType": "acronym",
+        "relevantIds": [
+          "ipcc-ar6-wg1-2021"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "cosmology-description",
+        "query": "Type Ia supernova evidence for cosmic acceleration",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "riess-accelerating-universe-1998"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "policy-description",
+        "query": "incremental decision making in public policy",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "lindblom-muddling-1959"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "space-technology",
+        "query": "space telescope transit photometry first results",
+        "queryType": "topic",
+        "relevantIds": [
+          "borucki-kepler-2010"
+        ],
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "title-punctuation",
+        "query": "Information in Black-Hole Radiation!",
+        "queryType": "variation",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "title-typo",
+        "query": "black hole informtion paradox",
+        "queryType": "variation",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "variationGroup": "black-hole-information",
+        "returnedIds": [],
+        "firstRelevantRank": null,
+        "recallAt": {
+          "1": 0,
+          "3": 0,
+          "5": 0,
+          "10": 0
+        },
+        "reciprocalRank": 0,
+        "ndcgAt10": 0,
+        "falseNegative": true,
+        "irrelevantRate": 0
+      }
+    ]
+  },
+  "stages": {
+    "exactLookup": {
+      "caseCount": 14,
+      "recallAt": {
+        "1": 0.21428571428571427,
+        "3": 0.21428571428571427,
+        "5": 0.21428571428571427,
+        "10": 0.21428571428571427
+      },
+      "meanReciprocalRank": 0.21428571428571427,
+      "meanNdcgAt10": 0.21428571428571427,
+      "falseNegativeRate": 0.7857142857142857,
+      "irrelevantResultRate": 0,
+      "queryVariationStability": 1,
+      "successByQueryType": {
+        "exact-title": 1,
+        "doi": 1,
+        "author": 0,
+        "topic": 0,
+        "synonym": 0,
+        "natural-language": 0,
+        "acronym": 0,
+        "variation": 0.5
+      },
+      "results": [
+        {
+          "id": "page-title",
+          "query": "Information in Black Hole Radiation",
+          "queryType": "exact-title",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-doi",
+          "query": "10.1103/PhysRevLett.71.3743",
+          "queryType": "doi",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-author",
+          "query": "papers by Don N. Page",
+          "queryType": "author",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-topic",
+          "query": "black hole information paradox",
+          "queryType": "topic",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-synonym",
+          "query": "Hawking information loss",
+          "queryType": "synonym",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-natural",
+          "query": "paper explaining when information returns during black-hole evaporation",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ai-acronym",
+          "query": "AI attention architecture",
+          "queryType": "acronym",
+          "relevantIds": [
+            "vaswani-attention-2017"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ir-acronym",
+          "query": "IR social construction of anarchy",
+          "queryType": "acronym",
+          "relevantIds": [
+            "wendt-anarchy-1992"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "climate-acronym",
+          "query": "IPCC AR6 physical climate report",
+          "queryType": "acronym",
+          "relevantIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "cosmology-description",
+          "query": "Type Ia supernova evidence for cosmic acceleration",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "policy-description",
+          "query": "incremental decision making in public policy",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "lindblom-muddling-1959"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "space-technology",
+          "query": "space telescope transit photometry first results",
+          "queryType": "topic",
+          "relevantIds": [
+            "borucki-kepler-2010"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-punctuation",
+          "query": "Information in Black-Hole Radiation!",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-typo",
+          "query": "black hole informtion paradox",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        }
+      ]
+    },
+    "lexicalRetrieval": {
+      "caseCount": 14,
+      "recallAt": {
+        "1": 0.8571428571428571,
+        "3": 0.8571428571428571,
+        "5": 0.8571428571428571,
+        "10": 0.8571428571428571
+      },
+      "meanReciprocalRank": 0.8571428571428571,
+      "meanNdcgAt10": 0.7742458270211696,
+      "falseNegativeRate": 0.14285714285714285,
+      "irrelevantResultRate": 0.07142857142857142,
+      "queryVariationStability": 1,
+      "successByQueryType": {
+        "exact-title": 1,
+        "doi": 0,
+        "author": 0,
+        "topic": 1,
+        "synonym": 1,
+        "natural-language": 1,
+        "acronym": 1,
+        "variation": 1
+      },
+      "results": [
+        {
+          "id": "page-title",
+          "query": "Information in Black Hole Radiation",
+          "queryType": "exact-title",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "page-doi",
+          "query": "10.1103/PhysRevLett.71.3743",
+          "queryType": "doi",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-author",
+          "query": "papers by Don N. Page",
+          "queryType": "author",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-topic",
+          "query": "black hole information paradox",
+          "queryType": "topic",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-synonym",
+          "query": "Hawking information loss",
+          "queryType": "synonym",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-natural",
+          "query": "paper explaining when information returns during black-hole evaporation",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ai-acronym",
+          "query": "AI attention architecture",
+          "queryType": "acronym",
+          "relevantIds": [
+            "vaswani-attention-2017"
+          ],
+          "returnedIds": [
+            "vaswani-attention-2017"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ir-acronym",
+          "query": "IR social construction of anarchy",
+          "queryType": "acronym",
+          "relevantIds": [
+            "wendt-anarchy-1992"
+          ],
+          "returnedIds": [
+            "wendt-anarchy-1992"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "climate-acronym",
+          "query": "IPCC AR6 physical climate report",
+          "queryType": "acronym",
+          "relevantIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "returnedIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "cosmology-description",
+          "query": "Type Ia supernova evidence for cosmic acceleration",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "returnedIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "policy-description",
+          "query": "incremental decision making in public policy",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "lindblom-muddling-1959"
+          ],
+          "returnedIds": [
+            "lindblom-muddling-1959"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "space-technology",
+          "query": "space telescope transit photometry first results",
+          "queryType": "topic",
+          "relevantIds": [
+            "borucki-kepler-2010"
+          ],
+          "returnedIds": [
+            "borucki-kepler-2010"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-punctuation",
+          "query": "Information in Black-Hole Radiation!",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "title-typo",
+          "query": "black hole informtion paradox",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        }
+      ]
+    },
+    "semanticRetrieval": {
+      "caseCount": 14,
+      "recallAt": {
+        "1": 0,
+        "3": 0,
+        "5": 0,
+        "10": 0
+      },
+      "meanReciprocalRank": 0,
+      "meanNdcgAt10": 0,
+      "falseNegativeRate": 1,
+      "irrelevantResultRate": 0,
+      "queryVariationStability": 1,
+      "successByQueryType": {
+        "exact-title": 0,
+        "doi": 0,
+        "author": 0,
+        "topic": 0,
+        "synonym": 0,
+        "natural-language": 0,
+        "acronym": 0,
+        "variation": 0
+      },
+      "results": [
+        {
+          "id": "page-title",
+          "query": "Information in Black Hole Radiation",
+          "queryType": "exact-title",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-doi",
+          "query": "10.1103/PhysRevLett.71.3743",
+          "queryType": "doi",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-author",
+          "query": "papers by Don N. Page",
+          "queryType": "author",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-topic",
+          "query": "black hole information paradox",
+          "queryType": "topic",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-synonym",
+          "query": "Hawking information loss",
+          "queryType": "synonym",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-natural",
+          "query": "paper explaining when information returns during black-hole evaporation",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ai-acronym",
+          "query": "AI attention architecture",
+          "queryType": "acronym",
+          "relevantIds": [
+            "vaswani-attention-2017"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ir-acronym",
+          "query": "IR social construction of anarchy",
+          "queryType": "acronym",
+          "relevantIds": [
+            "wendt-anarchy-1992"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "climate-acronym",
+          "query": "IPCC AR6 physical climate report",
+          "queryType": "acronym",
+          "relevantIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "cosmology-description",
+          "query": "Type Ia supernova evidence for cosmic acceleration",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "policy-description",
+          "query": "incremental decision making in public policy",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "lindblom-muddling-1959"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "space-technology",
+          "query": "space telescope transit photometry first results",
+          "queryType": "topic",
+          "relevantIds": [
+            "borucki-kepler-2010"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-punctuation",
+          "query": "Information in Black-Hole Radiation!",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-typo",
+          "query": "black hole informtion paradox",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [],
+          "firstRelevantRank": null,
+          "recallAt": {
+            "1": 0,
+            "3": 0,
+            "5": 0,
+            "10": 0
+          },
+          "reciprocalRank": 0,
+          "ndcgAt10": 0,
+          "falseNegative": true,
+          "irrelevantRate": 0
+        }
+      ],
+      "status": "not_configured"
+    },
+    "hybridRetrieval": {
+      "caseCount": 14,
+      "recallAt": {
+        "1": 1,
+        "3": 1,
+        "5": 1,
+        "10": 1
+      },
+      "meanReciprocalRank": 1,
+      "meanNdcgAt10": 0.9447353132522084,
+      "falseNegativeRate": 0,
+      "irrelevantResultRate": 0.07142857142857142,
+      "queryVariationStability": 1,
+      "successByQueryType": {
+        "exact-title": 1,
+        "doi": 1,
+        "author": 1,
+        "topic": 1,
+        "synonym": 1,
+        "natural-language": 1,
+        "acronym": 1,
+        "variation": 1
+      },
+      "results": [
+        {
+          "id": "page-title",
+          "query": "Information in Black Hole Radiation",
+          "queryType": "exact-title",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "page-doi",
+          "query": "10.1103/PhysRevLett.71.3743",
+          "queryType": "doi",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-author",
+          "query": "papers by Don N. Page",
+          "queryType": "author",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-topic",
+          "query": "black hole information paradox",
+          "queryType": "topic",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-synonym",
+          "query": "Hawking information loss",
+          "queryType": "synonym",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "returnedIds": [
+            "hawking-particle-creation-1975",
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-natural",
+          "query": "paper explaining when information returns during black-hole evaporation",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ai-acronym",
+          "query": "AI attention architecture",
+          "queryType": "acronym",
+          "relevantIds": [
+            "vaswani-attention-2017"
+          ],
+          "returnedIds": [
+            "vaswani-attention-2017"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ir-acronym",
+          "query": "IR social construction of anarchy",
+          "queryType": "acronym",
+          "relevantIds": [
+            "wendt-anarchy-1992"
+          ],
+          "returnedIds": [
+            "wendt-anarchy-1992"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "climate-acronym",
+          "query": "IPCC AR6 physical climate report",
+          "queryType": "acronym",
+          "relevantIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "returnedIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "cosmology-description",
+          "query": "Type Ia supernova evidence for cosmic acceleration",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "returnedIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "policy-description",
+          "query": "incremental decision making in public policy",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "lindblom-muddling-1959"
+          ],
+          "returnedIds": [
+            "lindblom-muddling-1959"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "space-technology",
+          "query": "space telescope transit photometry first results",
+          "queryType": "topic",
+          "relevantIds": [
+            "borucki-kepler-2010"
+          ],
+          "returnedIds": [
+            "borucki-kepler-2010"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-punctuation",
+          "query": "Information in Black-Hole Radiation!",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "title-typo",
+          "query": "black hole informtion paradox",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        }
+      ]
+    },
+    "rerankedHybridRetrieval": {
+      "caseCount": 14,
+      "recallAt": {
+        "1": 1,
+        "3": 1,
+        "5": 1,
+        "10": 1
+      },
+      "meanReciprocalRank": 1,
+      "meanNdcgAt10": 0.9447353132522084,
+      "falseNegativeRate": 0,
+      "irrelevantResultRate": 0.07142857142857142,
+      "queryVariationStability": 1,
+      "successByQueryType": {
+        "exact-title": 1,
+        "doi": 1,
+        "author": 1,
+        "topic": 1,
+        "synonym": 1,
+        "natural-language": 1,
+        "acronym": 1,
+        "variation": 1
+      },
+      "results": [
+        {
+          "id": "page-title",
+          "query": "Information in Black Hole Radiation",
+          "queryType": "exact-title",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "page-doi",
+          "query": "10.1103/PhysRevLett.71.3743",
+          "queryType": "doi",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "page-author",
+          "query": "papers by Don N. Page",
+          "queryType": "author",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-topic",
+          "query": "black hole information paradox",
+          "queryType": "topic",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-synonym",
+          "query": "Hawking information loss",
+          "queryType": "synonym",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "returnedIds": [
+            "hawking-particle-creation-1975",
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "black-hole-natural",
+          "query": "paper explaining when information returns during black-hole evaporation",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ai-acronym",
+          "query": "AI attention architecture",
+          "queryType": "acronym",
+          "relevantIds": [
+            "vaswani-attention-2017"
+          ],
+          "returnedIds": [
+            "vaswani-attention-2017"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "ir-acronym",
+          "query": "IR social construction of anarchy",
+          "queryType": "acronym",
+          "relevantIds": [
+            "wendt-anarchy-1992"
+          ],
+          "returnedIds": [
+            "wendt-anarchy-1992"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "climate-acronym",
+          "query": "IPCC AR6 physical climate report",
+          "queryType": "acronym",
+          "relevantIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "returnedIds": [
+            "ipcc-ar6-wg1-2021"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "cosmology-description",
+          "query": "Type Ia supernova evidence for cosmic acceleration",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "returnedIds": [
+            "riess-accelerating-universe-1998"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "policy-description",
+          "query": "incremental decision making in public policy",
+          "queryType": "natural-language",
+          "relevantIds": [
+            "lindblom-muddling-1959"
+          ],
+          "returnedIds": [
+            "lindblom-muddling-1959"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "space-technology",
+          "query": "space telescope transit photometry first results",
+          "queryType": "topic",
+          "relevantIds": [
+            "borucki-kepler-2010"
+          ],
+          "returnedIds": [
+            "borucki-kepler-2010"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        },
+        {
+          "id": "title-punctuation",
+          "query": "Information in Black-Hole Radiation!",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993"
+          ],
+          "returnedIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 1,
+          "falseNegative": false,
+          "irrelevantRate": 0.5
+        },
+        {
+          "id": "title-typo",
+          "query": "black hole informtion paradox",
+          "queryType": "variation",
+          "relevantIds": [
+            "page-information-radiation-1993",
+            "hawking-particle-creation-1975"
+          ],
+          "variationGroup": "black-hole-information",
+          "returnedIds": [
+            "page-information-radiation-1993"
+          ],
+          "firstRelevantRank": 1,
+          "recallAt": {
+            "1": 1,
+            "3": 1,
+            "5": 1,
+            "10": 1
+          },
+          "reciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "falseNegative": false,
+          "irrelevantRate": 0
+        }
+      ]
+    }
+  },
+  "postFix": {
+    "caseCount": 14,
+    "recallAt": {
+      "1": 1,
+      "3": 1,
+      "5": 1,
+      "10": 1
+    },
+    "meanReciprocalRank": 1,
+    "meanNdcgAt10": 0.9447353132522084,
+    "falseNegativeRate": 0,
+    "irrelevantResultRate": 0.07142857142857142,
+    "queryVariationStability": 1,
+    "successByQueryType": {
+      "exact-title": 1,
+      "doi": 1,
+      "author": 1,
+      "topic": 1,
+      "synonym": 1,
+      "natural-language": 1,
+      "acronym": 1,
+      "variation": 1
+    },
+    "results": [
+      {
+        "id": "page-title",
+        "query": "Information in Black Hole Radiation",
+        "queryType": "exact-title",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0.5
+      },
+      {
+        "id": "page-doi",
+        "query": "10.1103/PhysRevLett.71.3743",
+        "queryType": "doi",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "page-author",
+        "query": "papers by Don N. Page",
+        "queryType": "author",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-topic",
+        "query": "black hole information paradox",
+        "queryType": "topic",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "variationGroup": "black-hole-information",
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 0.6131471927654584,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-synonym",
+        "query": "Hawking information loss",
+        "queryType": "synonym",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "returnedIds": [
+          "hawking-particle-creation-1975",
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "black-hole-natural",
+        "query": "paper explaining when information returns during black-hole evaporation",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "ai-acronym",
+        "query": "AI attention architecture",
+        "queryType": "acronym",
+        "relevantIds": [
+          "vaswani-attention-2017"
+        ],
+        "returnedIds": [
+          "vaswani-attention-2017"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "ir-acronym",
+        "query": "IR social construction of anarchy",
+        "queryType": "acronym",
+        "relevantIds": [
+          "wendt-anarchy-1992"
+        ],
+        "returnedIds": [
+          "wendt-anarchy-1992"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "climate-acronym",
+        "query": "IPCC AR6 physical climate report",
+        "queryType": "acronym",
+        "relevantIds": [
+          "ipcc-ar6-wg1-2021"
+        ],
+        "returnedIds": [
+          "ipcc-ar6-wg1-2021"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "cosmology-description",
+        "query": "Type Ia supernova evidence for cosmic acceleration",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "riess-accelerating-universe-1998"
+        ],
+        "returnedIds": [
+          "riess-accelerating-universe-1998"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "policy-description",
+        "query": "incremental decision making in public policy",
+        "queryType": "natural-language",
+        "relevantIds": [
+          "lindblom-muddling-1959"
+        ],
+        "returnedIds": [
+          "lindblom-muddling-1959"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "space-technology",
+        "query": "space telescope transit photometry first results",
+        "queryType": "topic",
+        "relevantIds": [
+          "borucki-kepler-2010"
+        ],
+        "returnedIds": [
+          "borucki-kepler-2010"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      },
+      {
+        "id": "title-punctuation",
+        "query": "Information in Black-Hole Radiation!",
+        "queryType": "variation",
+        "relevantIds": [
+          "page-information-radiation-1993"
+        ],
+        "returnedIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 1,
+        "falseNegative": false,
+        "irrelevantRate": 0.5
+      },
+      {
+        "id": "title-typo",
+        "query": "black hole informtion paradox",
+        "queryType": "variation",
+        "relevantIds": [
+          "page-information-radiation-1993",
+          "hawking-particle-creation-1975"
+        ],
+        "variationGroup": "black-hole-information",
+        "returnedIds": [
+          "page-information-radiation-1993"
+        ],
+        "firstRelevantRank": 1,
+        "recallAt": {
+          "1": 1,
+          "3": 1,
+          "5": 1,
+          "10": 1
+        },
+        "reciprocalRank": 1,
+        "ndcgAt10": 0.6131471927654584,
+        "falseNegative": false,
+        "irrelevantRate": 0
+      }
+    ]
+  },
+  "improvement": {
+    "recallAt1": 0.8571428571428572,
+    "recallAt5": 0.8571428571428572,
+    "meanReciprocalRank": 0.8571428571428572,
+    "falseNegativeRate": 0.8571428571428571
+  }
+}
