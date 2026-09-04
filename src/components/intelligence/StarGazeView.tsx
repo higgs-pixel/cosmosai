@@ -1977,7 +1977,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             <div className="flex flex-col items-center gap-2 my-2">
               <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
                 <img
-                  src="/images/stargaze-qr.png"
+                  src="/images/stargaze-qr.png?v=3"
                   alt="Scannable Mobile Compass QR Code"
                   className="w-[160px] h-[160px] object-contain rounded-md"
                   loading="eager"
