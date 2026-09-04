@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { getSecurityHeaders } from "./src/lib/security/headers";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -7,6 +8,29 @@ const nextConfig: NextConfig = {
   compress: true,
   experimental: {
     optimizePackageImports: ["lucide-react"],
+  },
+  webpack: (config, { isServer, webpack }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
+          const mod = resource.request.replace(/^node:/, "");
+          if (mod === "module" || mod === "worker_threads" || mod === "fs" || mod === "net" || mod === "tls" || mod === "child_process") {
+            resource.request = path.resolve(__dirname, "./src/lib/empty-module.ts");
+          }
+        })
+      );
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        "node:module": false,
+        "node:worker_threads": false,
+        module: false,
+        worker_threads: false,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
   },
   images: {
     formats: ["image/avif", "image/webp"],

@@ -2,6 +2,8 @@
 
 import { useState, useMemo, memo } from "react";
 import * as SunCalc from "suncalc";
+
+
 import { SatelliteVisibilityResult, ObserverTwilightInfo } from "@/lib/orbit/visibility";
 import { Compass, Sun, Moon, Sparkles, Eye, Info, MapPin, Target, Layers, Filter } from "lucide-react";
 

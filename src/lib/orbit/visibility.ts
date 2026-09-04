@@ -48,9 +48,9 @@ export function getObserverTwilight(date: Date, lat: number, lon: number): Obser
   let sunAzDeg = 0;
 
   try {
-    const fn = (SunCalc as any).getPosition || (SunCalc as any).default?.getPosition;
     const d = date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
-    const sunPos = typeof fn === "function" ? fn(d, lat, lon) : null;
+    const getPos = SunCalc.getPosition || (SunCalc as any).default?.getPosition;
+    const sunPos = typeof getPos === "function" ? getPos(d, lat, lon) : null;
 
     if (sunPos && typeof sunPos.altitude === "number" && !isNaN(sunPos.altitude)) {
       const rawAlt = (sunPos.altitude * 180) / Math.PI;
@@ -60,6 +60,7 @@ export function getObserverTwilight(date: Date, lat: number, lon: number): Obser
   } catch {
     sunAltDeg = 15; // default daylight fallback
   }
+
 
   let phase: TwilightPhase = "Daylight";
   let isDarkEnough = false;
