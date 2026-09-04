@@ -2109,8 +2109,37 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
         )}
 
-        {/* MOBILE COMPASS QR SYNC MODAL (DISPLAYED WHEN 180° UPPER FREE VIEW IS UNCLICKED / OFF) */}
-        {!is180DomeView && (
+        {/* COMPACT LIVE TELEMETRY WIDGET AT RIGHTMOST CORNER WHEN CONNECTED */}
+        {isMobileSynced && (
+          <div className="absolute top-20 right-6 z-40 px-3.5 py-2.5 rounded-2xl bg-cyan-950/95 border-2 border-cyan-400 text-cyan-300 font-mono text-xs shadow-[0_0_35px_rgba(6,182,212,0.45)] backdrop-blur-2xl flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+              <Smartphone className="h-4 w-4 text-cyan-400 shrink-0" />
+            </div>
+
+            <div className="flex flex-col">
+              <div className="text-[10px] font-black tracking-wide text-white uppercase flex items-center gap-1.5 whitespace-nowrap">
+                <span>📱 MOBILE TELEMETRY TRANSMITTING</span>
+                <span className="text-[9px] font-mono text-cyan-400 font-bold opacity-90">#{sessionId}</span>
+              </div>
+              <div className="text-xs font-mono font-extrabold text-cyan-300 whitespace-nowrap mt-0.5">
+                AZ: {mobileOrientation?.heading}° &bull; EL: {mobileOrientation?.pitch}° {mobileOrientation?.roll !== undefined ? `&bull; ROLL: ${mobileOrientation.roll}°` : ""}
+              </div>
+            </div>
+
+            <button
+              onClick={handleRegenerateSession}
+              className="ml-1 p-1.5 rounded-xl bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition text-[10px] font-bold border border-cyan-500/40 shrink-0 flex items-center gap-1"
+              title="Generate new QR session or scan new phone"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">New QR</span>
+            </button>
+          </div>
+        )}
+
+        {/* FULL MOBILE COMPASS QR SYNC MODAL (AUTOMATICALLY HIDES WHEN CONNECTED) */}
+        {!is180DomeView && !isMobileSynced && (
           <div className="absolute top-20 right-6 z-40 w-80 p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <div className="flex items-center gap-2">
@@ -2122,7 +2151,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               </span>
             </div>
 
-            {/* QR Code Image (Dynamic QRCodeSVG rendering unique session URL) */}
+            {/* QR Code SVG */}
             <div className="flex flex-col items-center gap-2 my-2">
               <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
                 <QRCodeSVG
@@ -2136,28 +2165,12 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </div>
 
             {/* Live Connection Telemetry Status Banner */}
-            <div className={`p-2.5 rounded-xl border flex items-center gap-2 text-[10px] font-bold mt-2 transition ${
-              isMobileSynced
-                ? "bg-emerald-950/90 border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                : "bg-slate-900/90 border-amber-500/40 text-amber-300"
-            }`}>
-              {isMobileSynced ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 animate-bounce" />
-                  <div>
-                    <div>CONNECTED &amp; TRACKING LIVE!</div>
-                    <div className="text-[9px] text-emerald-200">AZ: {mobileOrientation?.heading}° | EL: {mobileOrientation?.pitch}°</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <QrCode className="h-4 w-4 text-amber-400 shrink-0 animate-pulse" />
-                  <div>
-                    <div>WAITING FOR PHONE SCAN</div>
-                    <div className="text-[9px] text-slate-400">Scan QR to sync line of sight</div>
-                  </div>
-                </>
-              )}
+            <div className="p-2.5 rounded-xl border border-amber-500/40 bg-slate-900/90 text-amber-300 flex items-center gap-2 text-[10px] font-bold mt-2">
+              <QrCode className="h-4 w-4 text-amber-400 shrink-0 animate-pulse" />
+              <div>
+                <div>WAITING FOR PHONE SCAN</div>
+                <div className="text-[9px] text-slate-400">Scan QR to sync line of sight</div>
+              </div>
             </div>
 
             {/* Manual Link / Controller Launcher */}

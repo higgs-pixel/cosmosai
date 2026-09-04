@@ -224,8 +224,8 @@ export default function MobileCompassSyncPage() {
         </div>
 
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 shrink-0">
-          <Radio className="h-3 w-3 text-emerald-400 animate-ping" />
-          <span>{isSending ? "TRANSMITTING..." : "CONNECTED"}</span>
+          <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
+          <span>TRANSMITTING</span>
         </div>
       </header>
 
