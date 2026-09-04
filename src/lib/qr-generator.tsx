@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import QRCode from "qrcode";
 
 interface QRCodeProps {
@@ -10,51 +10,62 @@ interface QRCodeProps {
 }
 
 /**
- * Standard, 100% compliant scannable QR Code generator using industry-standard Reed-Solomon QR library.
- * Renders high-contrast, instantly scannable vector QR codes dynamically generated from the provided session URL.
+ * 100% Native Inline SVG QR Code Generator (Zero PNG Image Files, Zero <img> Tags).
+ * Dynamically computes Reed-Solomon QR matrix vectors synchronously per session URL.
  */
-export function QRCodeSVG({ value, size = 200, className = "" }: QRCodeProps) {
-  const [dataUrl, setDataUrl] = useState<string>("");
+export function QRCodeSVG({ value, size = 180, className = "" }: QRCodeProps) {
+  const qrData = useMemo(() => {
+    if (!value) return null;
+    try {
+      const qr = QRCode.create(value, { errorCorrectionLevel: "M" });
+      const moduleCount = qr.modules.size;
+      const data = qr.modules.data;
+      const margin = 2; // quiet zone in module units
 
-  useEffect(() => {
-    let isMounted = true;
-    if (!value) return;
+      let pathStr = "";
+      for (let r = 0; r < moduleCount; r++) {
+        for (let c = 0; c < moduleCount; c++) {
+          if (data[r * moduleCount + c] === 1) {
+            const x = c + margin;
+            const y = r + margin;
+            pathStr += `M${x},${y}h1v1h-1z `;
+          }
+        }
+      }
 
-    QRCode.toDataURL(value, {
-      margin: 1,
-      width: Math.max(256, size * 2),
-      color: {
-        dark: "#000000",
-        light: "#ffffff",
-      },
-    })
-      .then((url) => {
-        if (isMounted) setDataUrl(url);
-      })
-      .catch((err) => {
-        console.error("QR Code Generation Error:", err);
-      });
+      return {
+        viewBoxSize: moduleCount + margin * 2,
+        path: pathStr,
+      };
+    } catch (err) {
+      console.error("Native SVG QR Generation Error:", err);
+      return null;
+    }
+  }, [value]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [value, size]);
+  if (!qrData) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="flex items-center justify-center text-xs font-mono text-slate-500 animate-pulse bg-white rounded-xl p-2"
+      >
+        Generating SVG QR...
+      </div>
+    );
+  }
 
   return (
     <div className={`relative flex flex-col items-center justify-center p-3 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)] ${className}`}>
-      {dataUrl ? (
-        <img
-          src={dataUrl}
-          alt={`Dynamic QR Code for ${value}`}
-          width={size}
-          height={size}
-          className="rounded-md object-contain select-none"
-        />
-      ) : (
-        <div style={{ width: size, height: size }} className="flex items-center justify-center text-xs font-mono text-slate-500 animate-pulse">
-          Generating QR...
-        </div>
-      )}
+      <svg
+        viewBox={`0 0 ${qrData.viewBoxSize} ${qrData.viewBoxSize}`}
+        width={size}
+        height={size}
+        className="rounded-md select-none w-full h-full"
+        shapeRendering="crispEdges"
+      >
+        <rect x="0" y="0" width={qrData.viewBoxSize} height={qrData.viewBoxSize} fill="#ffffff" />
+        <path d={qrData.path} fill="#000000" />
+      </svg>
     </div>
   );
 }
