@@ -131,11 +131,11 @@ export default function MobileCompassSyncPage() {
       }
 
       // 2. Stellarium 3D Orientation Elevation Transformation:
-      // sin(elevation) = cos(beta) * cos(gamma)
-      // When back camera points UP at sky (beta = 0°) -> elevation = +90° (Zenith / Top of Sky)
+      // sin(elevation) = -cos(beta) * cos(gamma)
+      // When back camera points UP at sky (beta = 180° or 135°) -> elevation = +90° / +45° (Zenith / Top of Sky)
       // When phone is vertical (beta = 90°) -> elevation = 0° (Horizon)
-      // When back camera points DOWN at ground (beta = 180°) -> elevation = -90° (Ground)
-      const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
+      // When back camera points DOWN at ground (beta = 0° or 45°) -> elevation = -90° / -45° (Ground)
+      const sinEl = Math.max(-1, Math.min(1, -Math.cos(betaRad) * Math.cos(gammaRad)));
       const calculatedElDeg = (Math.asin(sinEl) * 180) / Math.PI;
 
       const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
