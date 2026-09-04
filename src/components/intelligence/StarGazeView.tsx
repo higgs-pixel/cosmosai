@@ -1760,7 +1760,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           controlsRef.current.update();
         }
       } else {
-        showToast("📱 Mobile Compass QR Sync Active! Scan QR code");
+        showToast("📱 Mobile Compass QR Sync Active! Scan newly generated QR code");
         if (controlsRef.current) {
           controlsRef.current.object.position.set(0, 25, 200);
           controlsRef.current.target.set(0, 25, 0);
@@ -1769,7 +1769,9 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       }
       return next;
     });
-  }, []);
+    // Generate a fresh unique session ID every time 180° dome view button is touched
+    handleRegenerateSession();
+  }, [handleRegenerateSession]);
 
   // Live Real-Time CelesTrak NORAD TLE Data Catalog State
   const [satCatalog, setSatCatalog] = useState<SatelliteData[]>(DEFAULT_SATELLITE_CATALOG);
