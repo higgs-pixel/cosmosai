@@ -115,22 +115,30 @@ export default function MobileCompassSyncPage() {
 
       // 1. Azimuth / Compass Heading
       let compassHeading = 0;
+      const betaRad = ((e.beta || 0) * Math.PI) / 180;
+      const gammaRad = ((e.gamma || 0) * Math.PI) / 180;
+
       // @ts-expect-error iOS webkitCompassHeading
       if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading)) {
         // @ts-expect-error iOS webkitCompassHeading
         compassHeading = e.webkitCompassHeading;
       } else if (typeof e.alpha === "number" && !isNaN(e.alpha)) {
-        compassHeading = (360 - e.alpha) % 360;
+        const alphaRad = (e.alpha * Math.PI) / 180;
+        const Vx = -Math.sin(alphaRad) * Math.cos(gammaRad) - Math.cos(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
+        const Vy = -Math.cos(alphaRad) * Math.cos(gammaRad) + Math.sin(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
+        const computedHeading = (Math.atan2(Vx, Vy) * 180) / Math.PI;
+        compassHeading = !isNaN(computedHeading) && isFinite(computedHeading) ? computedHeading : (360 - e.alpha) % 360;
       }
 
-      // 2. Direct Pitch / Elevation (Simple 90 - beta mapping):
-      // beta = 90° (phone vertical facing forward) -> 0° Horizon
-      // beta = 0° (phone flat screen facing sky) -> 90° Zenith
-      const clampedBeta = Math.max(0, Math.min(90, e.beta));
-      const elevationDeg = 90 - clampedBeta;
+      // 2. Stellarium 3D Orientation Elevation Transformation:
+      // sin(elevation) = -cos(beta) * cos(gamma)
+      // When phone is vertical (beta = 90°) -> elevation = 0° (Horizon)
+      // When phone tilts UP towards sky (beta -> 180°) -> elevation -> 90° (Zenith)
+      const sinEl = Math.max(-1, Math.min(1, -Math.cos(betaRad) * Math.cos(gammaRad)));
+      const calculatedElDeg = (Math.asin(sinEl) * 180) / Math.PI;
 
-      const normHeading = Math.round((compassHeading % 360 + 360) % 360);
-      const normElevation = Math.round(Math.max(0, Math.min(90, elevationDeg)));
+      const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
+      const normElevation = Math.round(Math.max(0, Math.min(90, calculatedElDeg)));
       const normRoll = Math.round(e.gamma || 0);
 
       setHeading(normHeading);
