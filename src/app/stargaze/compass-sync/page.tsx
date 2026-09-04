@@ -132,13 +132,13 @@ export default function MobileCompassSyncPage() {
       }
 
       // 2. Stellarium Universal 3D Orientation Elevation Transformation:
-      // Absolute deviation from vertical 90° guarantees tilting UP to sky ALWAYS increases elevation from 0° (Horizon) to +90° (Zenith)
+      // Signed elevation from horizon (0°) to zenith (+90°). Tilting camera up increases elevation; tilting camera down towards ground stays at horizon (0°).
       const cosVal = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-      const calculatedElDeg = Math.abs((Math.asin(cosVal) * 180) / Math.PI);
+      const calculatedElDeg = (Math.asin(cosVal) * 180) / Math.PI;
 
       const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
-      const rawElevation = Math.round(Math.max(0, Math.min(90, calculatedElDeg)));
-      const normElevation = invertPitch ? 90 - rawElevation : rawElevation;
+      const rawElevation = Math.round(calculatedElDeg);
+      const normElevation = Math.max(0, Math.min(90, invertPitch ? -rawElevation : rawElevation));
       const normRoll = Math.round(e.gamma || 0);
 
       setHeading(normHeading);
