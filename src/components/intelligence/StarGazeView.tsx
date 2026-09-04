@@ -116,7 +116,6 @@ function MobileCameraSightReticle({
     return closestSat;
   }, [sightDir, satellites]);
 
-  const cardinalText = getCardinalText(mobileOrientation.heading);
 
   return (
     <group position={pos.toArray()}>
@@ -283,26 +282,15 @@ function ObserverGroundStation({
         <meshBasicMaterial color={targetSat ? "#f59e0b" : "#10b981"} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Floating Status Badge */}
-      <Html center position={[0, 8.5, 0]} className="pointer-events-none select-none">
-        <div
-          className={`px-3.5 py-1 rounded-full text-[10px] font-mono font-black shadow-2xl border backdrop-blur-md whitespace-nowrap animate-pulse transition ${
-            mobileOrientation
-              ? "bg-cyan-950/90 border-cyan-400 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.8)]"
-              : targetSat
-              ? "bg-amber-950/90 border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.8)]"
-              : "bg-emerald-950/90 border-emerald-500/60 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-          }`}
-        >
-          <span>
-            {mobileOrientation
-              ? `📱 STELLARIUM SIGHT: AZ ${mobileOrientation.heading}° | EL ${mobileOrientation.pitch}°`
-              : targetSat
-              ? ` PRECISION LOCK: ${targetSat.name}`
-              : "📡 SIGHT: ALIGNED NORTH (0° AZ)"}
-          </span>
-        </div>
-      </Html>
+
+      {/* Precision Satellite Lock Badge — only when a satellite is being tracked */}
+      {targetSat && !mobileOrientation && (
+        <Html center position={[0, 8.5, 0]} className="pointer-events-none select-none">
+          <div className="px-3.5 py-1 rounded-full text-[10px] font-mono font-black shadow-2xl border backdrop-blur-md whitespace-nowrap bg-amber-950/90 border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.8)] animate-pulse">
+            🎯 PRECISION LOCK: {targetSat.name}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
