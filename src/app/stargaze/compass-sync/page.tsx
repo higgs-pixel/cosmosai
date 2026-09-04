@@ -22,6 +22,7 @@ export default function MobileCompassSyncPage() {
   const [isSending, setIsSending] = useState<boolean>(false);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [manualMode, setManualMode] = useState<boolean>(false);
+  const [invertPitch, setInvertPitch] = useState<boolean>(false);
 
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
@@ -131,15 +132,16 @@ export default function MobileCompassSyncPage() {
       }
 
       // 2. Stellarium 3D Orientation Elevation Transformation:
-      // sin(elevation) = -cos(beta) * cos(gamma)
-      // When back camera points UP at sky (beta = 180° or 135°) -> elevation = +90° / +45° (Zenith / Top of Sky)
+      // sin(elevation) = cos(beta) * cos(gamma)
+      // When top of phone tilts UP to sky (beta = 0°) -> elevation = +90° (Zenith / Top of Sky)
       // When phone is vertical (beta = 90°) -> elevation = 0° (Horizon)
-      // When back camera points DOWN at ground (beta = 0° or 45°) -> elevation = -90° / -45° (Ground)
-      const sinEl = Math.max(-1, Math.min(1, -Math.cos(betaRad) * Math.cos(gammaRad)));
+      // When top of phone tilts DOWN to ground (beta = 180°) -> elevation = -90° (Ground)
+      const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
       const calculatedElDeg = (Math.asin(sinEl) * 180) / Math.PI;
 
       const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
-      const normElevation = Math.round(Math.max(0, Math.min(90, calculatedElDeg)));
+      const rawElevation = Math.round(Math.max(0, Math.min(90, calculatedElDeg)));
+      const normElevation = invertPitch ? 90 - rawElevation : rawElevation;
       const normRoll = Math.round(e.gamma || 0);
 
       setHeading(normHeading);
@@ -300,20 +302,32 @@ export default function MobileCompassSyncPage() {
           </div>
         </div>
 
-        {/* Interactive Manual Sliders (For Desktop/Testing & Manual Overrides) */}
+        {/* Interactive Manual Sliders & Sensor Controls */}
         <div className="w-full mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-300 flex-wrap gap-1">
             <span className="flex items-center gap-1">
-              <Sliders className="h-3.5 w-3.5 text-emerald-400" /> Manual Sensor Controls
+              <Sliders className="h-3.5 w-3.5 text-emerald-400" /> Sensor Settings
             </span>
-            <button
-              onClick={() => setManualMode(!manualMode)}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                manualMode ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400 hover:text-white"
-              }`}
-            >
-              {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setInvertPitch(!invertPitch)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                  invertPitch ? "bg-pink-500 text-white" : "bg-slate-800 text-slate-300 hover:text-white"
+                }`}
+                title="Toggle if tilting top of phone up moves elevation down"
+              >
+                {invertPitch ? "PITCH: INVERTED" : "PITCH: NORMAL"}
+              </button>
+
+              <button
+                onClick={() => setManualMode(!manualMode)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                  manualMode ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400 hover:text-white"
+                }`}
+              >
+                {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-1 text-[10px] font-mono">
