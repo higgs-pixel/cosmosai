@@ -1982,7 +1982,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
 
           {/* Preset Camera & Layer Controls */}
-          <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
+          <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl flex-wrap">
             {mobileOrientation && (
               <button
                 onClick={() => {
@@ -2001,6 +2001,31 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                 <span>{mobileSightMode === "ar" ? "1st-Person AR View" : "Dome Sight Track"}</span>
               </button>
             )}
+
+            {/* Compact Live Mobile Telemetry HUD Widget */}
+            {isMobileSynced && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-cyan-950/95 border border-cyan-400/80 text-cyan-300 font-mono text-xs shadow-[0_0_20px_rgba(6,182,212,0.4)] backdrop-blur-2xl">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                <Smartphone className="h-4 w-4 text-cyan-400 shrink-0" />
+                <div className="flex flex-col text-[10px] leading-tight whitespace-nowrap">
+                  <span className="font-extrabold text-white tracking-wide uppercase flex items-center gap-1">
+                    <span>LIVE COMPASS SYNCED</span>
+                    <span className="text-cyan-400 font-mono font-bold">#{sessionId}</span>
+                  </span>
+                  <span className="font-extrabold text-cyan-300 font-mono mt-0.5">
+                    AZ: {mobileOrientation?.heading}° • EL: {mobileOrientation?.pitch}° {mobileOrientation?.roll !== undefined ? `• ROLL: ${mobileOrientation.roll}°` : ""}
+                  </span>
+                </div>
+                <button
+                  onClick={handleRegenerateSession}
+                  className="ml-1 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition text-[9px] font-bold border border-cyan-500/40 shrink-0"
+                  title="Generate new QR session or scan new phone"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
             <button
               onClick={toggle180DomeView}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
@@ -2106,35 +2131,6 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
         {toastMessage && (
           <div className="absolute top-20 right-4 z-40 bg-slate-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs font-bold px-3.5 py-2 rounded-xl shadow-xl backdrop-blur-md animate-in fade-in duration-200 pointer-events-none">
             {toastMessage}
-          </div>
-        )}
-
-        {/* COMPACT LIVE TELEMETRY WIDGET AT RIGHTMOST CORNER WHEN CONNECTED */}
-        {isMobileSynced && (
-          <div className="absolute top-20 right-6 z-40 px-3.5 py-2.5 rounded-2xl bg-cyan-950/95 border-2 border-cyan-400 text-cyan-300 font-mono text-xs shadow-[0_0_35px_rgba(6,182,212,0.45)] backdrop-blur-2xl flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300 pointer-events-auto">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
-              <Smartphone className="h-4 w-4 text-cyan-400 shrink-0" />
-            </div>
-
-            <div className="flex flex-col">
-              <div className="text-[10px] font-black tracking-wide text-white uppercase flex items-center gap-1.5 whitespace-nowrap">
-                <span>📱 MOBILE TELEMETRY TRANSMITTING</span>
-                <span className="text-[9px] font-mono text-cyan-400 font-bold opacity-90">#{sessionId}</span>
-              </div>
-              <div className="text-xs font-mono font-extrabold text-cyan-300 whitespace-nowrap mt-0.5">
-                AZ: {mobileOrientation?.heading}° &bull; EL: {mobileOrientation?.pitch}° {mobileOrientation?.roll !== undefined ? `&bull; ROLL: ${mobileOrientation.roll}°` : ""}
-              </div>
-            </div>
-
-            <button
-              onClick={handleRegenerateSession}
-              className="ml-1 p-1.5 rounded-xl bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition text-[10px] font-bold border border-cyan-500/40 shrink-0 flex items-center gap-1"
-              title="Generate new QR session or scan new phone"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New QR</span>
-            </button>
           </div>
         )}
 
