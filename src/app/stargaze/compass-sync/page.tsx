@@ -203,19 +203,27 @@ export default function MobileCompassSyncPage() {
     };
 
     if (typeof window !== "undefined") {
-      // Prioritize deviceorientationabsolute on Android Chrome
-      if ("ondeviceorientationabsolute" in window) {
+      // On Android Chrome: deviceorientationabsolute gives true magnetic North.
+      // deviceorientation on Android gives RELATIVE angles (not magnetic!) - so ONLY use it as fallback.
+      // Both firing simultaneously causes the relative event to override the absolute one = WRONG direction.
+      const supportsAbsolute = "ondeviceorientationabsolute" in window;
+      if (supportsAbsolute) {
+        // Android: use ONLY absolute, skip relative deviceorientation to avoid override
         window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+      } else {
+        // iOS/others: only relative deviceorientation available (iOS uses webkitCompassHeading for correction)
+        (window as Window).addEventListener("deviceorientation", handleOrientation, true);
       }
-      window.addEventListener("deviceorientation", handleOrientation, true);
     }
 
     return () => {
       if (typeof window !== "undefined") {
-        if ("ondeviceorientationabsolute" in window) {
+        const supportsAbsolute = "ondeviceorientationabsolute" in window;
+        if (supportsAbsolute) {
           window.removeEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+        } else {
+          (window as Window).removeEventListener("deviceorientation", handleOrientation, true);
         }
-        window.removeEventListener("deviceorientation", handleOrientation, true);
       }
     };
   }, [manualMode, calibrationOffset, invertPitch, sendOrientationData]);

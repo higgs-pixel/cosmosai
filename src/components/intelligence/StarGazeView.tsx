@@ -144,27 +144,14 @@ function MobileCameraSightReticle({
         <meshBasicMaterial color={lockedSat ? "#ffea00" : "#22d3ee"} />
       </mesh>
 
-      {/* Floating HUD Information Badge */}
-      <Html center position={[0, -9, 0]} className="pointer-events-none select-none">
-        <div className="flex flex-col items-center gap-1">
-          <div
-            className={`px-3 py-1 rounded-xl text-[10px] font-mono font-black border backdrop-blur-xl shadow-2xl flex items-center gap-2 whitespace-nowrap ${
-              lockedSat
-                ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.9)] animate-pulse"
-                : "bg-slate-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.8)]"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>📱 CAMERA SIGHT: {mobileOrientation.heading}° ({cardinalText}) | {mobileOrientation.pitch}° EL</span>
+      {/* Satellite Lock Badge — shown only when a satellite is in the crosshair */}
+      {lockedSat && (
+        <Html center position={[0, -9, 0]} className="pointer-events-none select-none">
+          <div className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 border border-amber-400 text-amber-200 text-[9px] font-mono font-extrabold shadow-lg animate-bounce whitespace-nowrap">
+            🎯 LOCK: {lockedSat.name} ({Math.round(lockedSat.elevationDeg)}° EL)
           </div>
-
-          {lockedSat && (
-            <div className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 border border-amber-400 text-amber-200 text-[9px] font-mono font-extrabold shadow-lg animate-bounce">
-              🎯 SATELLITE LOCK: {lockedSat.name} ({Math.round(lockedSat.elevationDeg)}° EL)
-            </div>
-          )}
-        </div>
-      </Html>
+        </Html>
+      )}
     </group>
   );
 }
@@ -1649,12 +1636,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [mobileSightMode, setMobileSightMode] = useState<"ar" | "track">("track");
   const [isMobileSynced, setIsMobileSynced] = useState<boolean>(false);
   const [mobileSyncUrl, setMobileSyncUrl] = useState<string>("");
+  const [showQrPanel, setShowQrPanel] = useState<boolean>(true);
 
   const handleRegenerateSession = useCallback(() => {
     const newId = Math.random().toString(36).substring(2, 10);
     setSessionId(newId);
     setMobileOrientation(null);
     setIsMobileSynced(false);
+    setShowQrPanel(true);
     showToast(`🔄 New QR Session Generated: #${newId}`);
   }, []);
 
@@ -1714,6 +1703,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             roll: event.data.roll || 0,
           });
           setIsMobileSynced(true);
+          // Auto-close QR panel once data transmission starts
+          setShowQrPanel(false);
         }
       };
     }
@@ -1732,6 +1723,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             roll: data.data.roll || 0,
           });
           setIsMobileSynced(true);
+          // Auto-close QR panel once data transmission starts
+          setShowQrPanel(false);
         } else if (isSubscribed && !data.connected && !channel) {
           setIsMobileSynced(false);
           setMobileOrientation(null);
@@ -1981,105 +1974,138 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </button>
           </div>
 
-          {/* Preset Camera & Layer Controls */}
-          <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl flex-wrap">
-            {mobileOrientation && (
-              <button
-                onClick={() => {
-                  const next = mobileSightMode === "ar" ? "track" : "ar";
-                  setMobileSightMode(next);
-                  showToast(`📱 Mobile Sight View: ${next === "ar" ? "First-Person AR Sky View" : "Observatory Track View"}`);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${
-                  mobileSightMode === "ar"
-                    ? "bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
-                    : "bg-cyan-950/90 border border-cyan-400 text-cyan-300 hover:bg-cyan-900"
-                }`}
-                title="Toggle between First-Person AR Sky View and Observatory Track View"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                <span>{mobileSightMode === "ar" ? "1st-Person AR View" : "Dome Sight Track"}</span>
-              </button>
-            )}
+          {/* Right Controls - Structured Navbar */}
+          <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
 
-            {/* Sleek Mobile Compass Sync Indicator Badge (Telemetry Data Removed per requirement) */}
-            {isMobileSynced && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/90 border border-cyan-400/80 text-cyan-300 font-mono text-xs shadow-[0_0_15px_rgba(6,182,212,0.4)] backdrop-blur-2xl">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
-                <Smartphone className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                <span className="font-extrabold text-white text-[11px] tracking-wide">
-                  COMPASS SYNCED
-                </span>
+            {/* Group 1: Mobile Compass Controls */}
+            <div className="flex items-center gap-1">
+              {/* QR Sync Button — shows when not synced */}
+              {!isMobileSynced && (
                 <button
-                  onClick={handleRegenerateSession}
-                  className="ml-1.5 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition border border-cyan-500/40 shrink-0"
-                  title="Disconnect / New QR Session"
+                  onClick={() => setShowQrPanel(!showQrPanel)}
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold transition flex items-center gap-1.5 ${
+                    showQrPanel
+                      ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                      : "bg-slate-900/90 text-slate-400 hover:text-emerald-300 border border-slate-700"
+                  }`}
+                  title="Toggle Mobile Compass QR Sync Panel"
                 >
-                  <RotateCcw className="h-3 w-3" />
+                  <Smartphone className="h-3.5 w-3.5" />
+                  <span>Sync Phone</span>
                 </button>
-              </div>
-            )}
+              )}
 
-            <button
-              onClick={toggle180DomeView}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                is180DomeView
-                  ? "bg-emerald-600 text-white font-bold shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-                  : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-              title={
-                is180DomeView
-                  ? "180° Free 3D View Active (Click to Lock Fixed Observer View)"
-                  : "Fixed Observer View Active (Click for 180° Free 3D View)"
-              }
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              <span>180° Upper Dome View</span>
-            </button>
+              {/* Synced Badge */}
+              {isMobileSynced && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/90 border border-cyan-400/80 text-cyan-300 font-mono text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                  <Smartphone className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                  <span className="font-extrabold text-white tracking-wide">SYNCED</span>
+                  {mobileOrientation && (
+                    <span className="text-cyan-300 font-bold">{mobileOrientation.heading}° {mobileOrientation.pitch}°EL</span>
+                  )}
+                  <button
+                    onClick={handleRegenerateSession}
+                    className="ml-0.5 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition border border-cyan-500/40 shrink-0"
+                    title="Disconnect / New QR Session"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
 
-            <button
-              onClick={() => setShowLabels(!showLabels)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                showLabels ? "bg-emerald-600 text-white font-bold" : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-            >
-              Labels
-            </button>
-            <button
-              onClick={() => setShowOrbits(!showOrbits)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                showOrbits ? "bg-pink-600 text-white font-bold" : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-            >
-              Pink Orbits
-            </button>
-            <button
-              onClick={() => setShowGrid(!showGrid)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                showGrid ? "bg-emerald-600 text-white font-bold" : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => setShowRadar(!showRadar)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                showRadar ? "bg-emerald-600 text-white font-bold" : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-            >
-              Radar
-            </button>
-            <button
-              onClick={() => setShowSimDock(!showSimDock)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                showSimDock
-                  ? "bg-emerald-600 text-white font-bold shadow-[0_0_12px_rgba(16,185,129,0.5)]"
-                  : "bg-slate-900/90 text-slate-400 hover:text-white"
-              }`}
-            >
-              <Play className="h-3.5 w-3.5" />
-              <span>Simulation Dock</span>
-            </button>
+              {/* AR View Toggle — only when synced */}
+              {mobileOrientation && (
+                <button
+                  onClick={() => {
+                    const next = mobileSightMode === "ar" ? "track" : "ar";
+                    setMobileSightMode(next);
+                    showToast(`📱 ${next === "ar" ? "1st-Person AR View" : "Dome Track View"}`);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold transition flex items-center gap-1 ${
+                    mobileSightMode === "ar"
+                      ? "bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
+                      : "bg-cyan-950/90 border border-cyan-400/60 text-cyan-300 hover:bg-cyan-900"
+                  }`}
+                  title="Toggle AR/Track view"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>{mobileSightMode === "ar" ? "AR" : "Track"}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-700 mx-0.5 shrink-0" />
+
+            {/* Group 2: Scene Toggles */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggle180DomeView}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1 ${
+                  is180DomeView
+                    ? "bg-emerald-600 text-white font-bold shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                    : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span>180° Dome</span>
+              </button>
+
+              <button
+                onClick={() => setShowLabels(!showLabels)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
+                  showLabels ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title="Toggle satellite labels"
+              >
+                Labels
+              </button>
+
+              <button
+                onClick={() => setShowOrbits(!showOrbits)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
+                  showOrbits ? "bg-pink-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title="Toggle orbit paths"
+              >
+                Orbits
+              </button>
+
+              <button
+                onClick={() => setShowGrid(!showGrid)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
+                  showGrid ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title="Toggle azimuth/elevation grid"
+              >
+                Grid
+              </button>
+
+              <button
+                onClick={() => setShowRadar(!showRadar)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
+                  showRadar ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title="Toggle 2D planisphere radar"
+              >
+                Radar
+              </button>
+
+              <button
+                onClick={() => setShowSimDock(!showSimDock)}
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1 ${
+                  showSimDock
+                    ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                    : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+                title="Toggle simulation dock"
+              >
+                <Play className="h-3.5 w-3.5" />
+                <span>Sim</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2128,8 +2154,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
         )}
 
-        {/* FULL MOBILE COMPASS QR SYNC MODAL (AUTOMATICALLY HIDES WHEN CONNECTED) */}
-        {!is180DomeView && !isMobileSynced && (
+        {/* FULL MOBILE COMPASS QR SYNC MODAL (AUTO-CLOSES WHEN PHONE CONNECTS) */}
+        {!is180DomeView && showQrPanel && !isMobileSynced && (
           <div className="absolute top-20 right-6 z-40 w-80 p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <div className="flex items-center gap-2">
