@@ -2,6 +2,61 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders } from "lucide-react";
+import { Vector3, Euler, Quaternion, MathUtils } from "three";
+
+// Calculate 3D Quaternion device orientation to compute heading & pitch without Gimbal Lock
+function calculateDeviceSightOrientation(
+  alphaDeg: number,
+  betaDeg: number,
+  gammaDeg: number,
+  screenOrientDeg: number = 0,
+  invertPitch: boolean = false,
+  calibrationOffset: number = 0
+) {
+  const alpha = MathUtils.degToRad(alphaDeg || 0);
+  const beta = MathUtils.degToRad(betaDeg || 0);
+  const gamma = MathUtils.degToRad(gammaDeg || 0);
+  const orient = MathUtils.degToRad(screenOrientDeg || 0);
+
+  const euler = new Euler();
+  const q = new Quaternion();
+  const q0 = new Quaternion();
+  const q1 = new Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
+  const zee = new Vector3(0, 0, 1);
+
+  // W3C Device Orientation sequence: Z-X'-Y'' (YXZ in Three.js Euler)
+  euler.set(beta, alpha, -gamma, "YXZ");
+  q.setFromEuler(euler);
+  q.multiply(q1);
+  q.multiply(q0.setFromAxisAngle(zee, -orient));
+
+  // Forward line of sight vector:
+  // Flat (beta=0): top of phone (+Y)
+  // Upright (beta=90): back camera (-Z)
+  const betaClamp = Math.max(0, Math.min(Math.PI / 2, Math.abs(beta)));
+  const yWeight = Math.cos(betaClamp);
+  const zWeight = Math.sin(betaClamp);
+
+  const localSight = new Vector3(0, yWeight, -zWeight).normalize();
+  const worldSight = localSight.clone().applyQuaternion(q);
+
+  let azimuthRad = Math.atan2(worldSight.x, -worldSight.z);
+  let rawHeading = MathUtils.radToDeg(azimuthRad);
+  if (rawHeading < 0) rawHeading += 360;
+
+  let elevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, worldSight.y))));
+  if (invertPitch) elevationDeg = -elevationDeg;
+  elevationDeg = Math.max(0, Math.min(90, elevationDeg));
+
+  let finalHeading = (rawHeading + calibrationOffset) % 360;
+  if (finalHeading < 0) finalHeading += 360;
+
+  return {
+    heading: Math.round(finalHeading),
+    pitch: Math.round(elevationDeg),
+    roll: Math.round(gammaDeg || 0),
+  };
+}
 
 export default function MobileCompassSyncPage() {
   // Session ID resolution: reads ?session= from URL or generates unique per-device ID
@@ -108,48 +163,33 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Direct Device Orientation Listener (Tilt-Compensated Math Fixed)
+  // Direct Device Orientation Listener (3D Quaternion Math)
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
 
       if (e.beta === null || e.beta === undefined) return;
 
-      // 1. Azimuth / Compass Heading
-      let compassHeading = 0;
-      const betaRad = ((e.beta || 0) * Math.PI) / 180;
-      const gammaRad = ((e.gamma || 0) * Math.PI) / 180;
+      const screenAngle = typeof window !== "undefined" && window.screen?.orientation?.angle ? window.screen.orientation.angle : 0;
+      let normHeading = 0;
+      let normElevation = 0;
+      let normRoll = 0;
 
       // @ts-expect-error iOS webkitCompassHeading
       if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading) && e.webkitCompassHeading >= 0) {
         // @ts-expect-error iOS webkitCompassHeading
-        compassHeading = e.webkitCompassHeading;
-      } else if (typeof e.alpha === "number" && !isNaN(e.alpha)) {
-        const alphaRad = (e.alpha * Math.PI) / 180;
-        // Tilt-compensated vectors in Earth frame: Vx (East), Vy (North)
-        const Vx = -Math.sin(alphaRad) * Math.cos(gammaRad) - Math.cos(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
-        const Vy = Math.cos(alphaRad) * Math.cos(gammaRad) - Math.sin(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
-
-        let computedHeading = (Math.atan2(Vx, Vy) * 180) / Math.PI;
-        if (isNaN(computedHeading) || !isFinite(computedHeading)) {
-          computedHeading = (360 - (e.alpha || 0)) % 360;
-        }
-        compassHeading = (computedHeading + 360) % 360;
+        const rawiOSHeading = e.webkitCompassHeading;
+        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset);
+        normHeading = Math.round((rawiOSHeading + calibrationOffset) % 360);
+        if (normHeading < 0) normHeading += 360;
+        normElevation = computed.pitch;
+        normRoll = computed.roll;
+      } else {
+        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset);
+        normHeading = computed.heading;
+        normElevation = computed.pitch;
+        normRoll = computed.roll;
       }
-
-      // Screen orientation angle correction (e.g., 0, 90, 180, 270)
-      const screenAngle = typeof window !== "undefined" && window.screen?.orientation?.angle ? window.screen.orientation.angle : 0;
-      let finalHeading = (compassHeading + screenAngle + calibrationOffset) % 360;
-      if (finalHeading < 0) finalHeading += 360;
-
-      // 2. Stellarium Universal 3D Orientation Elevation Transformation:
-      const cosVal = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-      const calculatedElDeg = (Math.asin(cosVal) * 180) / Math.PI;
-
-      const normHeading = Math.round(finalHeading);
-      const rawElevation = Math.round(calculatedElDeg);
-      const normElevation = Math.max(0, Math.min(90, invertPitch ? -rawElevation : rawElevation));
-      const normRoll = Math.round(e.gamma || 0);
 
       setHeading(normHeading);
       setPitch(normElevation);
