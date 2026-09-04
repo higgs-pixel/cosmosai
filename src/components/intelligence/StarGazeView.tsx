@@ -2002,24 +2002,18 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               </button>
             )}
 
-            {/* Compact Live Mobile Telemetry HUD Widget */}
+            {/* Sleek Mobile Compass Sync Indicator Badge (Telemetry Data Removed per requirement) */}
             {isMobileSynced && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-cyan-950/95 border border-cyan-400/80 text-cyan-300 font-mono text-xs shadow-[0_0_20px_rgba(6,182,212,0.4)] backdrop-blur-2xl">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/90 border border-cyan-400/80 text-cyan-300 font-mono text-xs shadow-[0_0_15px_rgba(6,182,212,0.4)] backdrop-blur-2xl">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
-                <Smartphone className="h-4 w-4 text-cyan-400 shrink-0" />
-                <div className="flex flex-col text-[10px] leading-tight whitespace-nowrap">
-                  <span className="font-extrabold text-white tracking-wide uppercase flex items-center gap-1">
-                    <span>LIVE COMPASS SYNCED</span>
-                    <span className="text-cyan-400 font-mono font-bold">#{sessionId}</span>
-                  </span>
-                  <span className="font-extrabold text-cyan-300 font-mono mt-0.5">
-                    AZ: {mobileOrientation?.heading}° • EL: {mobileOrientation?.pitch}° {mobileOrientation?.roll !== undefined ? `• ROLL: ${mobileOrientation.roll}°` : ""}
-                  </span>
-                </div>
+                <Smartphone className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                <span className="font-extrabold text-white text-[11px] tracking-wide">
+                  COMPASS SYNCED
+                </span>
                 <button
                   onClick={handleRegenerateSession}
-                  className="ml-1 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition text-[9px] font-bold border border-cyan-500/40 shrink-0"
-                  title="Generate new QR session or scan new phone"
+                  className="ml-1.5 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition border border-cyan-500/40 shrink-0"
+                  title="Disconnect / New QR Session"
                 >
                   <RotateCcw className="h-3 w-3" />
                 </button>
