@@ -1903,70 +1903,89 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           />
         </Canvas>
 
-        {/* TOP FLOATING OVERLAY TOOLBAR */}
-        <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between flex-wrap gap-2 pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-2 rounded-2xl backdrop-blur-2xl shadow-2xl">
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl">
-              <MapPin className="h-4 w-4 text-emerald-400 shrink-0" />
-              <select
-                className="bg-transparent text-xs font-semibold text-slate-200 outline-none cursor-pointer max-w-[150px] sm:max-w-[220px] truncate"
-                value={currentObserver.name}
-                onChange={(e) => {
-                  const loc = PRESET_LOCATIONS.find((l) => l.name === e.target.value);
-                  if (loc) {
-                    setCurrentObserver(loc);
-                    showToast(`Site Changed: ${loc.name}`);
+        {/* ── TOP DISPLAY WINDOW NAVBAR & HUD (PERMANENTLY PINNED & STRUCTURED) ── */}
+        <div className="absolute top-4 left-4 right-4 z-30 pointer-events-none flex flex-col gap-2.5">
+          {/* ROW 1: OBSERVER SITE SELECTOR (LEFT) & MOBILE / DOME VIEW CONTROLS (RIGHT) */}
+          <div className="flex items-center justify-between gap-2 pointer-events-auto flex-wrap sm:flex-nowrap">
+            {/* Observer Location & GPS Lock */}
+            <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl shrink-0">
+              <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <MapPin className="h-4 w-4 text-emerald-400 shrink-0" />
+                <select
+                  className="bg-transparent text-xs font-semibold text-slate-200 outline-none cursor-pointer max-w-[140px] sm:max-w-[200px] truncate"
+                  value={currentObserver.name}
+                  onChange={(e) => {
+                    const loc = PRESET_LOCATIONS.find((l) => l.name === e.target.value);
+                    if (loc) {
+                      setCurrentObserver(loc);
+                      showToast(`Site Changed: ${loc.name}`);
+                    }
+                  }}
+                >
+                  <option value={currentObserver.name} className="bg-slate-950 text-white">
+                     {currentObserver.name} ({currentObserver.lat.toFixed(2)}°, {currentObserver.lon.toFixed(2)}°)
+                  </option>
+                  {PRESET_LOCATIONS.map((loc) => (
+                    <option key={loc.name} value={loc.name} className="bg-slate-950 text-white">
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Live GPS Location Sensor Button */}
+              <button
+                onClick={() => {
+                  if ("geolocation" in navigator) {
+                    showToast("📡 Sensing GPS Location...");
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const userLoc: ObserverCoords = {
+                          name: "My GPS Location",
+                          lat: pos.coords.latitude,
+                          lon: pos.coords.longitude,
+                          altMeters: pos.coords.altitude || 10,
+                        };
+                        setCurrentObserver(userLoc);
+                        showToast(` Geolocation Locked: ${userLoc.lat.toFixed(2)}°, ${userLoc.lon.toFixed(2)}°`);
+                      },
+                      () => {
+                        showToast("⚠️ GPS sensor timeout: Using selected location");
+                      }
+                    );
+                  } else {
+                    showToast("⚠️ Geolocation API not supported");
                   }
                 }}
+                className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-emerald-300 hover:bg-slate-800/80 transition text-xs font-semibold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                title="Detect my exact GPS location to sense passing satellites"
               >
-                <option value={currentObserver.name} className="bg-slate-950 text-white">
-                   {currentObserver.name} ({currentObserver.lat.toFixed(2)}°, {currentObserver.lon.toFixed(2)}°)
-                </option>
-                {PRESET_LOCATIONS.map((loc) => (
-                  <option key={loc.name} value={loc.name} className="bg-slate-950 text-white">
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
+                <Target className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Use My Location</span>
+              </button>
             </div>
 
-            {/* Live GPS Location Sensor Button */}
-            <button
-              onClick={() => {
-                if ("geolocation" in navigator) {
-                  showToast("📡 Sensing GPS Location...");
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                      const userLoc: ObserverCoords = {
-                        name: "My GPS Location",
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude,
-                        altMeters: pos.coords.altitude || 10,
-                      };
-                      setCurrentObserver(userLoc);
-                      showToast(` Geolocation Locked: ${userLoc.lat.toFixed(2)}°, ${userLoc.lon.toFixed(2)}°`);
-                    },
-                    () => {
-                      showToast("⚠️ GPS sensor timeout: Using selected location");
-                    }
-                  );
-                } else {
-                  showToast("⚠️ Geolocation API not supported");
-                }
-              }}
-              className="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-600 hover:text-white transition text-xs font-semibold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-              title="Detect my exact GPS location to sense passing satellites"
-            >
-              <Target className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Use My Location</span>
-            </button>
-          </div>
+            {/* Mobile Compass Sync & Dome Perspective Controls */}
+            <div className="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl shrink-0 whitespace-nowrap select-none ml-auto">
+              {/* 180° Dome View Toggle */}
+              <button
+                onClick={toggle180DomeView}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
+                  is180DomeView
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
+                }`}
+                title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">180° Dome</span>
+                <span className="sm:hidden">Dome</span>
+              </button>
 
-          {/* Right Controls - Structured Option Bar */}
-          <div className="flex items-center gap-2 pointer-events-auto bg-slate-950/85 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
+              {/* Divider */}
+              <div className="w-px h-5 bg-slate-800 shrink-0 mx-0.5" />
 
-            {/* Group 1: Mobile Sync & AR Controls */}
-            <div className="flex items-center gap-1.5">
+              {/* Mobile Sync Button */}
               <button
                 onClick={() => setShowQrPanel(!showQrPanel)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
@@ -1976,7 +1995,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                     ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
                     : "bg-slate-900/80 text-slate-300 hover:text-emerald-300 hover:bg-slate-800/80 border-slate-800"
                 }`}
-                title={isMobileSynced ? "Phone Connected. Click to manage link / disconnect" : "Connect mobile phone sensors via QR code"}
+                title={isMobileSynced ? "Phone Connected. Click to view link status / disconnect" : "Connect mobile phone sensors via QR code"}
               >
                 {isMobileSynced ? (
                   <>
@@ -2012,32 +2031,30 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Divider */}
-            <div className="w-px h-5 bg-slate-800 shrink-0" />
+          {/* ROW 2: HUD (BEARING & CLOCK) + PERMANENTLY POSITIONED SCENE OPTION BAR */}
+          <div className="flex items-center gap-2 pointer-events-auto flex-wrap select-none">
+            {/* Bearing Compass HUD Pill */}
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs font-bold backdrop-blur-2xl flex items-center gap-1.5 shadow-xl shrink-0">
+              <Compass className="h-4 w-4 text-emerald-400 animate-spin-slow" />
+              <span>BEARING: {getCardinalText(mobileOrientation ? mobileOrientation.heading : headingAzimuth)}</span>
+              {isMobileSynced && mobileOrientation && (
+                <span className="text-[10px] text-cyan-300 font-normal ml-0.5">({mobileOrientation.pitch}° EL)</span>
+              )}
+            </div>
 
-            {/* Group 2: Upper Dome Perspective */}
-            <button
-              onClick={toggle180DomeView}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
-                is180DomeView
-                  ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                  : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
-              }`}
-              title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              <span>180° Dome</span>
-            </button>
+            {/* Real-Time Simulation Clock HUD Pill */}
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800 text-amber-300 font-mono text-xs font-bold backdrop-blur-2xl flex items-center gap-1.5 shadow-xl shrink-0">
+              <Clock className="h-4 w-4 text-amber-400" />
+              <span>{currentDate.toLocaleTimeString()} ({currentDate.toLocaleDateString()})</span>
+            </div>
 
-            {/* Divider */}
-            <div className="w-px h-5 bg-slate-800 shrink-0" />
-
-            {/* Group 3: Scene Layer Toggles */}
-            <div className="flex items-center gap-1">
+            {/* SCENE OPTION BAR — STAYS STRICTLY IN ITS POSITION, NEVER JUMPS ON MOBILE CONNECT */}
+            <div className="flex items-center gap-1 bg-slate-950/90 border border-slate-800/80 p-1 rounded-xl backdrop-blur-2xl shadow-xl shrink-0">
               <button
                 onClick={() => setShowLabels(!showLabels)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
                   showLabels
                     ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
@@ -2049,19 +2066,19 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowOrbits(!showOrbits)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
                   showOrbits
                     ? "bg-pink-500/20 border-pink-500/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)]"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle orbit paths"
               >
-                Orbits
+                Pink Orbits
               </button>
 
               <button
                 onClick={() => setShowGrid(!showGrid)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
                   showGrid
                     ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
@@ -2073,7 +2090,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowRadar(!showRadar)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
                   showRadar
                     ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
@@ -2085,7 +2102,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowSimDock(!showSimDock)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 border ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 border ${
                   showSimDock
                     ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
@@ -2097,52 +2114,34 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               </button>
             </div>
           </div>
-        </div>
 
-        {/* PHYSICS-DRIVEN LIVE CLOCK & SOLAR ILLUMINATION HUD */}
-        <div className="absolute top-20 left-4 z-40 flex flex-col gap-2 pointer-events-auto max-w-[92vw]">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Bearing Compass */}
-            <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs font-bold backdrop-blur-2xl flex items-center gap-1.5 shadow-xl">
-              <Compass className="h-4 w-4 text-emerald-400 animate-spin-slow" />
-              <span>BEARING: {getCardinalText(mobileOrientation ? mobileOrientation.heading : headingAzimuth)}</span>
-              {isMobileSynced && mobileOrientation && (
-                <span className="text-[10px] text-cyan-300 font-normal ml-0.5">({mobileOrientation.pitch}° EL)</span>
-              )}
-            </div>
-
-            {/* Real-Time Simulation Clock HUD */}
-            <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800 text-amber-300 font-mono text-xs font-bold backdrop-blur-2xl flex items-center gap-1.5 shadow-xl">
-              <Clock className="h-4 w-4 text-amber-400" />
-              <span>{currentDate.toLocaleTimeString()} ({currentDate.toLocaleDateString()})</span>
-            </div>
-          </div>
-
-          {/* Solar Illumination Physics Status Panel */}
+          {/* ROW 3: SOLAR ILLUMINATION STATUS */}
           {observerSunCoords && (
-            <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/40 text-slate-200 font-mono text-[11px] font-semibold backdrop-blur-2xl flex items-center gap-2 flex-wrap shadow-xl">
-              <span className="text-amber-400 font-bold">☀️ Sun El: {observerSunCoords.elevationDeg.toFixed(1)}°</span>
-              <span className="text-slate-600">•</span>
-              <span className={observerSunCoords.isDark ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                {observerSunCoords.elevationDeg < -18
-                  ? "🌌 Astronomical Night"
-                  : observerSunCoords.elevationDeg < -12
-                  ? "🌃 Nautical Twilight"
-                  : observerSunCoords.elevationDeg < -6
-                  ? "🌆 Civil Twilight"
-                  : "☀️ Daylight (Sky Washed Out)"}
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-emerald-300 font-bold">
-                {nakedEyeCount} Naked-Eye Visible Now
-              </span>
+            <div className="flex items-center gap-2 pointer-events-auto select-none">
+              <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-amber-500/40 text-slate-200 font-mono text-[11px] font-semibold backdrop-blur-2xl flex items-center gap-2 flex-wrap shadow-xl">
+                <span className="text-amber-400 font-bold">☀️ Sun El: {observerSunCoords.elevationDeg.toFixed(1)}°</span>
+                <span className="text-slate-600">•</span>
+                <span className={observerSunCoords.isDark ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                  {observerSunCoords.elevationDeg < -18
+                    ? "🌌 Astronomical Night"
+                    : observerSunCoords.elevationDeg < -12
+                    ? "🌃 Nautical Twilight"
+                    : observerSunCoords.elevationDeg < -6
+                    ? "🌆 Civil Twilight"
+                    : "☀️ Daylight (Sky Washed Out)"}
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="text-emerald-300 font-bold">
+                  {nakedEyeCount} Naked-Eye Visible Now
+                </span>
+              </div>
             </div>
           )}
         </div>
 
         {/* Toast Popup */}
         {toastMessage && (
-          <div className="absolute top-20 right-4 z-40 bg-slate-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs font-bold px-3.5 py-2 rounded-xl shadow-xl backdrop-blur-md animate-in fade-in duration-200 pointer-events-none">
+          <div className="absolute top-28 right-4 z-40 bg-slate-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs font-bold px-3.5 py-2 rounded-xl shadow-xl backdrop-blur-md animate-in fade-in duration-200 pointer-events-none">
             {toastMessage}
           </div>
         )}
