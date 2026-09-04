@@ -2,25 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye } from "lucide-react";
-
-// Low-pass EMA smoothing parameters for rock-solid stability
-const EMA_ALPHA = 0.18;
-const DEADBAND_DEG = 0.35;
-
-function smoothAngle(prev: number, target: number): number {
-  let diff = target - prev;
-  while (diff < -180) diff += 360;
-  while (diff > 180) diff -= 360;
-  if (Math.abs(diff) < DEADBAND_DEG) return prev;
-  return ((prev + diff * EMA_ALPHA) % 360 + 360) % 360;
-}
-
-function smoothScalar(prev: number, target: number): number {
-  const diff = target - prev;
-  if (Math.abs(diff) < DEADBAND_DEG) return prev;
-  return prev + diff * EMA_ALPHA;
-}
+import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders } from "lucide-react";
 
 export default function MobileCompassSyncPage() {
   const searchParams = useSearchParams();
@@ -34,11 +16,6 @@ export default function MobileCompassSyncPage() {
   const [heading, setHeading] = useState<number>(0);
   const [pitch, setPitch] = useState<number>(0);
   const [roll, setRoll] = useState<number>(0);
-  const [rawSensors, setRawSensors] = useState<{ alpha: number; beta: number; gamma: number }>({
-    alpha: 0,
-    beta: 90,
-    gamma: 0,
-  });
   const [isSending, setIsSending] = useState<boolean>(false);
   const [packetCount, setPacketCount] = useState<number>(0);
   const [manualMode, setManualMode] = useState<boolean>(false);
@@ -46,8 +23,6 @@ export default function MobileCompassSyncPage() {
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
   const rollRef = useRef<number>(0);
-  const prevHeadingRef = useRef<number>(0);
-  const prevPitchRef = useRef<number>(0);
   const lastSendTime = useRef<number>(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
@@ -123,90 +98,56 @@ export default function MobileCompassSyncPage() {
 
     const heartbeat = setInterval(() => {
       sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
-    }, 300);
+    }, 400);
 
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Device orientation listener with Stellarium sensor fusion & Low-Pass EMA smoothing filter
+  // Clean, Direct Device Orientation Listener (Sensor Fusion Removed for Maximum Stability)
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
 
-      let alpha = e.alpha;
-      const beta = e.beta;
-      const gamma = e.gamma;
+      if (e.beta === null || e.beta === undefined) return;
 
-      // iOS Safari webkitCompassHeading (0 to 360 degrees magnetic North)
+      // 1. Azimuth / Compass Heading
+      let compassHeading = 0;
       // @ts-expect-error iOS webkitCompassHeading
       if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading)) {
         // @ts-expect-error iOS webkitCompassHeading
-        alpha = e.webkitCompassHeading;
+        compassHeading = e.webkitCompassHeading;
+      } else if (typeof e.alpha === "number" && !isNaN(e.alpha)) {
+        compassHeading = (360 - e.alpha) % 360;
       }
 
-      if (beta === null || beta === undefined) return;
+      // 2. Direct Pitch / Elevation (Simple 90 - beta mapping):
+      // beta = 90° (phone vertical facing forward) -> 0° Horizon
+      // beta = 0° (phone flat screen facing sky) -> 90° Zenith
+      const clampedBeta = Math.max(0, Math.min(90, e.beta));
+      const elevationDeg = 90 - clampedBeta;
 
-      // Compass Heading: 0 to 360°
-      let rawHeading = 0;
-      if (typeof alpha === "number" && !isNaN(alpha)) {
-        rawHeading = (alpha % 360 + 360) % 360;
-      }
-
-      // STELLARIUM / ASTRONOMY SENSOR PHYSICS FORMULA:
-      // Phone held vertically in portrait facing horizon (beta = 90°, gamma = 0°) -> Elevation = 0° (Horizon)
-      // Phone top tilted backward towards sky (beta = 0°, gamma = 0°) -> Elevation = 90° (Zenith)
-      // Line of sight elevation: arcsin( clamp( cos(beta) * cos(gamma), -1, 1 ) )
-      const betaRad = (beta * Math.PI) / 180;
-      const gammaRad = ((gamma || 0) * Math.PI) / 180;
-      const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-      let rawElevation = (Math.asin(sinEl) * 180) / Math.PI;
-
-      if (beta > 90 || beta < -90) {
-        rawElevation = 0;
-      } else {
-        rawElevation = Math.max(0, Math.min(90, rawElevation));
-      }
-
-      // Apply Low-Pass EMA Filter & Deadband Smoothing
-      const filteredHeading = smoothAngle(prevHeadingRef.current, rawHeading);
-      const filteredElevation = smoothScalar(prevPitchRef.current, rawElevation);
-
-      prevHeadingRef.current = filteredHeading;
-      prevPitchRef.current = filteredElevation;
-
-      const normHeading = Math.round(filteredHeading);
-      const normElevation = Math.round(filteredElevation);
-      const normRoll = Math.round(gamma || 0);
+      const normHeading = Math.round((compassHeading % 360 + 360) % 360);
+      const normElevation = Math.round(Math.max(0, Math.min(90, elevationDeg)));
+      const normRoll = Math.round(e.gamma || 0);
 
       setHeading(normHeading);
       setPitch(normElevation);
       setRoll(normRoll);
-      setRawSensors({
-        alpha: Math.round(alpha || 0),
-        beta: Math.round(beta),
-        gamma: Math.round(gamma || 0),
-      });
 
       const now = Date.now();
-      if (now - lastSendTime.current >= 50) {
+      if (now - lastSendTime.current >= 80) {
         lastSendTime.current = now;
         sendOrientationData(normHeading, normElevation, normRoll);
       }
     };
 
     if (typeof window !== "undefined") {
-      if ("ondeviceorientationabsolute" in window) {
-        window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
-      }
-      window.addEventListener("deviceorientation", handleOrientation as EventListener, true);
+      window.addEventListener("deviceorientation", handleOrientation, true);
     }
 
     return () => {
       if (typeof window !== "undefined") {
-        if ("ondeviceorientationabsolute" in window) {
-          window.removeEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
-        }
-        window.removeEventListener("deviceorientation", handleOrientation as EventListener, true);
+        window.removeEventListener("deviceorientation", handleOrientation, true);
       }
     };
   }, [manualMode, sendOrientationData]);
@@ -263,7 +204,7 @@ export default function MobileCompassSyncPage() {
         <div className="flex items-center gap-2 truncate">
           <Smartphone className="h-6 w-6 text-emerald-400 animate-pulse shrink-0" />
           <div className="truncate">
-            <h1 className="font-extrabold text-sm text-white tracking-wide truncate">STARGAZER STELLARIUM SENSOR</h1>
+            <h1 className="font-extrabold text-sm text-white tracking-wide truncate">STARGAZER COMPASS SENSOR</h1>
             <div className="text-[10px] font-mono text-emerald-400 truncate">SESSION: {displaySessionId}</div>
           </div>
         </div>
@@ -332,18 +273,8 @@ export default function MobileCompassSyncPage() {
           </div>
         </div>
 
-        {/* Live Raw Sensor Debug Banner */}
-        <div className="w-full mt-2 p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-[10px] font-mono text-slate-400 flex items-center justify-between">
-          <span className="flex items-center gap-1">
-            <Eye className="h-3 w-3 text-cyan-400" /> Sensor Fusion:
-          </span>
-          <span className="text-cyan-300 font-bold">
-            α: {rawSensors.alpha}° | β: {rawSensors.beta}° | γ: {rawSensors.gamma}°
-          </span>
-        </div>
-
         {/* Interactive Manual Sliders (For Desktop/Testing & Manual Overrides) */}
-        <div className="w-full mt-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
+        <div className="w-full mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-300">
             <span className="flex items-center gap-1">
               <Sliders className="h-3.5 w-3.5 text-emerald-400" /> Manual Sensor Controls
@@ -354,7 +285,7 @@ export default function MobileCompassSyncPage() {
                 manualMode ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400 hover:text-white"
               }`}
             >
-              {manualMode ? "MANUAL OVERRIDE ON" : "STELLARIUM AUTO"}
+              {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
             </button>
           </div>
 
@@ -415,7 +346,7 @@ export default function MobileCompassSyncPage() {
         {hasPermission === true && (
           <div className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-center text-xs font-mono text-emerald-300 flex items-center justify-center gap-2 shadow-inner">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            <span>Transmitting Live Stellarium Telemetry to 3D Dome</span>
+            <span>Transmitting Live Telemetry to 3D Dome</span>
           </div>
         )}
 
