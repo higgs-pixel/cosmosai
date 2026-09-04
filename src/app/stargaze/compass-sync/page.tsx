@@ -1,55 +1,71 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders } from "lucide-react";
-import { Vector3, Euler, Quaternion, MathUtils } from "three";
+import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye, Navigation } from "lucide-react";
+import { Vector3, Matrix4, MathUtils } from "three";
 
-// Calculate 3D Quaternion device orientation to compute heading & pitch without Gimbal Lock
+// Calculate 3D W3C Earth frame orientation to compute true heading & elevation without Gimbal Lock
 function calculateDeviceSightOrientation(
   alphaDeg: number,
   betaDeg: number,
   gammaDeg: number,
   screenOrientDeg: number = 0,
   invertPitch: boolean = false,
-  calibrationOffset: number = 0
+  calibrationOffset: number = 0,
+  sightMode: "auto" | "camera" | "pointer" = "auto"
 ) {
   const alpha = MathUtils.degToRad(alphaDeg || 0);
   const beta = MathUtils.degToRad(betaDeg || 0);
   const gamma = MathUtils.degToRad(gammaDeg || 0);
-  const orient = MathUtils.degToRad(screenOrientDeg || 0);
 
-  const euler = new Euler();
-  const q = new Quaternion();
-  const q0 = new Quaternion();
-  const q1 = new Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
-  const zee = new Vector3(0, 0, 1);
+  // W3C Transformation Matrix: Rz(alpha) * Rx(beta) * Ry(gamma)
+  const mZ = new Matrix4().makeRotationZ(alpha);
+  const mX = new Matrix4().makeRotationX(beta);
+  const mY = new Matrix4().makeRotationY(gamma);
+  const m = new Matrix4().multiplyMatrices(mZ, new Matrix4().multiplyMatrices(mX, mY));
 
-  // W3C Device Orientation sequence: Z-X'-Y'' (YXZ in Three.js Euler)
-  euler.set(beta, alpha, -gamma, "YXZ");
-  q.setFromEuler(euler);
-  q.multiply(q1);
-  q.multiply(q0.setFromAxisAngle(zee, -orient));
+  if (screenOrientDeg) {
+    const mScreen = new Matrix4().makeRotationZ(MathUtils.degToRad(-screenOrientDeg));
+    m.multiply(mScreen);
+  }
 
-  // Forward line of sight vector:
-  // Flat (beta=0): top of phone (+Y)
-  // Upright (beta=90): back camera (-Z)
-  const betaClamp = Math.max(0, Math.min(Math.PI / 2, Math.abs(beta)));
-  const yWeight = Math.cos(betaClamp);
-  const zWeight = Math.sin(betaClamp);
+  // Device coordinate vectors transformed into W3C Earth frame (X: East, Y: North, Z: Up):
+  // 1. Top of device (handheld compass pointer): (0, 1, 0)
+  // 2. Back camera (viewfinder lens sight): (0, 0, -1)
+  const topEarth = new Vector3(0, 1, 0).applyMatrix4(m);
+  const camEarth = new Vector3(0, 0, -1).applyMatrix4(m);
 
-  const localSight = new Vector3(0, yWeight, -zWeight).normalize();
-  const worldSight = localSight.clone().applyQuaternion(q);
+  let targetVec: Vector3;
+  let rawElevationDeg: number;
+  const absBeta = Math.abs(betaDeg || 0);
 
-  let azimuthRad = Math.atan2(worldSight.x, -worldSight.z);
-  let rawHeading = MathUtils.radToDeg(azimuthRad);
-  if (rawHeading < 0) rawHeading += 360;
+  if (sightMode === "pointer") {
+    targetVec = topEarth;
+    rawElevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, topEarth.z))));
+  } else if (sightMode === "camera") {
+    targetVec = camEarth;
+    rawElevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, -camEarth.z))));
+  } else {
+    // AUTO: When held flat/tilted in hand to view screen (beta < 55°), use top pointer.
+    // When held upright like a camera viewfinder (beta >= 55°), use camera lens.
+    if (absBeta < 55) {
+      targetVec = topEarth;
+      rawElevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, topEarth.z))));
+    } else {
+      targetVec = camEarth;
+      rawElevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, -camEarth.z))));
+    }
+  }
 
-  let elevationDeg = MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, worldSight.y))));
-  if (invertPitch) elevationDeg = -elevationDeg;
-  elevationDeg = Math.max(0, Math.min(90, elevationDeg));
+  // Azimuth: Angle in horizontal plane clockwise from North (+Y) towards East (+X)
+  let rawHeading = (MathUtils.radToDeg(Math.atan2(targetVec.x, targetVec.y)) + 360) % 360;
 
   let finalHeading = (rawHeading + calibrationOffset) % 360;
   if (finalHeading < 0) finalHeading += 360;
+
+  let elevationDeg = rawElevationDeg;
+  if (invertPitch) elevationDeg = -elevationDeg;
+  elevationDeg = Math.max(0, Math.min(90, elevationDeg));
 
   return {
     heading: Math.round(finalHeading),
@@ -79,6 +95,7 @@ export default function MobileCompassSyncPage() {
   const [manualMode, setManualMode] = useState<boolean>(false);
   const [invertPitch, setInvertPitch] = useState<boolean>(false);
   const [calibrationOffset, setCalibrationOffset] = useState<number>(0);
+  const [sightMode, setSightMode] = useState<"auto" | "camera" | "pointer">("auto");
 
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
@@ -163,7 +180,7 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Direct Device Orientation Listener (3D Quaternion Math)
+  // Direct Device Orientation Listener (W3C 3D Earth frame math)
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
@@ -179,13 +196,13 @@ export default function MobileCompassSyncPage() {
       if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading) && e.webkitCompassHeading >= 0) {
         // @ts-expect-error iOS webkitCompassHeading
         const rawiOSHeading = e.webkitCompassHeading;
-        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset);
+        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset, sightMode);
         normHeading = Math.round((rawiOSHeading + calibrationOffset) % 360);
         if (normHeading < 0) normHeading += 360;
         normElevation = computed.pitch;
         normRoll = computed.roll;
       } else {
-        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset);
+        const computed = calculateDeviceSightOrientation(e.alpha || 0, e.beta || 0, e.gamma || 0, screenAngle, invertPitch, calibrationOffset, sightMode);
         normHeading = computed.heading;
         normElevation = computed.pitch;
         normRoll = computed.roll;
@@ -226,7 +243,7 @@ export default function MobileCompassSyncPage() {
         }
       }
     };
-  }, [manualMode, calibrationOffset, invertPitch, sendOrientationData]);
+  }, [manualMode, calibrationOffset, invertPitch, sightMode, sendOrientationData]);
 
   // Request Sensor Permission (iOS 13+ & Android)
   const requestSensorPermission = async () => {
@@ -291,17 +308,30 @@ export default function MobileCompassSyncPage() {
         </div>
       </header>
 
-      {/* Stellarium AR Back-Camera Sight Banner */}
+      {/* Stellarium AR Sight Banner */}
       <div className="w-full max-w-md my-2 p-3 rounded-2xl bg-cyan-950/90 border border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-xl flex items-center gap-3">
         <div className="p-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400 text-cyan-300 shrink-0 animate-pulse">
           <Smartphone className="h-5 w-5" />
         </div>
-        <div className="text-[11px] font-mono leading-tight">
-          <div className="font-extrabold text-cyan-300 tracking-wide flex items-center gap-1.5">
-            <span>📷 BACK CAMERA SIGHT VECTOR ACTIVE</span>
+        <div className="text-[11px] font-mono leading-tight flex-1">
+          <div className="font-extrabold text-cyan-300 tracking-wide flex items-center justify-between">
+            <span>
+              {sightMode === "pointer"
+                ? "🧭 COMPASS POINTER MODE (TOP EDGE)"
+                : sightMode === "camera"
+                ? "📷 BACK CAMERA LENS SIGHT"
+                : "✨ SMART AUTO (POINTER / CAMERA)"}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 uppercase font-bold">
+              {sightMode}
+            </span>
           </div>
           <div className="text-slate-300 text-[10px] mt-0.5">
-            Point your smartphone camera at the sky to direct the 3D observatory laser &amp; sky view.
+            {sightMode === "pointer"
+              ? "Aim top edge of phone at the sky or horizon like a laser pointer."
+              : sightMode === "camera"
+              ? "Aim back camera lens at the sky like a telescope viewfinder."
+              : "Hold flat to read compass, tilt up to aim at satellites & stars."}
           </div>
         </div>
       </div>
@@ -388,6 +418,42 @@ export default function MobileCompassSyncPage() {
                 }`}
               >
                 {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
+              </button>
+            </div>
+          </div>
+
+          {/* Sight Vector Mode Selector */}
+          <div className="flex items-center justify-between text-[10px] font-mono bg-slate-950/80 p-2 rounded-lg border border-cyan-500/30">
+            <span className="text-cyan-300 font-bold flex items-center gap-1">
+              <Navigation className="h-3 w-3" />
+              <span>SIGHT MODE:</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSightMode("auto")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                  sightMode === "auto" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
+                }`}
+              >
+                Auto (Smart)
+              </button>
+              <button
+                onClick={() => setSightMode("pointer")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                  sightMode === "pointer" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
+                }`}
+                title="Point top edge of phone at stars / horizon"
+              >
+                Pointer (Top)
+              </button>
+              <button
+                onClick={() => setSightMode("camera")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                  sightMode === "camera" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
+                }`}
+                title="Aim back camera lens at the sky"
+              >
+                Camera (Lens)
               </button>
             </div>
           </div>

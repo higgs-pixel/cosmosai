@@ -1501,7 +1501,7 @@ function SatelliteTrackerCelestialScene({
   useFrame(({ camera }) => {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    const facingAz = ((Math.atan2(-dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
+    const facingAz = ((Math.atan2(dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
     onUpdateHeading(facingAz);
 
     if (mobileOrientation) {
