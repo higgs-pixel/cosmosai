@@ -131,13 +131,10 @@ export default function MobileCompassSyncPage() {
         compassHeading = !isNaN(computedHeading) && isFinite(computedHeading) ? computedHeading : (360 - e.alpha) % 360;
       }
 
-      // 2. Stellarium 3D Orientation Elevation Transformation:
-      // sin(elevation) = cos(beta) * cos(gamma)
-      // When top of phone tilts UP to sky (beta = 0°) -> elevation = +90° (Zenith / Top of Sky)
-      // When phone is vertical (beta = 90°) -> elevation = 0° (Horizon)
-      // When top of phone tilts DOWN to ground (beta = 180°) -> elevation = -90° (Ground)
-      const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-      const calculatedElDeg = (Math.asin(sinEl) * 180) / Math.PI;
+      // 2. Stellarium Universal 3D Orientation Elevation Transformation:
+      // Absolute deviation from vertical 90° guarantees tilting UP to sky ALWAYS increases elevation from 0° (Horizon) to +90° (Zenith)
+      const cosVal = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
+      const calculatedElDeg = Math.abs((Math.asin(cosVal) * 180) / Math.PI);
 
       const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
       const rawElevation = Math.round(Math.max(0, Math.min(90, calculatedElDeg)));
