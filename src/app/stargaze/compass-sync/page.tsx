@@ -112,15 +112,28 @@ export default function MobileCompassSyncPage() {
         compassHeading = (360 - e.alpha) % 360;
       }
 
-      const calculatedPitch = e.beta !== null ? Math.max(0, Math.min(90, e.beta)) : 45;
-      const calculatedRoll = e.gamma !== null ? e.gamma : 0;
+      // STELLARIUM / ASTRONOMY APP SENSOR PHYSICS CALCULATION:
+      // In DeviceOrientation API:
+      // beta = 90° (phone held vertically in front of user's face) -> Elevation = 0° (Horizon)
+      // beta = 0° (phone flat facing sky) -> Elevation = 90° (Zenith)
+      // Elevation = arcsin( clamp( cos(beta) * cos(gamma), -1, 1 ) )
+      let calculatedElevation = 45;
+      if (e.beta !== null && e.gamma !== null) {
+        const betaRad = (e.beta * Math.PI) / 180;
+        const gammaRad = (e.gamma * Math.PI) / 180;
+        const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
+        calculatedElevation = (Math.asin(sinEl) * 180) / Math.PI;
+      } else if (e.beta !== null) {
+        calculatedElevation = 90 - Math.abs(e.beta);
+      }
 
       const normHeading = Math.round((compassHeading % 360 + 360) % 360);
-      const normPitch = Math.round(calculatedPitch);
+      const normPitch = Math.round(Math.max(0, Math.min(90, calculatedElevation)));
+      const calculatedRoll = e.gamma !== null ? Math.round(e.gamma) : 0;
 
       setHeading(normHeading);
       setPitch(normPitch);
-      setRoll(Math.round(calculatedRoll));
+      setRoll(calculatedRoll);
 
       // Throttle immediate orientation posts to 20Hz (50ms)
       const now = Date.now();
