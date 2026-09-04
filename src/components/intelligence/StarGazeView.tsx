@@ -1567,7 +1567,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     };
   }, [sessionId]);
 
-  // Telemetry Polling Loop from Mobile to Desktop when 180° Upper Dome View is OFF
+  // Telemetry Polling Loop & BroadcastChannel from Mobile to Desktop when 180° Upper Dome View is OFF
   useEffect(() => {
     if (is180DomeView) {
       setMobileOrientation(null);
@@ -1576,6 +1576,24 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     }
 
     let isSubscribed = true;
+
+    // 1. Instant local BroadcastChannel tab sync listener
+    let channel: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      channel = new BroadcastChannel("stargaze_compass_channel");
+      channel.onmessage = (event) => {
+        if (!isSubscribed) return;
+        if (event.data && event.data.type === "COMPASS_TELEMETRY") {
+          setMobileOrientation({
+            heading: event.data.heading,
+            pitch: event.data.pitch,
+          });
+          setIsMobileSynced(true);
+        }
+      };
+    }
+
+    // 2. HTTP Polling Fallback
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/stargaze/compass-sync?session=${sessionId}`);
@@ -1588,7 +1606,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             pitch: data.data.pitch,
           });
           setIsMobileSynced(true);
-        } else if (isSubscribed && !data.connected) {
+        } else if (isSubscribed && !data.connected && !channel) {
           setIsMobileSynced(false);
         }
       } catch {
@@ -1598,6 +1616,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
     return () => {
       isSubscribed = false;
+      if (channel) channel.close();
       clearInterval(interval);
     };
   }, [is180DomeView, sessionId]);
@@ -1954,9 +1973,16 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               </span>
             </div>
 
-            {/* QR Code Matrix Container */}
+            {/* QR Code Image (Using Image 1 QR Asset) */}
             <div className="flex flex-col items-center gap-2 my-2">
-              <QRCodeSVG value={mobileSyncUrl || `/stargaze/compass-sync?session=${sessionId}`} size={160} />
+              <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                <img
+                  src="/images/stargaze-qr.png"
+                  alt="Scannable Mobile Compass QR Code"
+                  className="w-[160px] h-[160px] object-contain rounded-md"
+                  loading="eager"
+                />
+              </div>
               <div className="text-[10px] text-slate-300 text-center leading-tight mt-1">
                 Scan QR code with your smartphone camera to transmit real-time device compass sensors!
               </div>
@@ -1989,7 +2015,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
             {/* Manual Link / Controller Launcher */}
             <a
-              href={mobileSyncUrl}
+              href={mobileSyncUrl || `/stargaze/compass-sync?session=${sessionId}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2.5 w-full py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] flex items-center justify-center gap-1.5 transition font-semibold"
