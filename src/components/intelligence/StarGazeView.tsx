@@ -1961,14 +1961,12 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               </span>
             </div>
 
-            {/* QR Code Image (Using Image 1 QR Asset) */}
+            {/* QR Code Image (Dynamic QRCodeSVG rendering unique session URL) */}
             <div className="flex flex-col items-center gap-2 my-2">
               <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-                <img
-                  src="/images/stargaze-qr.png?v=3"
-                  alt="Scannable Mobile Compass QR Code"
-                  className="w-[160px] h-[160px] object-contain rounded-md"
-                  loading="eager"
+                <QRCodeSVG
+                  value={mobileSyncUrl || `${typeof window !== "undefined" ? window.location.origin : ""}/stargaze/compass-sync?session=${sessionId}`}
+                  size={160}
                 />
               </div>
               <div className="text-[10px] text-slate-300 text-center leading-tight mt-1">

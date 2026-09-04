@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders } from "lucide-react";
 
 export default function MobileCompassSyncPage() {
-  const searchParams = useSearchParams();
-  const rawSession = searchParams.get("session");
-  const sessionId =
-    rawSession && rawSession.trim() !== "<SESSION_ID>" && rawSession.trim() !== "%3CSESSION_ID%3E"
-      ? rawSession.trim()
-      : "stargaze-sync";
+  // Session ID resolution: reads ?session= from URL or generates unique per-device ID
+  const [sessionId] = useState<string>(() => {
+    if (typeof window === "undefined") return "stargaze-sync";
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("session");
+    if (raw && raw.trim() && raw.trim() !== "<SESSION_ID>" && raw.trim() !== "%3CSESSION_ID%3E") {
+      return raw.trim();
+    }
+    return Math.random().toString(36).substring(2, 10);
+  });
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [heading, setHeading] = useState<number>(0);
@@ -103,7 +106,7 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Clean, Direct Device Orientation Listener (Sensor Fusion Removed for Maximum Stability)
+  // Direct Device Orientation Listener (Sensor Fusion Completely Removed)
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
@@ -195,7 +198,7 @@ export default function MobileCompassSyncPage() {
     return "NORTH-WEST (315°)";
   };
 
-  const displaySessionId = sessionId === "stargaze-sync" ? "stargaze-sync" : `#${sessionId.slice(0, 10)}`;
+  const displaySessionId = `#${sessionId.slice(0, 10)}`;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center justify-between p-4 sm:p-6 select-none overflow-x-hidden">
