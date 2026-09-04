@@ -4,13 +4,12 @@ export interface CompassSyncData {
   sessionId: string;
   heading: number; // 0 to 360 degrees (Azimuth)
   pitch: number;   // -90 to 90 degrees (Elevation)
-  roll?: number;    // -180 to 180 degrees
+  roll?: number;   // -180 to 180 degrees
   timestamp: number;
 }
 
 // In-memory store for active mobile compass sessions
 const compassSessions = new Map<string, CompassSyncData>();
-let latestCompassData: CompassSyncData | null = null;
 
 // Clean up stale sessions older than 5 minutes periodically
 function cleanupSessions() {
@@ -27,7 +26,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { sessionId, heading, pitch, roll } = body;
 
-    const normSessionId = sessionId ? String(sessionId).trim() : "stargaze-sync";
+    const normSessionId =
+      sessionId && String(sessionId).trim() !== "<SESSION_ID>" && String(sessionId).trim() !== "%3CSESSION_ID%3E"
+        ? String(sessionId).trim()
+        : "stargaze-sync";
+
     if (typeof heading !== "number") {
       return NextResponse.json({ error: "Missing heading" }, { status: 400 });
     }
@@ -40,17 +43,13 @@ export async function POST(req: Request) {
       timestamp: Date.now(),
     };
 
+    // Strictly isolate telemetry to this exact session ID (no global crosstalk)
     compassSessions.set(normSessionId, data);
-    compassSessions.set("stargaze-sync", data);
-    compassSessions.set("default-session", data);
-    compassSessions.set("<SESSION_ID>", data);
-    compassSessions.set("%3CSESSION_ID%3E", data);
-    latestCompassData = data;
 
     cleanupSessions();
 
     return NextResponse.json({ success: true, timestamp: data.timestamp });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 }
@@ -59,12 +58,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const requestedSessionId = searchParams.get("session") || "stargaze-sync";
 
-  let session = compassSessions.get(requestedSessionId);
-
-  // Fall back to latest active telemetry if session ID isn't directly matched
-  if (!session && latestCompassData && (Date.now() - latestCompassData.timestamp < 10000)) {
-    session = latestCompassData;
-  }
+  const session = compassSessions.get(requestedSessionId);
 
   if (!session) {
     return NextResponse.json({ connected: false });

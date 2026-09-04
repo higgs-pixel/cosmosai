@@ -1569,7 +1569,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       channel = new BroadcastChannel("stargaze_compass_channel");
       channel.onmessage = (event) => {
         if (!isSubscribed) return;
-        if (event.data && event.data.type === "COMPASS_TELEMETRY") {
+        if (event.data && event.data.type === "COMPASS_TELEMETRY" && event.data.sessionId === sessionId) {
           setMobileOrientation({
             heading: event.data.heading,
             pitch: event.data.pitch,

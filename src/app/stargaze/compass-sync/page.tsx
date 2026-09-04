@@ -4,10 +4,31 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye } from "lucide-react";
 
+// Low-pass EMA smoothing parameters for rock-solid stability
+const EMA_ALPHA = 0.18;
+const DEADBAND_DEG = 0.35;
+
+function smoothAngle(prev: number, target: number): number {
+  let diff = target - prev;
+  while (diff < -180) diff += 360;
+  while (diff > 180) diff -= 360;
+  if (Math.abs(diff) < DEADBAND_DEG) return prev;
+  return ((prev + diff * EMA_ALPHA) % 360 + 360) % 360;
+}
+
+function smoothScalar(prev: number, target: number): number {
+  const diff = target - prev;
+  if (Math.abs(diff) < DEADBAND_DEG) return prev;
+  return prev + diff * EMA_ALPHA;
+}
+
 export default function MobileCompassSyncPage() {
   const searchParams = useSearchParams();
   const rawSession = searchParams.get("session");
-  const sessionId = rawSession ? rawSession.trim() : "stargaze-sync";
+  const sessionId =
+    rawSession && rawSession.trim() !== "<SESSION_ID>" && rawSession.trim() !== "%3CSESSION_ID%3E"
+      ? rawSession.trim()
+      : "stargaze-sync";
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [heading, setHeading] = useState<number>(0);
@@ -25,6 +46,8 @@ export default function MobileCompassSyncPage() {
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
   const rollRef = useRef<number>(0);
+  const prevHeadingRef = useRef<number>(0);
+  const prevPitchRef = useRef<number>(0);
   const lastSendTime = useRef<number>(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
@@ -105,7 +128,7 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Device orientation listener with Stellarium sensor fusion algorithm
+  // Device orientation listener with Stellarium sensor fusion & Low-Pass EMA smoothing filter
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
@@ -124,9 +147,9 @@ export default function MobileCompassSyncPage() {
       if (beta === null || beta === undefined) return;
 
       // Compass Heading: 0 to 360°
-      let compassHeading = 0;
+      let rawHeading = 0;
       if (typeof alpha === "number" && !isNaN(alpha)) {
-        compassHeading = (alpha % 360 + 360) % 360;
+        rawHeading = (alpha % 360 + 360) % 360;
       }
 
       // STELLARIUM / ASTRONOMY SENSOR PHYSICS FORMULA:
@@ -136,16 +159,23 @@ export default function MobileCompassSyncPage() {
       const betaRad = (beta * Math.PI) / 180;
       const gammaRad = ((gamma || 0) * Math.PI) / 180;
       const sinEl = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
-      let calculatedElevation = (Math.asin(sinEl) * 180) / Math.PI;
+      let rawElevation = (Math.asin(sinEl) * 180) / Math.PI;
 
       if (beta > 90 || beta < -90) {
-        calculatedElevation = 0;
+        rawElevation = 0;
       } else {
-        calculatedElevation = Math.max(0, Math.min(90, calculatedElevation));
+        rawElevation = Math.max(0, Math.min(90, rawElevation));
       }
 
-      const normHeading = Math.round(compassHeading);
-      const normElevation = Math.round(calculatedElevation);
+      // Apply Low-Pass EMA Filter & Deadband Smoothing
+      const filteredHeading = smoothAngle(prevHeadingRef.current, rawHeading);
+      const filteredElevation = smoothScalar(prevPitchRef.current, rawElevation);
+
+      prevHeadingRef.current = filteredHeading;
+      prevPitchRef.current = filteredElevation;
+
+      const normHeading = Math.round(filteredHeading);
+      const normElevation = Math.round(filteredElevation);
       const normRoll = Math.round(gamma || 0);
 
       setHeading(normHeading);
@@ -224,19 +254,21 @@ export default function MobileCompassSyncPage() {
     return "NORTH-WEST (315°)";
   };
 
+  const displaySessionId = sessionId === "stargaze-sync" ? "stargaze-sync" : `#${sessionId.slice(0, 10)}`;
+
   return (
     <main className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center justify-between p-4 sm:p-6 select-none overflow-x-hidden">
       {/* Header Bar */}
       <header className="w-full max-w-md flex items-center justify-between border-b border-emerald-500/30 pb-3">
-        <div className="flex items-center gap-2">
-          <Smartphone className="h-6 w-6 text-emerald-400 animate-pulse" />
-          <div>
-            <h1 className="font-extrabold text-sm text-white tracking-wide">STARGAZER STELLARIUM SENSOR</h1>
-            <div className="text-[10px] font-mono text-emerald-400">SESSION: #{sessionId.slice(0, 10)}</div>
+        <div className="flex items-center gap-2 truncate">
+          <Smartphone className="h-6 w-6 text-emerald-400 animate-pulse shrink-0" />
+          <div className="truncate">
+            <h1 className="font-extrabold text-sm text-white tracking-wide truncate">STARGAZER STELLARIUM SENSOR</h1>
+            <div className="text-[10px] font-mono text-emerald-400 truncate">SESSION: {displaySessionId}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 shrink-0">
           <Radio className="h-3 w-3 text-emerald-400 animate-ping" />
           <span>{isSending ? "TRANSMITTING..." : "CONNECTED"}</span>
         </div>
