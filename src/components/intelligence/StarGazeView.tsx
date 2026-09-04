@@ -1649,14 +1649,12 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [mobileSightMode, setMobileSightMode] = useState<"ar" | "track">("track");
   const [isMobileSynced, setIsMobileSynced] = useState<boolean>(false);
   const [mobileSyncUrl, setMobileSyncUrl] = useState<string>("");
-  const [forceShowQr, setForceShowQr] = useState<boolean>(false);
 
   const handleRegenerateSession = useCallback(() => {
     const newId = Math.random().toString(36).substring(2, 10);
     setSessionId(newId);
     setMobileOrientation(null);
     setIsMobileSynced(false);
-    setForceShowQr(false);
     showToast(`🔄 New QR Session Generated: #${newId}`);
   }, []);
 
@@ -2111,31 +2109,20 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
         )}
 
-        {/* MOBILE COMPASS QR SYNC MODAL (DISPLAYED WHEN NOT YET CONNECTED OR USER REQUESTS QR) */}
-        {!is180DomeView && (!isMobileSynced || forceShowQr) && (
+        {/* MOBILE COMPASS QR SYNC MODAL (DISPLAYED WHEN 180° UPPER FREE VIEW IS UNCLICKED / OFF) */}
+        {!is180DomeView && (
           <div className="absolute top-20 right-6 z-40 w-80 p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4 text-emerald-400 animate-pulse" />
                 <span className="font-extrabold text-white tracking-wide">MOBILE COMPASS QR SYNC</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold">
-                  #{sessionId}
-                </span>
-                {forceShowQr && (
-                  <button
-                    onClick={() => setForceShowQr(false)}
-                    className="text-slate-400 hover:text-white text-xs px-1"
-                    title="Minimize QR Modal"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold">
+                #{sessionId}
+              </span>
             </div>
 
-            {/* Dynamic Native SVG QR Code */}
+            {/* QR Code Image (Dynamic QRCodeSVG rendering unique session URL) */}
             <div className="flex flex-col items-center gap-2 my-2">
               <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
                 <QRCodeSVG
@@ -2186,69 +2173,12 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
             {/* Manual Regenerate Unique Session Button */}
             <button
-              onClick={() => {
-                handleRegenerateSession();
-                setForceShowQr(false);
-              }}
+              onClick={handleRegenerateSession}
               className="mt-2 w-full py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-200 text-[10px] flex items-center justify-center gap-1.5 transition font-bold shadow-sm"
             >
               <RotateCcw className="h-3 w-3 text-emerald-400" />
               <span>Generate New Unique QR Session</span>
             </button>
-          </div>
-        )}
-
-        {/* UPPER RIGHT CORNER MOBILE TELEMETRY HUD (DISPLAYED WHEN MOBILE CONNECTED) */}
-        {isMobileSynced && mobileOrientation && !forceShowQr && (
-          <div className="absolute top-20 right-6 z-40 p-3.5 rounded-2xl bg-slate-950/95 border-2 border-cyan-400/80 shadow-[0_0_35px_rgba(6,182,212,0.4)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto flex flex-col gap-2 min-w-[290px]">
-            {/* Header & Status */}
-            <div className="flex items-center justify-between border-b border-cyan-500/30 pb-2">
-              <div className="flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-cyan-400 animate-pulse shrink-0" />
-                <span className="font-extrabold text-cyan-300 tracking-wide text-xs">MOBILE TELEMETRY LIVE</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/40 text-[9px] font-bold text-cyan-300">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                <span>#{sessionId}</span>
-              </div>
-            </div>
-
-            {/* Live Sensor Values Grid */}
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="p-2 rounded-xl bg-slate-900/90 border border-emerald-500/40">
-                <div className="text-[9px] text-slate-400 font-bold">AZIMUTH (Heading)</div>
-                <div className="font-black text-emerald-400 text-sm mt-0.5">
-                  {mobileOrientation.heading}° <span className="text-[10px] text-emerald-300 font-normal">({getCardinalText(mobileOrientation.heading)})</span>
-                </div>
-              </div>
-
-              <div className="p-2 rounded-xl bg-slate-900/90 border border-pink-500/40">
-                <div className="text-[9px] text-slate-400 font-bold">ELEVATION (Pitch)</div>
-                <div className="font-black text-pink-400 text-sm mt-0.5">
-                  {mobileOrientation.pitch}° <span className="text-[10px] text-pink-300 font-normal">{mobileOrientation.pitch >= 85 ? "(Zenith)" : mobileOrientation.pitch <= 5 ? "(Horizon)" : ""}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Controls Bar: Show QR Code / New Session */}
-            <div className="flex items-center gap-2 pt-1 border-t border-white/10">
-              <button
-                onClick={() => setForceShowQr(true)}
-                className="flex-1 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold transition flex items-center justify-center gap-1.5"
-              >
-                <QrCode className="h-3 w-3 text-cyan-400" />
-                <span>Show QR Code</span>
-              </button>
-
-              <button
-                onClick={handleRegenerateSession}
-                className="py-1.5 px-3 rounded-xl bg-slate-900 border border-cyan-500/40 hover:bg-cyan-950 text-cyan-300 text-[10px] font-bold transition flex items-center justify-center gap-1.5"
-                title="Generate new unique QR session"
-              >
-                <RotateCcw className="h-3 w-3 text-cyan-400" />
-                <span>New QR</span>
-              </button>
-            </div>
           </div>
         )}
 
