@@ -23,6 +23,7 @@ export default function MobileCompassSyncPage() {
   const [packetCount, setPacketCount] = useState<number>(0);
   const [manualMode, setManualMode] = useState<boolean>(false);
   const [invertPitch, setInvertPitch] = useState<boolean>(false);
+  const [calibrationOffset, setCalibrationOffset] = useState<number>(0);
 
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
@@ -107,7 +108,7 @@ export default function MobileCompassSyncPage() {
     return () => clearInterval(heartbeat);
   }, [sendOrientationData]);
 
-  // Direct Device Orientation Listener (Sensor Fusion Completely Removed)
+  // Direct Device Orientation Listener (Tilt-Compensated Math Fixed)
   const startListening = useCallback(() => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (manualMode) return;
@@ -120,23 +121,32 @@ export default function MobileCompassSyncPage() {
       const gammaRad = ((e.gamma || 0) * Math.PI) / 180;
 
       // @ts-expect-error iOS webkitCompassHeading
-      if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading)) {
+      if (typeof e.webkitCompassHeading === "number" && !isNaN(e.webkitCompassHeading) && e.webkitCompassHeading >= 0) {
         // @ts-expect-error iOS webkitCompassHeading
         compassHeading = e.webkitCompassHeading;
       } else if (typeof e.alpha === "number" && !isNaN(e.alpha)) {
         const alphaRad = (e.alpha * Math.PI) / 180;
+        // Tilt-compensated vectors in Earth frame: Vx (East), Vy (North)
         const Vx = -Math.sin(alphaRad) * Math.cos(gammaRad) - Math.cos(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
-        const Vy = -Math.cos(alphaRad) * Math.cos(gammaRad) + Math.sin(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
-        const computedHeading = (Math.atan2(Vx, Vy) * 180) / Math.PI;
-        compassHeading = !isNaN(computedHeading) && isFinite(computedHeading) ? computedHeading : (360 - e.alpha) % 360;
+        const Vy = Math.cos(alphaRad) * Math.cos(gammaRad) - Math.sin(alphaRad) * Math.sin(betaRad) * Math.sin(gammaRad);
+
+        let computedHeading = (Math.atan2(Vx, Vy) * 180) / Math.PI;
+        if (isNaN(computedHeading) || !isFinite(computedHeading)) {
+          computedHeading = (360 - (e.alpha || 0)) % 360;
+        }
+        compassHeading = (computedHeading + 360) % 360;
       }
 
+      // Screen orientation angle correction (e.g., 0, 90, 180, 270)
+      const screenAngle = typeof window !== "undefined" && window.screen?.orientation?.angle ? window.screen.orientation.angle : 0;
+      let finalHeading = (compassHeading + screenAngle + calibrationOffset) % 360;
+      if (finalHeading < 0) finalHeading += 360;
+
       // 2. Stellarium Universal 3D Orientation Elevation Transformation:
-      // Signed elevation from horizon (0°) to zenith (+90°). Tilting camera up increases elevation; tilting camera down towards ground stays at horizon (0°).
       const cosVal = Math.max(-1, Math.min(1, Math.cos(betaRad) * Math.cos(gammaRad)));
       const calculatedElDeg = (Math.asin(cosVal) * 180) / Math.PI;
 
-      const normHeading = Math.round(((compassHeading % 360) + 360) % 360);
+      const normHeading = Math.round(finalHeading);
       const rawElevation = Math.round(calculatedElDeg);
       const normElevation = Math.max(0, Math.min(90, invertPitch ? -rawElevation : rawElevation));
       const normRoll = Math.round(e.gamma || 0);
@@ -153,15 +163,22 @@ export default function MobileCompassSyncPage() {
     };
 
     if (typeof window !== "undefined") {
+      // Prioritize deviceorientationabsolute on Android Chrome
+      if ("ondeviceorientationabsolute" in window) {
+        window.addEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+      }
       window.addEventListener("deviceorientation", handleOrientation, true);
     }
 
     return () => {
       if (typeof window !== "undefined") {
+        if ("ondeviceorientationabsolute" in window) {
+          window.removeEventListener("deviceorientationabsolute", handleOrientation as EventListener, true);
+        }
         window.removeEventListener("deviceorientation", handleOrientation, true);
       }
     };
-  }, [manualMode, sendOrientationData]);
+  }, [manualMode, calibrationOffset, invertPitch, sendOrientationData]);
 
   // Request Sensor Permission (iOS 13+ & Android)
   const requestSensorPermission = async () => {
@@ -364,6 +381,31 @@ export default function MobileCompassSyncPage() {
                 sendOrientationData(heading, p, roll);
               }}
               className="accent-pink-400 w-full cursor-pointer h-1.5 rounded-lg bg-slate-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-[10px] font-mono border-t border-slate-800/80 pt-2 mt-1">
+            <div className="flex justify-between text-slate-400">
+              <span className="flex items-center gap-1 text-cyan-300 font-semibold">
+                <span>COMPASS CALIBRATION OFFSET</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCalibrationOffset(0)}
+                  className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  RESET (0°)
+                </button>
+                <span className="text-cyan-400 font-bold">{calibrationOffset > 0 ? `+${calibrationOffset}` : calibrationOffset}°</span>
+              </div>
+            </div>
+            <input
+              type="range"
+              min="-180"
+              max="180"
+              value={calibrationOffset}
+              onChange={(e) => setCalibrationOffset(parseInt(e.target.value, 10))}
+              className="accent-cyan-400 w-full cursor-pointer h-1.5 rounded-lg bg-slate-800"
             />
           </div>
         </div>
