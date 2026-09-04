@@ -77,6 +77,101 @@ function getCardinalText(azDeg: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 // SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// STELLARIUM MOBILE CAMERA SIGHT RETICLE (CELESTIAL SPHERE HUD TARGET)
+// ─────────────────────────────────────────────────────────────────────────────
+function MobileCameraSightReticle({
+  mobileOrientation,
+  satellites,
+}: {
+  mobileOrientation: { heading: number; pitch: number; roll?: number };
+  satellites: ComputedSatelliteSkyState[];
+}) {
+  const r = SKY_RADIUS * 0.96; // 268.8
+  const azRad = (mobileOrientation.heading * Math.PI) / 180;
+  const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+
+  // Stellarium exact Cartesian unit vector transformation (North: -Z, East: +X, Up: +Y)
+  const dirX = Math.cos(elRad) * Math.sin(azRad);
+  const dirY = Math.sin(elRad);
+  const dirZ = -Math.cos(elRad) * Math.cos(azRad);
+
+  const pos = useMemo(() => new THREE.Vector3(dirX * r, dirY * r, dirZ * r), [dirX, dirY, dirZ, r]);
+  const sightDir = useMemo(() => new THREE.Vector3(dirX, dirY, dirZ), [dirX, dirY, dirZ]);
+
+  // Satellite Proximity Detection (Within 8 degrees of sight vector)
+  const lockedSat = useMemo(() => {
+    let closestSat: ComputedSatelliteSkyState | null = null;
+    let minAngle = 0.14; // ~8 degrees in radians
+
+    for (const sat of satellites) {
+      if (!sat.isAboveHorizon) continue;
+      const satDir = sat.vec3.clone().normalize();
+      const angle = sightDir.angleTo(satDir);
+      if (angle < minAngle) {
+        minAngle = angle;
+        closestSat = sat;
+      }
+    }
+    return closestSat;
+  }, [sightDir, satellites]);
+
+  const cardinalText = getCardinalText(mobileOrientation.heading);
+
+  return (
+    <group position={pos.toArray()}>
+      {/* Outer Rotating Cyan/Amber Sight Target Ring */}
+      <mesh>
+        <ringGeometry args={[4.5, 6.2, 32]} />
+        <meshBasicMaterial color={lockedSat ? "#f59e0b" : "#06b6d4"} transparent opacity={0.85} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Crosshair Alignment Lines */}
+      <Line
+        points={[new THREE.Vector3(-9, 0, 0), new THREE.Vector3(9, 0, 0)]}
+        color={lockedSat ? "#f59e0b" : "#06b6d4"}
+        lineWidth={2.2}
+      />
+      <Line
+        points={[new THREE.Vector3(0, -9, 0), new THREE.Vector3(0, 9, 0)]}
+        color={lockedSat ? "#f59e0b" : "#06b6d4"}
+        lineWidth={2.2}
+      />
+
+      {/* Central Impact Dot */}
+      <mesh>
+        <sphereGeometry args={[1.5, 16, 16]} />
+        <meshBasicMaterial color={lockedSat ? "#ffea00" : "#22d3ee"} />
+      </mesh>
+
+      {/* Floating HUD Information Badge */}
+      <Html center position={[0, -9, 0]} className="pointer-events-none select-none">
+        <div className="flex flex-col items-center gap-1">
+          <div
+            className={`px-3 py-1 rounded-xl text-[10px] font-mono font-black border backdrop-blur-xl shadow-2xl flex items-center gap-2 whitespace-nowrap ${
+              lockedSat
+                ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.9)] animate-pulse"
+                : "bg-slate-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.8)]"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>📱 CAMERA SIGHT: {mobileOrientation.heading}° ({cardinalText}) | {mobileOrientation.pitch}° EL</span>
+          </div>
+
+          {lockedSat && (
+            <div className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 border border-amber-400 text-amber-200 text-[9px] font-mono font-extrabold shadow-lg animate-bounce">
+              🎯 SATELLITE LOCK: {lockedSat.name} ({Math.round(lockedSat.elevationDeg)}° EL)
+            </div>
+          )}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
+// ─────────────────────────────────────────────────────────────────────────────
 function ObserverGroundStation({
   targetSat,
   satellites,
@@ -86,7 +181,7 @@ function ObserverGroundStation({
   targetSat: ComputedSatelliteSkyState | null;
   satellites: ComputedSatelliteSkyState[];
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
-  mobileOrientation?: { heading: number; pitch: number } | null;
+  mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
 }) {
   const domeRef = useRef<THREE.Group>(null);
 
@@ -95,11 +190,12 @@ function ObserverGroundStation({
     if (!domeRef.current) return;
 
     if (mobileOrientation) {
-      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH MAPPING)
+      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH-ROLL MAPPING)
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+      const rollRad = ((mobileOrientation.roll || 0) * Math.PI) / 180;
 
-      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, -rollRad, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
       domeRef.current.quaternion.slerp(targetQuat, 0.35);
@@ -213,7 +309,7 @@ function ObserverGroundStation({
         >
           <span>
             {mobileOrientation
-              ? `📱 MOBILE COMPASS SYNCED: AZ ${mobileOrientation.heading}° | EL ${mobileOrientation.pitch}°`
+              ? `📱 STELLARIUM SIGHT: AZ ${mobileOrientation.heading}° | EL ${mobileOrientation.pitch}°`
               : targetSat
               ? ` PRECISION LOCK: ${targetSat.name}`
               : "📡 SIGHT: ALIGNED NORTH (0° AZ)"}
@@ -558,6 +654,14 @@ function Clean3DSkyDome({
         onSelectSat={onSelectSat}
         mobileOrientation={mobileOrientation}
       />
+
+      {/* Stellarium Mobile Camera Sight Reticle on Sky Dome Sphere */}
+      {mobileOrientation && (
+        <MobileCameraSightReticle
+          mobileOrientation={mobileOrientation}
+          satellites={satellites}
+        />
+      )}
 
       {cardinals.map((c) => (
         <group key={c.label} position={c.pos}>
@@ -1402,6 +1506,7 @@ function SatelliteTrackerCelestialScene({
   onSelectSat,
   is180DomeView,
   mobileOrientation,
+  mobileSightMode = "track",
 }: {
   observer: ObserverCoords;
   currentDate: Date;
@@ -1415,7 +1520,8 @@ function SatelliteTrackerCelestialScene({
   satellites: ComputedSatelliteSkyState[];
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
   is180DomeView: boolean;
-  mobileOrientation?: { heading: number; pitch: number } | null;
+  mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
+  mobileSightMode?: "ar" | "track";
 }) {
   useFrame(({ camera }) => {
     const dir = new THREE.Vector3();
@@ -1423,16 +1529,24 @@ function SatelliteTrackerCelestialScene({
     const facingAz = ((Math.atan2(-dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
     onUpdateHeading(facingAz);
 
-    if (mobileOrientation && controlsRef.current && !is180DomeView) {
+    if (mobileOrientation) {
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+      const r = 240;
 
-      const targetX = 180 * Math.sin(azRad) * Math.cos(elRad);
-      const targetY = 180 * Math.sin(elRad);
-      const targetZ = -180 * Math.cos(azRad) * Math.cos(elRad);
+      const targetX = r * Math.sin(azRad) * Math.cos(elRad);
+      const targetY = Math.max(5, r * Math.sin(elRad));
+      const targetZ = -r * Math.cos(azRad) * Math.cos(elRad);
 
-      controlsRef.current.target.set(targetX, Math.max(10, targetY), targetZ);
-      controlsRef.current.update();
+      if (mobileSightMode === "ar") {
+        // FIRST-PERSON AR SKY VIEWER MODE: Eye at ground station looking outward along back-camera vector
+        camera.position.set(0, 10, 0);
+        camera.lookAt(targetX, targetY, targetZ);
+      } else if (controlsRef.current) {
+        // OBSERVATORY TRACK MODE: Orbit controls target smoothly centers on mobile sight vector
+        controlsRef.current.target.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.15);
+        controlsRef.current.update();
+      }
     }
   });
 
@@ -1479,7 +1593,7 @@ function SatelliteTrackerCelestialScene({
         enableDamping
         dampingFactor={0.05}
         rotateSpeed={0.6}
-        enableRotate={is180DomeView}
+        enableRotate={is180DomeView && mobileSightMode !== "ar"}
         target={is180DomeView ? [0, 60, 0] : [0, 25, 0]}
         minPolarAngle={0.001}
         maxPolarAngle={Math.PI / 2 + 0.1}
@@ -1530,26 +1644,50 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   };
 
   // Mobile Compass Sync State
-  const [sessionId] = useState<string>(() => Math.random().toString(36).substring(2, 10));
-  const [mobileOrientation, setMobileOrientation] = useState<{ heading: number; pitch: number } | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => Math.random().toString(36).substring(2, 10));
+  const [mobileOrientation, setMobileOrientation] = useState<{ heading: number; pitch: number; roll?: number } | null>(null);
+  const [mobileSightMode, setMobileSightMode] = useState<"ar" | "track">("track");
   const [isMobileSynced, setIsMobileSynced] = useState<boolean>(false);
   const [mobileSyncUrl, setMobileSyncUrl] = useState<string>("");
 
+  const handleRegenerateSession = useCallback(() => {
+    const newId = Math.random().toString(36).substring(2, 10);
+    setSessionId(newId);
+    setMobileOrientation(null);
+    setIsMobileSynced(false);
+    showToast(`🔄 New QR Session Generated: #${newId}`);
+  }, []);
+
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentOrigin = window.location.origin;
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+    if (!isLocalhost) {
+      // Deployed host (Vercel/Production): Always use public origin URL
+      setMobileSyncUrl(`${currentOrigin}/stargaze/compass-sync?session=${sessionId}`);
+      return;
+    }
+
+    // Local dev server fallback (for testing on LAN IP)
     let isMounted = true;
     async function resolveLocalIpUrl() {
       try {
         const res = await fetch("/api/stargaze/local-ip");
         const data = await res.json();
         if (isMounted) {
-          const port = typeof window !== "undefined" ? window.location.port || "3000" : "3000";
-          const protocol = typeof window !== "undefined" ? window.location.protocol : "http:";
-          const host = data.ip && data.ip !== "localhost" ? `${data.ip}:${port}` : (typeof window !== "undefined" ? window.location.host : "localhost:3000");
-          setMobileSyncUrl(`${protocol}//${host}/stargaze/compass-sync?session=${sessionId}`);
+          const port = window.location.port || "3000";
+          const protocol = window.location.protocol;
+          if (data.ip && data.ip !== "localhost" && data.ip !== "127.0.0.1") {
+            setMobileSyncUrl(`${protocol}//${data.ip}:${port}/stargaze/compass-sync?session=${sessionId}`);
+          } else {
+            setMobileSyncUrl(`${currentOrigin}/stargaze/compass-sync?session=${sessionId}`);
+          }
         }
       } catch {
-        if (isMounted && typeof window !== "undefined") {
-          setMobileSyncUrl(`${window.location.origin}/stargaze/compass-sync?session=${sessionId}`);
+        if (isMounted) {
+          setMobileSyncUrl(`${currentOrigin}/stargaze/compass-sync?session=${sessionId}`);
         }
       }
     }
@@ -1573,6 +1711,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           setMobileOrientation({
             heading: event.data.heading,
             pitch: event.data.pitch,
+            roll: event.data.roll || 0,
           });
           setIsMobileSynced(true);
         }
@@ -1590,6 +1729,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           setMobileOrientation({
             heading: data.data.heading,
             pitch: data.data.pitch,
+            roll: data.data.roll || 0,
           });
           setIsMobileSynced(true);
         } else if (isSubscribed && !data.connected && !channel) {
@@ -1776,6 +1916,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             onSelectSat={(sat) => handleTrackSatellite(sat)}
             is180DomeView={is180DomeView}
             mobileOrientation={mobileOrientation}
+            mobileSightMode={mobileSightMode}
           />
         </Canvas>
 
@@ -1838,8 +1979,26 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </button>
           </div>
 
-          {/* Preset Camera & Layer Controls (StarGazer Manual tab removed) */}
+          {/* Preset Camera & Layer Controls */}
           <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
+            {mobileOrientation && (
+              <button
+                onClick={() => {
+                  const next = mobileSightMode === "ar" ? "track" : "ar";
+                  setMobileSightMode(next);
+                  showToast(`📱 Mobile Sight View: ${next === "ar" ? "First-Person AR Sky View" : "Observatory Track View"}`);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${
+                  mobileSightMode === "ar"
+                    ? "bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
+                    : "bg-cyan-950/90 border border-cyan-400 text-cyan-300 hover:bg-cyan-900"
+                }`}
+                title="Toggle between First-Person AR Sky View and Observatory Track View"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span>{mobileSightMode === "ar" ? "1st-Person AR View" : "Dome Sight Track"}</span>
+              </button>
+            )}
             <button
               onClick={toggle180DomeView}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
@@ -2009,6 +2168,15 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               <Link2 className="h-3 w-3 text-emerald-400" />
               <span>Launch Mobile Sync Controller</span>
             </a>
+
+            {/* Manual Regenerate Unique Session Button */}
+            <button
+              onClick={handleRegenerateSession}
+              className="mt-2 w-full py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-200 text-[10px] flex items-center justify-center gap-1.5 transition font-bold shadow-sm"
+            >
+              <RotateCcw className="h-3 w-3 text-emerald-400" />
+              <span>Generate New Unique QR Session</span>
+            </button>
           </div>
         )}
 

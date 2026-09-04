@@ -218,6 +218,21 @@ export default function MobileCompassSyncPage() {
         </div>
       </header>
 
+      {/* Stellarium AR Back-Camera Sight Banner */}
+      <div className="w-full max-w-md my-2 p-3 rounded-2xl bg-cyan-950/90 border border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-xl flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400 text-cyan-300 shrink-0 animate-pulse">
+          <Smartphone className="h-5 w-5" />
+        </div>
+        <div className="text-[11px] font-mono leading-tight">
+          <div className="font-extrabold text-cyan-300 tracking-wide flex items-center gap-1.5">
+            <span>📷 BACK CAMERA SIGHT VECTOR ACTIVE</span>
+          </div>
+          <div className="text-slate-300 text-[10px] mt-0.5">
+            Point your smartphone camera at the sky to direct the 3D observatory laser &amp; sky view.
+          </div>
+        </div>
+      </div>
+
       {/* Center Interactive Glowing Compass Rose Dial */}
       <section className="my-4 flex flex-col items-center justify-center relative w-full max-w-md">
         {/* Outer Rotating Compass Outer Ring */}
