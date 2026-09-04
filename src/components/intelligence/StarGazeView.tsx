@@ -95,48 +95,40 @@ function ObserverGroundStation({
     if (!domeRef.current) return;
 
     if (mobileOrientation) {
-      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT
+      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH MAPPING)
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
 
-      // Azimuth 0° = North (-Z), 90° = East (+X)
-      const dirX = Math.sin(azRad) * Math.cos(elRad);
-      const dirY = Math.sin(elRad);
-      const dirZ = -Math.cos(azRad) * Math.cos(elRad);
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      const targetDir = new THREE.Vector3(dirX, dirY, dirZ).normalize();
-      const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(0, 0, 1),
-        targetDir
-      );
-
-      domeRef.current.quaternion.slerp(targetQuat, 0.2);
+      domeRef.current.quaternion.slerp(targetQuat, 0.35);
     } else if (targetSat) {
-      // SCIENTIFICALLY PRECISE VECTOR ALIGNMENT VIA QUATERNION SLERP
+      // SCIENTIFICALLY PRECISE SATELLITE TRACKING VECTOR ALIGNMENT
       const stationPos = new THREE.Vector3(0, 2.4, 0);
       const targetPos = targetSat.vec3.clone();
-      const direction = targetPos.sub(stationPos).normalize();
+      const dir = targetPos.sub(stationPos).normalize();
 
-      const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(0, 0, 1),
-        direction
-      );
+      const satAz = ((Math.atan2(dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
+      const satEl = (Math.asin(Math.max(-1, Math.min(1, dir.y))) * 180) / Math.PI;
 
-      domeRef.current.quaternion.slerp(targetQuat, 0.12);
+      const azRad = (satAz * Math.PI) / 180;
+      const elRad = (satEl * Math.PI) / 180;
+
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+
+      domeRef.current.quaternion.slerp(targetQuat, 0.2);
     } else {
-      // DEFAULT NORTH SIGHT ALIGNMENT (Azimuth 0° = North -Z, 15° elevation pitch)
-      const northDir = new THREE.Vector3(
-        Math.sin(Math.sin(t * 0.4) * 0.05),
-        Math.sin((15 * Math.PI) / 180),
-        -Math.cos((15 * Math.PI) / 180)
-      ).normalize();
+      // DEFAULT NORTH SIGHT ALIGNMENT (Azimuth 0° North, 15° elevation pitch)
+      const idleAz = Math.sin(t * 0.4) * 3;
+      const azRad = (idleAz * Math.PI) / 180;
+      const elRad = (15 * Math.PI) / 180;
 
-      const northQuat = new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(0, 0, 1),
-        northDir
-      );
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      domeRef.current.quaternion.slerp(northQuat, 0.08);
+      domeRef.current.quaternion.slerp(targetQuat, 0.1);
     }
   });
 
@@ -1431,7 +1423,7 @@ function SatelliteTrackerCelestialScene({
     const facingAz = ((Math.atan2(-dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
     onUpdateHeading(facingAz);
 
-    if (mobileOrientation && controlsRef.current) {
+    if (mobileOrientation && controlsRef.current && !is180DomeView) {
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
 
