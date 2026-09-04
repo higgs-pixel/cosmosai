@@ -1962,89 +1962,85 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </button>
           </div>
 
-          {/* Right Controls - Structured Navbar */}
-          <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-950/80 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
+          {/* Right Controls - Structured Option Bar */}
+          <div className="flex items-center gap-2 pointer-events-auto bg-slate-950/85 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl">
 
-            {/* Group 1: Mobile Compass Controls */}
-            <div className="flex items-center gap-1">
-              {/* QR Sync Button — shows when not synced */}
-              {!isMobileSynced && (
-                <button
-                  onClick={() => setShowQrPanel(!showQrPanel)}
-                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold transition flex items-center gap-1.5 ${
-                    showQrPanel
-                      ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]"
-                      : "bg-slate-900/90 text-slate-400 hover:text-emerald-300 border border-slate-700"
-                  }`}
-                  title="Toggle Mobile Compass QR Sync Panel"
-                >
-                  <Smartphone className="h-3.5 w-3.5" />
-                  <span>Sync Phone</span>
-                </button>
-              )}
+            {/* Group 1: Mobile Sync & AR Controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowQrPanel(!showQrPanel)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
+                  isMobileSynced
+                    ? "bg-cyan-500/20 border-cyan-400/60 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                    : showQrPanel
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                    : "bg-slate-900/80 text-slate-300 hover:text-emerald-300 hover:bg-slate-800/80 border-slate-800"
+                }`}
+                title={isMobileSynced ? "Phone Connected. Click to manage link / disconnect" : "Connect mobile phone sensors via QR code"}
+              >
+                {isMobileSynced ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                    <Smartphone className="h-3.5 w-3.5 text-cyan-300" />
+                    <span>Phone Synced</span>
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Sync Phone</span>
+                  </>
+                )}
+              </button>
 
-              {/* Synced Badge */}
+              {/* 1st-Person AR View Mode — only active when synced */}
               {isMobileSynced && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/90 border border-cyan-400/80 text-cyan-300 font-mono text-[11px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
-                  <Smartphone className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                  <span className="font-extrabold text-white tracking-wide">SYNCED</span>
-                  {mobileOrientation && (
-                    <span className="text-cyan-300 font-bold">{mobileOrientation.heading}° {mobileOrientation.pitch}°EL</span>
-                  )}
-                  <button
-                    onClick={handleRegenerateSession}
-                    className="ml-0.5 p-1 rounded-lg bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 hover:text-white transition border border-cyan-500/40 shrink-0"
-                    title="Disconnect / New QR Session"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-
-              {/* AR View Toggle — only when synced */}
-              {mobileOrientation && (
                 <button
                   onClick={() => {
                     const next = mobileSightMode === "ar" ? "track" : "ar";
                     setMobileSightMode(next);
                     showToast(`📱 ${next === "ar" ? "1st-Person AR View" : "Dome Track View"}`);
                   }}
-                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold transition flex items-center gap-1 ${
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
                     mobileSightMode === "ar"
-                      ? "bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
-                      : "bg-cyan-950/90 border border-cyan-400/60 text-cyan-300 hover:bg-cyan-900"
+                      ? "bg-cyan-400 text-slate-950 font-bold border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                      : "bg-slate-900/80 border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60"
                   }`}
-                  title="Toggle AR/Track view"
+                  title="Toggle 1st-Person AR View vs Dome Track View"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  <span>{mobileSightMode === "ar" ? "AR" : "Track"}</span>
+                  <span>{mobileSightMode === "ar" ? "AR View" : "Track"}</span>
                 </button>
               )}
             </div>
 
             {/* Divider */}
-            <div className="w-px h-5 bg-slate-700 mx-0.5 shrink-0" />
+            <div className="w-px h-5 bg-slate-800 shrink-0" />
 
-            {/* Group 2: Scene Toggles */}
+            {/* Group 2: Upper Dome Perspective */}
+            <button
+              onClick={toggle180DomeView}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
+                is180DomeView
+                  ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                  : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
+              }`}
+              title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span>180° Dome</span>
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-800 shrink-0" />
+
+            {/* Group 3: Scene Layer Toggles */}
             <div className="flex items-center gap-1">
               <button
-                onClick={toggle180DomeView}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1 ${
-                  is180DomeView
-                    ? "bg-emerald-600 text-white font-bold shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                    : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
-                }`}
-                title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
-              >
-                <Maximize2 className="h-3.5 w-3.5" />
-                <span>180° Dome</span>
-              </button>
-
-              <button
                 onClick={() => setShowLabels(!showLabels)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
-                  showLabels ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                  showLabels
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle satellite labels"
               >
@@ -2053,8 +2049,10 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowOrbits(!showOrbits)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
-                  showOrbits ? "bg-pink-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                  showOrbits
+                    ? "bg-pink-500/20 border-pink-500/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.25)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle orbit paths"
               >
@@ -2063,8 +2061,10 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowGrid(!showGrid)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
-                  showGrid ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                  showGrid
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle azimuth/elevation grid"
               >
@@ -2073,8 +2073,10 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowRadar(!showRadar)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
-                  showRadar ? "bg-emerald-600 text-white" : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                  showRadar
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle 2D planisphere radar"
               >
@@ -2083,14 +2085,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
               <button
                 onClick={() => setShowSimDock(!showSimDock)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition flex items-center gap-1 ${
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 border ${
                   showSimDock
-                    ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                    : "bg-slate-900/90 text-slate-400 hover:text-white border border-slate-700"
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                    : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
                 title="Toggle simulation dock"
               >
-                <Play className="h-3.5 w-3.5" />
+                <Play className="h-3 w-3" />
                 <span>Sim</span>
               </button>
             </div>
@@ -2103,7 +2105,10 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             {/* Bearing Compass */}
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs font-bold backdrop-blur-2xl flex items-center gap-1.5 shadow-xl">
               <Compass className="h-4 w-4 text-emerald-400 animate-spin-slow" />
-              <span>BEARING: {getCardinalText(headingAzimuth)}</span>
+              <span>BEARING: {getCardinalText(mobileOrientation ? mobileOrientation.heading : headingAzimuth)}</span>
+              {isMobileSynced && mobileOrientation && (
+                <span className="text-[10px] text-cyan-300 font-normal ml-0.5">({mobileOrientation.pitch}° EL)</span>
+              )}
             </div>
 
             {/* Real-Time Simulation Clock HUD */}
@@ -2142,60 +2147,117 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
         )}
 
-        {/* FULL MOBILE COMPASS QR SYNC MODAL (AUTO-CLOSES WHEN PHONE CONNECTS) */}
-        {!is180DomeView && showQrPanel && !isMobileSynced && (
+        {/* FULL MOBILE COMPASS QR SYNC MODAL (CLOSABLE & AUTO-CLOSES ON TRANSMISSION) */}
+        {!is180DomeView && showQrPanel && (
           <div className="absolute top-20 right-6 z-40 w-80 p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4 text-emerald-400 animate-pulse" />
-                <span className="font-extrabold text-white tracking-wide">MOBILE COMPASS QR SYNC</span>
+                <span className="font-extrabold text-white tracking-wide">
+                  {isMobileSynced ? "MOBILE PHONE SYNCED" : "MOBILE COMPASS QR SYNC"}
+                </span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold">
-                #{sessionId}
-              </span>
-            </div>
-
-            {/* QR Code SVG */}
-            <div className="flex flex-col items-center gap-2 my-2">
-              <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-                <QRCodeSVG
-                  value={mobileSyncUrl || `${typeof window !== "undefined" ? window.location.origin : ""}/stargaze/compass-sync?session=${sessionId}`}
-                  size={160}
-                />
-              </div>
-              <div className="text-[10px] text-slate-300 text-center leading-tight mt-1">
-                Scan QR code with your smartphone camera to transmit real-time device compass sensors!
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold">
+                  #{sessionId}
+                </span>
+                <button
+                  onClick={() => setShowQrPanel(false)}
+                  className="text-slate-400 hover:text-white text-xs px-1 font-bold"
+                  title="Close Modal"
+                >
+                  ✕
+                </button>
               </div>
             </div>
 
-            {/* Live Connection Telemetry Status Banner */}
-            <div className="p-2.5 rounded-xl border border-amber-500/40 bg-slate-900/90 text-amber-300 flex items-center gap-2 text-[10px] font-bold mt-2">
-              <QrCode className="h-4 w-4 text-amber-400 shrink-0 animate-pulse" />
-              <div>
-                <div>WAITING FOR PHONE SCAN</div>
-                <div className="text-[9px] text-slate-400">Scan QR to sync line of sight</div>
+            {isMobileSynced ? (
+              /* Connected State Details */
+              <div className="flex flex-col gap-3 my-2">
+                <div className="p-3 rounded-xl border border-cyan-500/40 bg-cyan-950/40 text-cyan-300 flex items-center gap-2.5 text-xs font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                  <div>
+                    <div>PHONE SENSORS CONNECTED</div>
+                    <div className="text-[10px] text-slate-300 font-normal mt-0.5">
+                      Transmitting live compass orientation to 3D observatory
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const next = mobileSightMode === "ar" ? "track" : "ar";
+                      setMobileSightMode(next);
+                      showToast(`📱 ${next === "ar" ? "1st-Person AR View" : "Dome Track View"}`);
+                    }}
+                    className={`flex-1 py-2 rounded-xl font-bold transition flex items-center justify-center gap-1.5 text-[11px] ${
+                      mobileSightMode === "ar"
+                        ? "bg-cyan-400 text-slate-950"
+                        : "bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950"
+                    }`}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>{mobileSightMode === "ar" ? "Mode: AR View" : "Mode: Track View"}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleRegenerateSession();
+                      showToast("📱 Disconnected from Mobile");
+                    }}
+                    className="py-2 px-3 rounded-xl bg-slate-900 border border-rose-500/40 hover:bg-rose-950 text-rose-300 text-[11px] font-bold transition"
+                    title="Disconnect phone and generate new session"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* QR Code for phone scan */
+              <>
+                <div className="flex flex-col items-center gap-2 my-2">
+                  <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-white border-2 border-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                    <QRCodeSVG
+                      value={mobileSyncUrl || `${typeof window !== "undefined" ? window.location.origin : ""}/stargaze/compass-sync?session=${sessionId}`}
+                      size={160}
+                    />
+                  </div>
+                  <div className="text-[10px] text-slate-300 text-center leading-tight mt-1">
+                    Scan QR code with your smartphone camera to transmit real-time device compass sensors!
+                  </div>
+                </div>
 
-            {/* Manual Link / Controller Launcher */}
-            <a
-              href={mobileSyncUrl || `/stargaze/compass-sync?session=${sessionId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2.5 w-full py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] flex items-center justify-center gap-1.5 transition font-semibold"
-            >
-              <Link2 className="h-3 w-3 text-emerald-400" />
-              <span>Launch Mobile Sync Controller</span>
-            </a>
+                {/* Live Connection Status Banner */}
+                <div className="p-2.5 rounded-xl border border-amber-500/40 bg-slate-900/90 text-amber-300 flex items-center gap-2 text-[10px] font-bold mt-2">
+                  <QrCode className="h-4 w-4 text-amber-400 shrink-0 animate-pulse" />
+                  <div>
+                    <div>WAITING FOR PHONE SCAN</div>
+                    <div className="text-[9px] text-slate-400">Scan QR to sync line of sight</div>
+                  </div>
+                </div>
 
-            {/* Manual Regenerate Unique Session Button */}
-            <button
-              onClick={handleRegenerateSession}
-              className="mt-2 w-full py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-200 text-[10px] flex items-center justify-center gap-1.5 transition font-bold shadow-sm"
-            >
-              <RotateCcw className="h-3 w-3 text-emerald-400" />
-              <span>Generate New Unique QR Session</span>
-            </button>
+                {/* Manual Link / Controller Launcher */}
+                <a
+                  href={mobileSyncUrl || `/stargaze/compass-sync?session=${sessionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2.5 w-full py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white text-[10px] flex items-center justify-center gap-1.5 transition font-semibold"
+                >
+                  <Link2 className="h-3 w-3 text-emerald-400" />
+                  <span>Launch Mobile Sync Controller</span>
+                </a>
+
+                {/* Manual Regenerate Unique Session Button */}
+                <button
+                  onClick={handleRegenerateSession}
+                  className="mt-2 w-full py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-200 text-[10px] flex items-center justify-center gap-1.5 transition font-bold shadow-sm"
+                >
+                  <RotateCcw className="h-3 w-3 text-emerald-400" />
+                  <span>Generate New Unique QR Session</span>
+                </button>
+              </>
+            )}
           </div>
         )}
 
