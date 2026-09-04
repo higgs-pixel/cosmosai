@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  turbopack: {},
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
