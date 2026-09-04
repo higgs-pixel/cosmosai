@@ -159,8 +159,8 @@ function ObserverGroundStation({
         <mesh position={[0, 2.2, 3.8]}>
           <sphereGeometry args={[0.95, 16, 16]} />
           <meshStandardMaterial
-            color={targetSat ? "#f59e0b" : "#10b981"}
-            emissive={targetSat ? "#f59e0b" : "#10b981"}
+            color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
+            emissive={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
             emissiveIntensity={4.5}
           />
         </mesh>
@@ -170,21 +170,21 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.9} />
         </mesh>
 
-        {/* 3D Volumetric Sight Cone (GOLDEN YELLOW WHEN TRACKED) */}
+        {/* 3D Volumetric Sight Cone */}
         <mesh position={[0, 2.2, 120]} rotation={[-Math.PI / 2, 0, 0]}>
           <coneGeometry args={[38, 240, 32, 1, true]} />
           <meshBasicMaterial
-            color={targetSat ? "#f59e0b" : "#10b981"}
+            color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
             transparent
-            opacity={targetSat ? 0.38 : 0.18}
+            opacity={mobileOrientation ? 0.35 : targetSat ? 0.38 : 0.18}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        {/* Precision Sight Laser Core Beam (GOLDEN YELLOW WHEN TRACKED) */}
+        {/* Precision Sight Laser Core Beam */}
         <Line
           points={[new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(0, 2.2, 260)]}
-          color={targetSat ? "#f59e0b" : "#10b981"}
+          color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
           lineWidth={4.2}
           transparent
           opacity={0.95}
@@ -192,7 +192,7 @@ function ObserverGroundStation({
       </group>
 
       {/* Direct Line of Sight Beam to Tracked Satellite (GOLDEN YELLOW) */}
-      {targetSat && (
+      {targetSat && !mobileOrientation && (
         <Line
           points={[new THREE.Vector3(0, 2.4, 0), targetSat.vec3]}
           color="#f59e0b"
@@ -1567,14 +1567,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     };
   }, [sessionId]);
 
-  // Telemetry Polling Loop & BroadcastChannel from Mobile to Desktop when 180° Upper Dome View is OFF
+  // Telemetry Polling Loop & BroadcastChannel from Mobile to Desktop
   useEffect(() => {
-    if (is180DomeView) {
-      setMobileOrientation(null);
-      setIsMobileSynced(false);
-      return;
-    }
-
     let isSubscribed = true;
 
     // 1. Instant local BroadcastChannel tab sync listener
@@ -1608,6 +1602,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           setIsMobileSynced(true);
         } else if (isSubscribed && !data.connected && !channel) {
           setIsMobileSynced(false);
+          setMobileOrientation(null);
         }
       } catch {
         /* skip network hiccups */
@@ -1619,7 +1614,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       if (channel) channel.close();
       clearInterval(interval);
     };
-  }, [is180DomeView, sessionId]);
+  }, [sessionId]);
 
   // Toggle 180° Free Dome View vs Fixed Observer Perspective View
   const toggle180DomeView = useCallback(() => {
@@ -1788,6 +1783,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             satellites={allSatellites}
             onSelectSat={(sat) => handleTrackSatellite(sat)}
             is180DomeView={is180DomeView}
+            mobileOrientation={mobileOrientation}
           />
         </Canvas>
 
