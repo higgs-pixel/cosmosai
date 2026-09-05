@@ -1,30 +1,17 @@
 "use client";
 
 import {
-  MapPin,
   Navigation,
   Play,
   Pause,
   RotateCcw,
   Clock,
   Radio,
-  Sliders,
   Sun,
   Moon,
-  Info,
-  Layers,
-  Sparkles,
-  ShieldAlert,
-  Compass,
-  Activity,
   Crosshair,
-  Gauge,
-  Cpu,
+  SlidersHorizontal,
 } from "lucide-react";
-import { GlassPanel } from "@/components/glass/GlassPanel";
-import { GlassButton } from "@/components/glass/GlassButton";
-import { GlassBadge } from "@/components/glass/GlassBadge";
-import { SpaceTechCard } from "@/components/ui/SpaceTechCard";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 import { ObserverTwilightInfo } from "@/lib/orbit/visibility";
 
@@ -97,76 +84,70 @@ export function ObservatoryCommandConsole({
   nakedEyeCount,
 }: ObservatoryCommandConsoleProps) {
   return (
-    <section id="console-section" className="w-full space-y-5 pt-4 font-sans">
-      {/* Space-Tech Avionics Bay Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-cyan-400 font-bold uppercase">
-            <Cpu className="h-4 w-4" />
-            <span>01 // OBSERVATORY COMMAND AVIONICS BAY</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+    <section id="console-section" className="w-full space-y-6 pt-6 font-sans">
+      {/* Editorial Section Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-900 pb-4">
+        <div>
+          <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+            Section 02 // Observatory Console
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase">
-            Ground Station &amp; Orbital Simulation Console
+          <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
+            Ground Station Astrometry &amp; Propagation Controls
           </h2>
-          <p className="text-xs text-slate-400 font-mono">
-            Dual-bay topocentric astrometry, high-frequency SGP4 temporal propagation, and geodetic coordinate calibration.
+          <p className="text-xs text-zinc-400 font-sans mt-1">
+            Topocentric geodetic coordinate calibration, temporal simulation, and solar illumination analysis.
           </p>
         </div>
 
-        {/* Global Hardware GPS Lock Status Indicator */}
-        <div className="flex items-center gap-2.5 font-mono text-xs">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-cyan-500/30 flex items-center gap-2 shadow-[0_0_15px_rgba(0,229,255,0.1)]">
-            <Radio className={`h-3.5 w-3.5 ${gpsStatus === "locating" ? "animate-spin text-amber-400" : "text-cyan-400"}`} />
-            <span className="text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+        {/* Minimal GPS Status Indicator */}
+        <div className="flex items-center gap-2 text-xs font-sans">
+          <div className="px-3 py-1 bg-zinc-950 border border-zinc-800 flex items-center gap-2 text-zinc-300">
+            <Radio className={`h-3 w-3 ${gpsStatus === "locating" ? "animate-spin text-amber-400" : "text-[#00e5ff]"}`} />
+            <span className="text-[11px] uppercase tracking-wider font-semibold">
               GPS: {gpsStatus === "phone-paired" ? "COMPANION LINK" : gpsStatus === "locating" ? "ACQUIRING..." : "CALIBRATED"}
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           </div>
         </div>
       </div>
 
-      {/* DUAL AVIONICS BAY GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 w-full">
-        {/* BAY ALPHA: Ground Station Navigation & Sensors */}
-        <SpaceTechCard
-          moduleTag="BAY-ALPHA // GROUND STATION ASTROMETRY"
-          statusText={gpsStatus === "locating" ? "LOCKING COORDS..." : "SENSORS ONLINE"}
-          statusColor={gpsStatus === "locating" ? "amber" : "cyan"}
-          scanLine={gpsStatus === "locating"}
-          tilt={false}
-          className="p-5 flex flex-col justify-between space-y-4"
-        >
+      {/* DUAL EDITORIAL PANEL GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        {/* Panel A: Ground Station Geodetic Position */}
+        <div className="border border-zinc-850 bg-zinc-950 p-6 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
-            {/* Active Observer Telemetry Header */}
-            <div className="flex items-start justify-between gap-3 bg-slate-950/70 border border-white/[0.08] p-3 rounded-xl">
-              <div className="space-y-0.5">
-                <div className="text-[10px] font-mono text-slate-400 uppercase">ACTIVE OBSERVATORY SITE</div>
-                <div className="text-sm font-bold text-white tracking-wide">{observer.name}</div>
-                <div className="text-xs font-mono text-cyan-300">
+            {/* Header & Active Site */}
+            <div className="flex items-start justify-between gap-3 border-b border-zinc-900 pb-3">
+              <div>
+                <span className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold mb-1">
+                  Active Ground Station
+                </span>
+                <div className="text-base font-bold text-white tracking-wide">{observer.name}</div>
+                <div className="text-xs text-zinc-400 font-mono mt-0.5">
                   {observer.lat.toFixed(4)}°N, {observer.lon.toFixed(4)}°E &bull; {observer.altMeters}m ASL
                 </div>
               </div>
 
-              <GlassBadge tone={gpsStatus === "phone-paired" ? "purple" : "emerald"} dot>
+              <span className="text-[10px] font-mono text-zinc-400 border border-zinc-800 px-2 py-1">
                 &plusmn;{observer.accuracyRadiusMeters || 25}m ({observer.source || "gps"})
-              </GlassBadge>
+              </span>
             </div>
 
             {/* Controls: Preset City & Auto GPS */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Preset Selector */}
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">Preset Observatories</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="text-[10px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
+                  Preset Observatories
+                </label>
                 <select
                   value={presetCities.some((c) => c.name === observer.name) ? observer.name : "custom"}
                   onChange={(e) => {
                     const found = presetCities.find((c) => c.name === e.target.value);
                     if (found) onSelectPresetCity(found);
                   }}
-                  className="w-full h-9 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-400 cursor-pointer"
+                  className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 outline-none focus:border-zinc-500 font-sans cursor-pointer"
                 >
-                  <option value="custom">Preset Observatories…</option>
+                  <option value="custom">Select Observatory Preset…</option>
                   {presetCities.map((c) => (
                     <option key={c.name} value={c.name}>
                       {c.name}
@@ -175,70 +156,74 @@ export function ObservatoryCommandConsole({
                 </select>
               </div>
 
-              {/* Auto GPS Trigger */}
-              <div className="pt-5">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
+                  Sensor Sync
+                </label>
                 <button
                   onClick={onDetectGps}
-                  className="h-9 px-3.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/40 text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shadow-[0_0_12px_rgba(0,229,255,0.15)]"
+                  className="w-full h-8 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                 >
-                  <Navigation className={`h-3.5 w-3.5 ${gpsStatus === "locating" ? "animate-spin text-cyan-400" : "text-cyan-400"}`} />
-                  <span>AUTO GPS</span>
+                  <Navigation className={`h-3 w-3 ${gpsStatus === "locating" ? "animate-spin text-[#00e5ff]" : "text-zinc-400"}`} />
+                  <span>Auto GPS</span>
                 </button>
               </div>
             </div>
 
-            {/* Manual Lat / Lon / Alt Input Bar */}
+            {/* Manual Lat / Lon / Alt Coordinates */}
             <div className="space-y-1">
-              <label className="text-[10px] font-mono text-slate-400 uppercase">Manual Geodetic Coordinates</label>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-400 block font-semibold">
+                Manual Coordinates
+              </label>
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                <div className="flex-1 flex items-center gap-1 bg-slate-950 border border-white/10 px-2.5 py-1.5 rounded-xl font-mono text-xs">
-                  <span className="text-[9px] text-cyan-400 font-bold">LAT</span>
+                <div className="flex-1 flex items-center gap-1 bg-black border border-zinc-800 px-3 py-1 font-mono text-xs">
+                  <span className="text-[9px] text-zinc-500 font-bold">LAT</span>
                   <input
                     type="number"
                     value={customLat}
                     onChange={(e) => onCustomLatChange(e.target.value)}
-                    className="w-full bg-transparent text-center text-white text-xs outline-none focus:text-cyan-300"
+                    className="w-full bg-transparent text-center text-white text-xs outline-none focus:text-[#00e5ff]"
                     placeholder="Lat"
                   />
-                  <span className="text-white/20">|</span>
-                  <span className="text-[9px] text-cyan-400 font-bold">LON</span>
+                  <span className="text-zinc-800">|</span>
+                  <span className="text-[9px] text-zinc-500 font-bold">LON</span>
                   <input
                     type="number"
                     value={customLon}
                     onChange={(e) => onCustomLonChange(e.target.value)}
-                    className="w-full bg-transparent text-center text-white text-xs outline-none focus:text-cyan-300"
+                    className="w-full bg-transparent text-center text-white text-xs outline-none focus:text-[#00e5ff]"
                     placeholder="Lon"
                   />
-                  <span className="text-white/20">|</span>
-                  <span className="text-[9px] text-cyan-400 font-bold">ALT</span>
+                  <span className="text-zinc-800">|</span>
+                  <span className="text-[9px] text-zinc-500 font-bold">ALT</span>
                   <input
                     type="number"
                     value={customAlt}
                     onChange={(e) => onCustomAltChange(e.target.value)}
-                    className="w-16 bg-transparent text-center text-white text-xs outline-none focus:text-cyan-300"
+                    className="w-16 bg-transparent text-center text-white text-xs outline-none focus:text-[#00e5ff]"
                     placeholder="Alt"
                   />
                 </div>
 
                 <button
                   onClick={onApplyCustomCoords}
-                  className="h-9 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono text-xs font-black transition cursor-pointer shadow-[0_0_12px_rgba(0,229,255,0.3)] shrink-0"
+                  className="h-8 px-4 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider transition cursor-pointer shrink-0"
                 >
-                  SET COORDS
+                  Apply
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Observer Solar & Sky State Micro-Readout */}
-          <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-mono">
+          {/* Observer Twilight Status */}
+          <div className="pt-3 border-t border-zinc-900 flex items-center justify-between text-xs font-sans">
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-[11px]">SOLAR CONDITION:</span>
+              <span className="text-zinc-400 text-[11px] uppercase tracking-wider">Solar Horizon:</span>
               <span
-                className={`px-2 py-0.5 rounded-full font-bold text-[10px] flex items-center gap-1.5 ${
+                className={`px-2 py-0.5 text-[10px] font-semibold flex items-center gap-1.5 border ${
                   twilight.isDarkEnough
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                    : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    ? "bg-zinc-900 text-emerald-400 border-emerald-500/40"
+                    : "bg-zinc-900 text-amber-400 border-amber-500/40"
                 }`}
               >
                 {twilight.isDarkEnough ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
@@ -246,27 +231,23 @@ export function ObservatoryCommandConsole({
               </span>
             </div>
 
-            <div className="text-cyan-400 font-bold text-[11px]">
-              {aboveHorizonCount} OVERHEAD
+            <div className="text-zinc-300 font-mono text-[11px]">
+              <span className="text-white font-bold">{aboveHorizonCount}</span> SATELLITES OVERHEAD
             </div>
           </div>
-        </SpaceTechCard>
+        </div>
 
-        {/* BAY BETA: Temporal Simulation & Propagation Controller */}
-        <SpaceTechCard
-          moduleTag="BAY-BETA // TEMPORAL PROPAGATION ENGINE"
-          statusText={isPaused ? "CLOCK PAUSED" : `${speed}X SIMULATION`}
-          statusColor={isPaused ? "amber" : "emerald"}
-          tilt={false}
-          className="p-5 flex flex-col justify-between space-y-4"
-        >
+        {/* Panel B: Temporal Simulation & Propagation Engine */}
+        <div className="border border-zinc-850 bg-zinc-950 p-6 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
-            {/* Live Clock & Control Row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/70 border border-white/[0.08] p-3 rounded-xl">
-              <div className="space-y-0.5">
-                <div className="text-[10px] font-mono text-slate-400 uppercase">SIMULATION TIME</div>
-                <div className="text-sm font-mono font-black text-emerald-400 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-emerald-400" />
+            {/* Clock Header & Play Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-900 pb-3">
+              <div>
+                <span className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#00e5ff] font-semibold mb-1">
+                  Temporal Propagation Engine
+                </span>
+                <div className="text-base font-mono font-bold text-white flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[#00e5ff]" />
                   <span>{formattedClock}</span>
                 </div>
               </div>
@@ -274,40 +255,38 @@ export function ObservatoryCommandConsole({
               <div className="flex items-center gap-2">
                 <button
                   onClick={onTogglePlay}
-                  className={`h-8 px-3 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                    isPaused
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  }`}
+                  className="h-8 px-3 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
                 >
-                  {isPaused ? <Play className="h-3.5 w-3.5 text-emerald-400" /> : <Pause className="h-3.5 w-3.5 text-amber-400" />}
-                  <span>{isPaused ? "RESUME" : "PAUSE"}</span>
+                  {isPaused ? <Play className="h-3 w-3 text-emerald-400" /> : <Pause className="h-3 w-3 text-amber-400" />}
+                  <span>{isPaused ? "Resume" : "Pause"}</span>
                 </button>
 
                 <button
                   onClick={onLiveSync}
-                  className="h-8 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  className="h-8 px-3 border border-zinc-800 bg-black hover:bg-zinc-900 text-zinc-300 hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+                  title="Reset clock to live real-time"
                 >
-                  <RotateCcw className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>LIVE SYNC</span>
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Live Sync</span>
                 </button>
               </div>
             </div>
 
-            {/* Speed Multipliers & Constellation Group */}
+            {/* Speed Multipliers & Target Group */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Segmented Speed Bar */}
               <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">Propagation Speed</label>
-                <div className="flex items-center gap-1 bg-slate-950 border border-white/10 p-1 rounded-xl font-mono text-xs">
+                <label className="text-[10px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
+                  Simulation Speed
+                </label>
+                <div className="flex items-center border border-zinc-800 bg-black p-0.5 font-mono text-xs">
                   {[1, 5, 10, 30, 60].map((s) => (
                     <button
                       key={s}
                       onClick={() => onSetSpeed(s)}
-                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      className={`flex-1 py-1 text-xs font-semibold transition cursor-pointer ${
                         speed === s
-                          ? "bg-cyan-500 text-black shadow-md font-black"
-                          : "text-slate-400 hover:text-white"
+                          ? "bg-white text-black font-bold"
+                          : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       {s}x
@@ -316,33 +295,36 @@ export function ObservatoryCommandConsole({
                 </div>
               </div>
 
-              {/* Constellation Group */}
               <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">Constellation Target Group</label>
+                <label className="text-[10px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
+                  Constellation Target Group
+                </label>
                 <select
                   value={skyCatalogGroup}
                   onChange={(e) => onSetSkyCatalogGroup(e.target.value as any)}
-                  className="w-full h-9 rounded-xl border border-white/10 bg-slate-950 px-2.5 text-xs font-mono font-bold text-cyan-300 outline-none cursor-pointer"
+                  className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 outline-none focus:border-zinc-500 font-sans cursor-pointer"
                 >
-                  <option value="active" className="bg-slate-950 text-white">All Active Constellations</option>
-                  <option value="visual" className="bg-slate-950 text-white">Bright &amp; Visual (ISS, Hubble)</option>
-                  <option value="weather" className="bg-slate-950 text-white">Weather &amp; Earth Observation</option>
-                  <option value="gnss" className="bg-slate-950 text-white">GNSS (GPS, Galileo, BeiDou)</option>
-                  <option value="stations" className="bg-slate-950 text-white">Space Stations (ISS &amp; Tiangong)</option>
+                  <option value="active">All Active Constellations</option>
+                  <option value="visual">Bright &amp; Visual (ISS, Hubble)</option>
+                  <option value="weather">Weather &amp; Earth Observation</option>
+                  <option value="gnss">GNSS (GPS, Galileo, BeiDou)</option>
+                  <option value="stations">Space Stations (ISS &amp; Tiangong)</option>
                 </select>
               </div>
             </div>
 
             {/* Timezone Selector */}
             <div>
-              <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">Observatory Timezone</label>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
+                Timezone Format
+              </label>
               <select
                 value={selectedTz}
                 onChange={(e) => onSelectTz(e.target.value)}
-                className="w-full h-9 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-mono text-cyan-300 outline-none cursor-pointer"
+                className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 outline-none focus:border-zinc-500 font-sans cursor-pointer"
               >
                 {timezoneOptions.map((tz) => (
-                  <option key={tz.id} value={tz.id} className="bg-slate-950 text-white">
+                  <option key={tz.id} value={tz.id}>
                     {tz.name}
                   </option>
                 ))}
@@ -350,11 +332,11 @@ export function ObservatoryCommandConsole({
             </div>
           </div>
 
-          {/* Interactive Temporal Scrubber Slider (±6 Hours) */}
-          <div className="pt-3 border-t border-white/[0.08] space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <span>TEMPORAL SCRUBBER (-6H)</span>
-              <span className="text-cyan-400 font-bold">DELTA: {Math.round((timeMs - sliderBaseTime) / 60000)} MIN</span>
+          {/* Temporal Scrubber Slider (±6 Hours) */}
+          <div className="pt-3 border-t border-zinc-900 space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+              <span>SCRUBBER (-6H)</span>
+              <span className="text-[#00e5ff] font-semibold">DELTA: {Math.round((timeMs - sliderBaseTime) / 60000)} MIN</span>
               <span>(+6H)</span>
             </div>
             <input
@@ -364,48 +346,33 @@ export function ObservatoryCommandConsole({
               step={1000}
               value={timeMs}
               onChange={(e) => onTimeScrubberChange(Number(e.target.value))}
-              className="w-full h-2 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              className="w-full h-1.5 bg-zinc-800 rounded-none appearance-none cursor-pointer accent-white"
             />
           </div>
-        </SpaceTechCard>
+        </div>
       </div>
 
-      {/* FLIGHT DIRECTOR SCIENTIFIC ADVISORY HUD */}
-      <SpaceTechCard
-        moduleTag="DIRECTOR // SCIENTIFIC VISIBILITY PROTOCOL"
-        statusText="ASTRONOMICAL POLICY"
-        statusColor="cyan"
-        tilt={false}
-        className="p-4 sm:p-5"
-      >
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
-              <Crosshair className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                Topocentric 3-Condition Concurrent Naked-Eye Policy
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                A satellite is classified as <span className="text-cyan-300 font-bold font-mono">NAKED-EYE VISIBLE</span> strictly when 3 conditions concur:
-                (1) Topocentric elevation &gt; 10° above horizon, (2) Spacecraft illuminated by Sun outside Earth&apos;s umbra, and (3) Observer site in astronomical twilight or night (Sun Alt &lt; -6°).
-              </p>
-            </div>
-          </div>
+      {/* SCIENTIFIC VISIBILITY PROTOCOL FOOTER */}
+      <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Crosshair className="h-4 w-4 text-[#00e5ff] shrink-0 mt-0.5" />
+          <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+            <strong className="text-white uppercase tracking-wider text-[11px] block">Topocentric 3-Condition Visibility Protocol:</strong>
+            Spacecraft classified as naked-eye visible strictly when: (1) Elevation &gt; 10° above horizon, (2) Spacecraft illuminated outside Earth umbra, and (3) Observer site in astronomical twilight or darkness (Sun altitude &lt; -6°).
+          </p>
+        </div>
 
-          <div className="flex items-center gap-3 shrink-0 font-mono text-center self-end lg:self-center">
-            <div className="bg-slate-950 border border-white/10 px-4 py-2 rounded-xl">
-              <div className="text-[9px] text-slate-400 uppercase">Above Horizon</div>
-              <div className="text-lg font-black text-white">{aboveHorizonCount}</div>
-            </div>
-            <div className="bg-emerald-500/15 border border-emerald-400/30 px-4 py-2 rounded-xl">
-              <div className="text-[9px] text-emerald-400 uppercase font-bold">Naked-Eye</div>
-              <div className="text-lg font-black text-emerald-300">{nakedEyeCount}</div>
-            </div>
+        <div className="flex items-center gap-4 shrink-0 font-mono text-xs border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-4">
+          <div>
+            <span className="text-[10px] text-zinc-500 uppercase block">Overhead</span>
+            <span className="text-lg font-bold text-white">{aboveHorizonCount}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-emerald-400 uppercase block">Naked Eye</span>
+            <span className="text-lg font-bold text-emerald-400">{nakedEyeCount}</span>
           </div>
         </div>
-      </SpaceTechCard>
+      </div>
     </section>
   );
 }

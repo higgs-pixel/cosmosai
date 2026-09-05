@@ -6,10 +6,10 @@ import {
   ArrowLeft,
   MapPin,
   Clock,
+  Search,
+  Smartphone,
+  ChevronDown,
 } from "lucide-react";
-import { GlassPanel } from "@/components/glass/GlassPanel";
-import { GlassButton } from "@/components/glass/GlassButton";
-import { GlassBadge } from "@/components/glass/GlassBadge";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
 interface TrackMySkyNavProps {
@@ -19,6 +19,8 @@ interface TrackMySkyNavProps {
   onOpenManual?: () => void;
   onScrollToSection: (id: string) => void;
   activeSection?: string;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export function TrackMySkyNav({
@@ -28,90 +30,140 @@ export function TrackMySkyNav({
   onOpenManual,
   onScrollToSection,
   activeSection = "hero",
+  searchQuery = "",
+  onSearchChange,
 }: TrackMySkyNavProps) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
+      setIsScrolled(window.scrollY > 30);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
+  const navItems = [
     { id: "hero", label: "Overview" },
-    { id: "console-section", label: "Console" },
+    { id: "satellite-info-section", label: "Mission Focus" },
+    { id: "console-section", label: "Observatory Console" },
     { id: "viewports-section", label: "Viewports" },
-    { id: "passes-section", label: "Passes" },
-    { id: "analytics-section", label: "Analytics" },
-    { id: "fleet-table-section", label: "Fleet" },
+    { id: "passes-section", label: "Pass Predictor" },
+    { id: "analytics-section", label: "Astrometry" },
+    { id: "fleet-table-section", label: "Fleet Catalog" },
+    { id: "dossier-section", label: "Technical Dossier" },
   ];
 
   return (
-    <header className="fixed top-3 inset-x-3 sm:inset-x-6 z-40 pointer-events-none transition-all duration-300">
-      <div className="max-w-[1650px] mx-auto flex items-center justify-between gap-3 pointer-events-auto">
-        {/* LEFT: Branding & Workspace Return */}
-        <GlassPanel
-          level={isScrolled ? 2 : 1}
-          className="px-3.5 py-1.5 flex items-center gap-3 shrink-0 shadow-2xl transition-all"
-        >
-          <Link
-            href="/orbit"
-            className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-slate-300 hover:text-white transition"
-            title="Return to Orbit Workspace"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-xs tracking-wider text-white font-sans uppercase">
-              TRACK MY SKY
-            </span>
-            <GlassBadge tone="cyan" dot pulse>
-              LIVE
-            </GlassBadge>
-          </div>
-        </GlassPanel>
-
-        {/* CENTER: Spatial Jump Navigation Pills */}
-        <GlassPanel
-          level={isScrolled ? 2 : 1}
-          className="hidden xl:flex items-center gap-1 p-1 shadow-2xl shrink-0 transition-all"
-        >
-          {navLinks.map((link) => (
-            <GlassButton
-              key={link.id}
-              size="xs"
-              variant={activeSection === link.id ? "primary" : "default"}
-              onClick={() => onScrollToSection(link.id)}
+    <header
+      className={`fixed top-0 inset-x-0 z-50 transition-colors duration-200 ${
+        isScrolled ? "bg-black/95 border-b border-zinc-850 backdrop-blur-md" : "bg-black/85 border-b border-zinc-900 backdrop-blur-sm"
+      }`}
+    >
+      <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Upper Editorial Row: Brand, Search Bar, Companion GPS & Actions */}
+        <div className="flex h-14 items-center justify-between gap-4 border-b border-zinc-900">
+          {/* Brand: Bold NASA-Style Sans Logo */}
+          <div className="flex items-center gap-4 shrink-0">
+            <Link
+              href="/orbit"
+              className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition font-sans text-xs uppercase tracking-wider group mr-2"
+              title="Return to Orbit Workspace"
             >
-              {link.label}
-            </GlassButton>
-          ))}
-        </GlassPanel>
+              <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden sm:inline">Orbit</span>
+            </Link>
 
-        {/* RIGHT: Status, GPS Site, Clock, and Pair Phone */}
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Observer Location Pill */}
-          <GlassPanel
-            level={1}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-slate-300 shadow-xl max-w-[220px] truncate"
-            title={`Observer Site: ${observer.name}`}
-          >
-            <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-            <span className="truncate">{observer.name || "GPS Site"}</span>
-          </GlassPanel>
+            <div className="flex items-center gap-3">
+              <span className="text-base sm:text-lg font-black tracking-[0.2em] text-white uppercase font-sans select-none">
+                COSMOS
+              </span>
+              <span className="h-4 w-px bg-zinc-800 hidden sm:block" />
+              <span className="text-[10px] tracking-[0.25em] text-zinc-400 uppercase font-semibold font-sans hidden sm:block">
+                Track My Sky
+              </span>
+            </div>
+          </div>
 
-          {/* Clock Pill */}
-          <GlassPanel
-            level={1}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-emerald-400 font-bold shadow-xl shrink-0"
-          >
-            <Clock className="h-3.5 w-3.5 text-emerald-400" />
-            <span>{formattedTime}</span>
-          </GlassPanel>
+          {/* Center Search Input (Exact NASA reference style) */}
+          <div className="flex-1 max-w-md mx-4 hidden md:block">
+            <div className="relative flex items-center">
+              <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  onSearchChange?.(e.target.value);
+                  if (e.target.value) {
+                    onScrollToSection("fleet-table-section");
+                  }
+                }}
+                placeholder="Search fleet catalog or NORAD ID…"
+                className="w-full h-8 pl-9 pr-3 rounded-none bg-zinc-950 border border-zinc-800 text-xs font-sans text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"
+              />
+            </div>
+          </div>
+
+          {/* Right Controls: Companion Phone Link, Observer Site & Live Time */}
+          <div className="flex items-center gap-4 text-xs font-sans">
+            {/* Observer Geodetic Site Pill */}
+            <div
+              className="hidden lg:flex items-center gap-1.5 text-zinc-400 max-w-[200px] truncate"
+              title={`Observer Site: ${observer.name}`}
+            >
+              <MapPin className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+              <span className="truncate text-[11px] font-sans text-zinc-300">{observer.name}</span>
+            </div>
+
+            {/* Companion Smartphone GPS Sync */}
+            {onOpenPairModal && (
+              <button
+                onClick={onOpenPairModal}
+                className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition uppercase text-[11px] tracking-wider font-medium cursor-pointer"
+                title="Pair Smartphone GPS sensor"
+              >
+                <Smartphone className="h-3.5 w-3.5 text-zinc-500" />
+                <span className="hidden xl:inline">Companion GPS</span>
+              </button>
+            )}
+
+            {/* Observatory Clock */}
+            <div className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-zinc-300 pl-2 border-l border-zinc-800">
+              <Clock className="h-3 w-3 text-zinc-500" />
+              <span>{formattedTime}</span>
+            </div>
+          </div>
         </div>
+
+        {/* Lower Editorial Sub-Navigation Bar: Small Uppercase Labels with Dropdowns */}
+        <nav className="flex items-center gap-6 sm:gap-8 overflow-x-auto py-2 scrollbar-none font-sans">
+          {navItems.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onScrollToSection(item.id)}
+                className={`flex items-center gap-1 shrink-0 text-[11px] uppercase tracking-[0.15em] font-medium transition cursor-pointer ${
+                  isActive
+                    ? "text-white font-bold border-b border-white pb-0.5"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                <span>{item.label}</span>
+                <ChevronDown className="h-2.5 w-2.5 opacity-40" />
+              </button>
+            );
+          })}
+
+          {onOpenManual && (
+            <button
+              onClick={onOpenManual}
+              className="ml-auto flex items-center gap-1 shrink-0 text-[10px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
+            >
+              <span>Glossary &amp; Docs</span>
+            </button>
+          )}
+        </nav>
       </div>
     </header>
   );

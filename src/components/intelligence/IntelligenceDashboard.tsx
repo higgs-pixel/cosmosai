@@ -608,7 +608,7 @@ export default function IntelligenceDashboard() {
               title="Return to COSMOS Observatory"
             >
               <span className="text-sm font-bold tracking-[0.25em] text-white uppercase group-hover:text-[#00e5ff] transition font-sans">
-                COSMOS
+                COSMOS AI
               </span>
               <span className="h-3.5 w-px bg-zinc-800" />
               <span className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase font-medium font-sans">
@@ -672,13 +672,13 @@ export default function IntelligenceDashboard() {
 
           {/* Right Navigation Actions */}
           <div className="flex items-center gap-3 font-sans">
-            <Link
+            {/* <Link
               href="/"
               className="inline-flex h-8 items-center gap-1.5 border border-zinc-800 px-3 text-[11px] font-medium tracking-wider uppercase text-zinc-300 hover:border-zinc-600 hover:text-white transition bg-zinc-950/80 font-sans"
             >
               <ArrowLeft className="h-3 w-3" />
               <span className="hidden sm:inline">Observatory</span>
-            </Link>
+            </Link> */}
 
             <Link
               href="/track-my-sky"

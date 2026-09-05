@@ -5,19 +5,12 @@ import {
   Clock,
   Sparkles,
   Eye,
-  ChevronRight,
-  TrendingUp,
-  Compass,
   Calendar,
-  Layers,
   Box,
   LayoutGrid,
   Crosshair,
+  ArrowRight,
 } from "lucide-react";
-import { GlassPanel } from "@/components/glass/GlassPanel";
-import { GlassButton } from "@/components/glass/GlassButton";
-import { GlassBadge } from "@/components/glass/GlassBadge";
-import { SpaceTechCard } from "@/components/ui/SpaceTechCard";
 import { Passes3DCarousel } from "./Passes3DCarousel";
 import { SatellitePass } from "@/components/intelligence/PassPredictor";
 
@@ -55,89 +48,86 @@ export function UpcomingPassesTimeline({
   const [viewMode, setViewMode] = useState<"carousel" | "grid">("carousel");
 
   return (
-    <section id="passes-section" className="w-full space-y-4 pt-4">
-      {/* Section Header */}
-      <GlassPanel level={2} className="p-4 sm:p-5 shadow-2xl">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-cyan-400 font-bold uppercase">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>03 // UPCOMING SATELLITE PASSES TIMELINE</span>
-            </div>
-            <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              <span>Predicted Topocentric Passes</span>
-              <GlassBadge tone="cyan">{passes.length} TARGETS</GlassBadge>
-            </h2>
-            <p className="text-xs text-slate-300">
-              High-precision SGP4 orbital pass predictions calculated relative to your observer horizon.
-            </p>
+    <section id="passes-section" className="w-full space-y-6 pt-6 font-sans">
+      {/* Editorial Section Header */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 border-b border-zinc-900 pb-4">
+        <div>
+          <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+            Section 04 // Upcoming Orbital Passes
           </div>
-
-          {/* Filter & View Mode Controls */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* View Mode Switcher: 3D Carousel vs Matrix Grid */}
-            <div className="flex items-center gap-1 bg-slate-950/90 border border-cyan-500/30 p-1 rounded-xl font-mono text-xs">
-              <button
-                onClick={() => setViewMode("carousel")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "carousel"
-                    ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(0,229,255,0.4)] font-black"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Box className="h-3.5 w-3.5" />
-                <span>3D CAROUSEL</span>
-              </button>
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "grid"
-                    ? "bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(0,229,255,0.4)] font-black"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span>MATRIX GRID</span>
-              </button>
-            </div>
-
-            {/* Naked-Eye Only Toggle */}
-            <label className="flex items-center gap-2 text-xs font-mono text-slate-200 cursor-pointer bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 rounded-xl transition select-none">
-              <input
-                type="checkbox"
-                checked={onlyVisible}
-                onChange={(e) => onToggleOnlyVisible(e.target.checked)}
-                className="rounded border-white/20 bg-slate-900 text-cyan-400 focus:ring-0 cursor-pointer"
-              />
-              <span className="font-semibold">Naked-Eye Only</span>
-            </label>
-
-            {/* Timeframe Selector */}
-            <div className="flex items-center gap-1 bg-slate-950/80 border border-white/10 p-1 rounded-xl font-mono text-xs">
-              {(["1h", "6h", "24h"] as const).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => onSetTimeframeFilter(tf)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    timeframeFilter === tf
-                      ? "bg-cyan-500 text-slate-950 shadow-md font-black"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans flex items-center gap-3">
+            <span>Predicted Topocentric Passes</span>
+            <span className="text-xs text-zinc-400 font-normal">({passes.length} TARGETS IN RANGE)</span>
+          </h2>
+          <p className="text-xs text-zinc-400 font-sans mt-1">
+            Astrometric pass calculations relative to your local observer horizon over the next {timeframeFilter}.
+          </p>
         </div>
 
-        {/* Content View: 3D Spatial Carousel OR Matrix Grid */}
+        {/* Filter & View Mode Controls */}
+        <div className="flex flex-wrap items-center gap-3 font-sans">
+          {/* View Mode Switcher: 3D Carousel vs Matrix Grid */}
+          <div className="flex items-center border border-zinc-800 bg-black p-0.5 text-xs">
+            <button
+              onClick={() => setViewMode("carousel")}
+              className={`px-3 py-1 text-[11px] uppercase font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "carousel"
+                  ? "bg-white text-black font-bold"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Box className="h-3 w-3" />
+              <span>3D Carousel</span>
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`px-3 py-1 text-[11px] uppercase font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                viewMode === "grid"
+                  ? "bg-white text-black font-bold"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <LayoutGrid className="h-3 w-3" />
+              <span>Story Grid</span>
+            </button>
+          </div>
+
+          {/* Naked-Eye Only Toggle */}
+          <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 hover:border-zinc-700 transition select-none">
+            <input
+              type="checkbox"
+              checked={onlyVisible}
+              onChange={(e) => onToggleOnlyVisible(e.target.checked)}
+              className="rounded-none border-zinc-700 bg-black text-white focus:ring-0 cursor-pointer accent-white"
+            />
+            <span className="text-[11px] uppercase font-semibold tracking-wider">Naked-Eye Only</span>
+          </label>
+
+          {/* Timeframe Selector */}
+          <div className="flex items-center border border-zinc-800 bg-black p-0.5 text-xs">
+            {(["1h", "6h", "24h"] as const).map((tf) => (
+              <button
+                key={tf}
+                onClick={() => onSetTimeframeFilter(tf)}
+                className={`px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer uppercase ${
+                  timeframeFilter === tf
+                    ? "bg-white text-black font-bold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Passes Container */}
+      <div className="w-full border border-zinc-850 bg-black p-4 sm:p-6">
         {passes.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 font-mono text-xs space-y-2">
-            <p className="text-white text-sm font-bold">NO UPCOMING SATELLITE PASSES DETECTED</p>
-            <p className="text-slate-400">
-              No passes found in the selected {timeframeFilter} window. Try expanding the timeframe or unchecking "Naked-Eye Only".
-            </p>
+          <div className="py-20 text-center text-zinc-500 font-sans text-xs uppercase tracking-widest space-y-2">
+            <p className="text-white text-sm font-bold">No upcoming passes in {timeframeFilter} window</p>
+            <p className="text-zinc-400">Expand the timeframe window or uncheck &ldquo;Naked-Eye Only&rdquo;.</p>
           </div>
         ) : viewMode === "carousel" ? (
           /* Mode 1: 3D Spatial Cylindrical Carousel */
@@ -148,8 +138,8 @@ export function UpcomingPassesTimeline({
             onSelectSatId={onSelectSatId}
           />
         ) : (
-          /* Mode 2: Space-Tech Matrix Grid of 3D Tilt Cards */
-          <div className="pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          /* Mode 2: NASA Editorial Story Grid of Pass Cards */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {passes.slice(0, 15).map((pass, idx) => {
               const isSelected =
                 selectedPass?.noradId === pass.noradId &&
@@ -157,99 +147,96 @@ export function UpcomingPassesTimeline({
               const relativeTime = getRelativeTimeStr(pass.startTimeMs);
 
               return (
-                <SpaceTechCard
+                <div
                   key={`grid-pass-${pass.noradId}-${pass.startTimeMs}-${idx}`}
-                  tilt={true}
-                  scanLine={isSelected}
-                  glow={isSelected}
-                  moduleTag={`NORAD ${pass.noradId}`}
-                  statusText={pass.isVisibleToEye ? "NAKED-EYE" : "ABOVE HORIZON"}
-                  statusColor={pass.isVisibleToEye ? "emerald" : "cyan"}
                   onClick={() => {
                     onSelectPass(pass);
                     onSelectSatId(pass.noradId);
                   }}
-                  className={`cursor-pointer p-4 flex flex-col justify-between transition-all select-none ${
-                    isSelected ? "ring-2 ring-cyan-400" : ""
+                  className={`border p-5 flex flex-col justify-between transition cursor-pointer select-none ${
+                    isSelected
+                      ? "border-white bg-zinc-900 shadow-[0_0_15px_rgba(255,255,255,0.06)]"
+                      : "border-zinc-850 bg-zinc-950 hover:border-zinc-700"
                   }`}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-black text-white tracking-tight flex items-center gap-1.5 truncate">
-                        {pass.isVisibleToEye && (
-                          <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-pulse shrink-0" />
-                        )}
-                        <span className="truncate">{pass.satName}</span>
-                      </h3>
-                      <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-400/30">
+                  <div className="space-y-3">
+                    {/* Header Row: Timing & Status Tag */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-[#00e5ff] font-semibold">
                         {relativeTime}
+                      </span>
+                      <span
+                        className={`text-[9px] uppercase px-2 py-0.5 border font-semibold ${
+                          pass.isVisibleToEye
+                            ? "border-emerald-500/40 text-emerald-400 bg-emerald-950/20"
+                            : "border-zinc-800 text-zinc-400 bg-black"
+                        }`}
+                      >
+                        {pass.isVisibleToEye ? "Naked-Eye Pass" : "Above Horizon"}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 bg-white/[0.03] border border-white/[0.06] p-2.5 rounded-xl font-mono text-xs">
+                    {/* Satellite Name & NORAD */}
+                    <div>
+                      <h3 className="text-base font-bold text-white tracking-tight truncate font-sans">
+                        {pass.satName}
+                      </h3>
+                      <span className="text-[10px] font-mono text-zinc-500">NORAD {pass.noradId}</span>
+                    </div>
+
+                    {/* Astrometry Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-2 border-t border-b border-zinc-900 py-3 text-xs font-sans">
                       <div>
-                        <div className="text-[9px] text-slate-500 uppercase">Max Elevation</div>
-                        <div className="font-bold text-cyan-300 text-sm">
-                          {pass.maxElevationDeg}° Peak
+                        <div className="text-[10px] uppercase text-zinc-500">Max Elevation</div>
+                        <div className="font-bold text-white text-sm">{pass.maxElevationDeg}°</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase text-zinc-500">Visual Mag</div>
+                        <div className="font-bold text-emerald-400 text-sm">
+                          {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ
                         </div>
                       </div>
                       <div>
-                        <div className="text-[9px] text-slate-500 uppercase">Duration</div>
-                        <div className="font-bold text-white text-sm">
+                        <div className="text-[10px] uppercase text-zinc-500">AOS (Rise)</div>
+                        <div className="text-zinc-300 font-mono text-xs">
+                          {new Date(pass.startTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase text-zinc-500">Duration</div>
+                        <div className="text-zinc-300 font-mono text-xs">
                           {Math.round(pass.durationSec / 60)} min
                         </div>
                       </div>
-                      <div>
-                        <div className="text-[9px] text-slate-500 uppercase">Rise (AOS)</div>
-                        <div className="font-semibold text-slate-300 text-xs">
-                          {new Date(pass.startTimeMs).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[9px] text-slate-500 uppercase">Set (LOS)</div>
-                        <div className="font-semibold text-slate-300 text-xs">
-                          {new Date(pass.endTimeMs).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-zinc-400 font-mono">
+                      Trajectory: Az {pass.riseAzimuthDeg}° &rarr; {pass.setAzimuthDeg}°
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-slate-400 mt-2">
-                    <span>
-                      Az: {pass.riseAzimuthDeg}° → {pass.setAzimuthDeg}°
-                    </span>
-                    <span className="font-bold text-emerald-400">
-                      {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mag
-                    </span>
-                  </div>
-
+                  {/* Target Action Link */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectPass(pass);
                       onSelectSatId(pass.noradId);
                     }}
-                    className={`mt-3 w-full h-9 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition ${
+                    className={`mt-4 w-full h-8 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 border transition cursor-pointer ${
                       isSelected
-                        ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]"
-                        : "bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40"
+                        ? "border-white bg-white text-black font-bold"
+                        : "border-zinc-800 bg-black hover:border-zinc-600 text-zinc-200"
                     }`}
                   >
-                    <Crosshair className="h-3.5 w-3.5" />
-                    <span>{isSelected ? "LOCKED IN VIEWPORTS" : "AIM RETICLE & LOCK"}</span>
+                    <Crosshair className="h-3 w-3" />
+                    <span>{isSelected ? "Target Locked" : "Track Target"}</span>
                   </button>
-                </SpaceTechCard>
+                </div>
               );
             })}
           </div>
         )}
-      </GlassPanel>
+      </div>
     </section>
   );
 }

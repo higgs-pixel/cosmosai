@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -12,13 +11,11 @@ import {
   Radio,
   Target,
   ArrowDown,
-  Layers,
   Activity,
   Globe,
+  ArrowRight,
+  ExternalLink,
 } from "lucide-react";
-import { GlassPanel } from "@/components/glass/GlassPanel";
-import { GlassBadge } from "@/components/glass/GlassBadge";
-import { GlassButton } from "@/components/glass/GlassButton";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
 const HeroEarthScene = dynamic(
@@ -26,10 +23,10 @@ const HeroEarthScene = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full min-h-[420px] grid place-items-center bg-[#02040a]">
-        <div className="flex flex-col items-center gap-2 text-cyan-400 font-mono text-xs">
-          <Globe className="h-8 w-8 animate-spin" />
-          <span>INITIALIZING 3D ORBITAL GLOBE…</span>
+      <div className="w-full h-full min-h-[500px] grid place-items-center bg-black">
+        <div className="flex flex-col items-center gap-2 text-zinc-400 font-mono text-xs">
+          <Globe className="h-8 w-8 animate-spin text-zinc-500" />
+          <span className="tracking-widest uppercase text-zinc-400">PROPAGATING 3D ORBITAL GLOBE…</span>
         </div>
       </div>
     ),
@@ -39,7 +36,7 @@ const HeroEarthScene = dynamic(
 // Decoupled, pure memoized 3D background layer — zero re-renders on telemetry count changes
 const PureHeroEarthBackground = memo(function PureHeroEarthBackground() {
   return (
-    <div className="absolute top-0 right-0 w-full lg:w-[62%] h-full pointer-events-auto z-0 opacity-90 lg:opacity-100">
+    <div className="absolute top-0 right-0 w-full lg:w-[68%] xl:w-[64%] h-full pointer-events-auto z-0 opacity-95">
       <HeroEarthScene />
     </div>
   );
@@ -54,6 +51,10 @@ interface TrackMySkyHeroProps {
   activeSatAltKm?: number;
   activeSatElDeg?: number;
   activeSatAzDeg?: number;
+  activeSatMag?: number;
+  activeSatVelocityKmH?: number;
+  activeSatCategory?: string;
+  activeSatNoradId?: number;
   onDetectGps: () => void;
   onScrollToSection: (id: string) => void;
 }
@@ -67,177 +68,187 @@ export function TrackMySkyHero({
   activeSatAltKm = 418,
   activeSatElDeg = 45.2,
   activeSatAzDeg = 178,
+  activeSatMag = -1.8,
+  activeSatVelocityKmH = 27600,
+  activeSatCategory = "Space Station",
+  activeSatNoradId = 25544,
   onDetectGps,
   onScrollToSection,
 }: TrackMySkyHeroProps) {
   return (
-    <section className="relative w-full min-h-[85vh] lg:min-h-[92vh] flex flex-col justify-between pt-24 pb-12 overflow-hidden">
-      {/* Background 3D Earth Layer (Asymmetric placement right/center) */}
+    <section className="relative w-full min-h-screen lg:min-h-[96vh] flex flex-col justify-between pt-24 pb-16 overflow-hidden bg-black border-b border-zinc-900">
+      {/* Background 3D Earth Layer (Asymmetric placement right/center, dominant planetary visual) */}
       <PureHeroEarthBackground />
 
+      {/* Subtle Editorial Contrast Gradients for Text Readability without destroying the void of space */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-black via-black/60 to-transparent w-full lg:w-3/5" />
+      <div className="pointer-events-none absolute bottom-0 inset-x-0 h-36 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
+
       {/* Hero Foreground Content */}
-      <div className="relative z-10 max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-between">
-        {/* Top Header Tags */}
-        <div className="space-y-4 max-w-2xl">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-2.5 flex-wrap"
-          >
-            <GlassBadge tone="cyan" dot pulse>
-              LIVE ORBITAL DATA
-            </GlassBadge>
-            <span className="text-white/20">•</span>
-            <GlassBadge tone="slate">SGP4 / TLE PROPAGATION</GlassBadge>
-            <span className="text-white/20">•</span>
-            <GlassBadge tone="amber">3-CONDITION VISIBILITY</GlassBadge>
-          </motion.div>
+      <div className="relative z-20 max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-between">
+        
+        {/* Top Floating Editorial Metadata */}
+        <div className="pt-4 max-w-xl">
+          <div className="flex items-center gap-3 text-[10px] font-sans uppercase tracking-[0.25em] text-zinc-400">
+            <span className="text-zinc-200 font-bold">NASA / SGP4 ASTRONOMICAL EPHEMERIS</span>
+            <span className="text-zinc-700">&bull;</span>
+            <span>TOPOCENTRIC SKY OBSERVATORY</span>
+          </div>
+        </div>
 
-          {/* Large Editorial Typography */}
+        {/* ─────────────────────────────────────────────────────────────────────
+            PLUTO-STYLE EDITORIAL OVERLAY: Exact layout matching reference image
+            Small outline category badge + Large bordered headline box + Action link
+            ───────────────────────────────────────────────────────────────────── */}
+        <div className="max-w-2xl pt-20 pb-4">
+          {/* Small Outlined Category Box */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="space-y-3"
+            transition={{ duration: 0.5 }}
+            className="border border-white/30 bg-black/60 backdrop-blur-sm px-3 py-1.5 inline-block mb-3.5"
           >
-            <span className="font-mono text-xs sm:text-sm tracking-[0.25em] text-cyan-400 font-bold uppercase block">
-              ORBITAL INTELLIGENCE SYSTEM
+            <span className="text-[10px] font-bold tracking-[0.22em] text-zinc-300 uppercase font-sans">
+              Observation Target &bull; {activeSatCategory}
             </span>
-
-            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-white uppercase leading-[0.92] select-none">
-              TRACK
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400">
-                MY SKY
-              </span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-slate-300 max-w-xl font-sans leading-relaxed pt-2">
-              Real-time topocentric satellite intelligence and orbital awareness.
-              Compute naked-eye visual passes, inspect 3D celestial trajectories, and
-              track passing spacecraft from your precise ground station coordinates.
-            </p>
           </motion.div>
 
-          {/* Quick Action Navigation Buttons */}
+          {/* Large Headline Box with Thin 1px Border & Pure Dark Surface */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.25 }}
-            className="flex items-center gap-3 pt-3 flex-wrap"
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="border border-white/20 bg-black/80 backdrop-blur-md p-6 sm:p-8 mb-5 shadow-2xl space-y-4"
           >
-            <Link href="/stargaze">
-              <GlassButton variant="primary" size="md">
-                <Sparkles className="h-4 w-4 text-cyan-300 animate-pulse" />
-                <span>Launch 3D Planetarium</span>
-              </GlassButton>
-            </Link>
+            <div className="space-y-1">
+              <span className="text-xs font-mono tracking-widest text-[#00e5ff] font-semibold uppercase block">
+                NORAD ID {activeSatNoradId}
+              </span>
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white uppercase leading-[0.95] font-sans">
+                {activeSatName}
+              </h1>
+            </div>
 
-            <GlassButton
-              variant="default"
-              size="md"
+            <p className="text-xs sm:text-sm text-zinc-300 font-sans leading-relaxed max-w-lg">
+              Live orbital track propagated from WGS-84 coordinates relative to <span className="text-white font-medium">{observer.name}</span>.
+              Real-time azimuth, elevation, and photometric visual pass predictions.
+            </p>
+
+            {/* Live Telemetry Data Row */}
+            <div className="pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-sans text-zinc-300">
+              <div>
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Elevation</span>
+                <span className="text-white font-bold text-sm">{activeSatElDeg.toFixed(1)}°</span>
+              </div>
+              <div className="h-6 w-px bg-zinc-800 hidden sm:block" />
+              <div>
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Azimuth</span>
+                <span className="text-zinc-200 font-bold text-sm">{activeSatAzDeg.toFixed(1)}°</span>
+              </div>
+              <div className="h-6 w-px bg-zinc-800 hidden sm:block" />
+              <div>
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Altitude</span>
+                <span className="text-[#00e5ff] font-bold text-sm">{Math.round(activeSatAltKm)} km</span>
+              </div>
+              <div className="h-6 w-px bg-zinc-800 hidden sm:block" />
+              <div>
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Visual Mag</span>
+                <span className="text-emerald-400 font-bold text-sm">{activeSatMag > 0 ? `+${activeSatMag}` : activeSatMag} mᵥ</span>
+              </div>
+              <div className="h-6 w-px bg-zinc-800 hidden sm:block" />
+              <div>
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider block">Overhead Now</span>
+                <span className="text-white font-bold text-sm">{visibleCount} Assets</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Understated Editorial Action Links (Pluto reference style: "See these images →") */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.25 }}
+            className="flex flex-wrap items-center gap-6 text-xs font-sans font-semibold tracking-wider text-zinc-300"
+          >
+            <button
+              onClick={() => onScrollToSection("satellite-info-section")}
+              className="inline-flex items-center gap-2 hover:text-white transition group border-b border-zinc-700 hover:border-white pb-0.5 cursor-pointer uppercase text-[11px]"
+            >
+              <span>Explore Satellite Dossier</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            <button
               onClick={() => onScrollToSection("viewports-section")}
+              className="inline-flex items-center gap-1.5 hover:text-white transition group border-b border-transparent hover:border-zinc-500 pb-0.5 cursor-pointer text-zinc-400 uppercase text-[11px]"
             >
-              <Compass className="h-4 w-4 text-slate-300" />
+              <Compass className="h-3.5 w-3.5" />
               <span>Observation Viewports</span>
-            </GlassButton>
+            </button>
 
-            <GlassButton
-              variant="ghost"
-              size="md"
-              onClick={onDetectGps}
-              title="Acquire browser GPS sensor"
+            <button
+              onClick={() => onScrollToSection("passes-section")}
+              className="inline-flex items-center gap-1.5 hover:text-white transition group border-b border-transparent hover:border-zinc-500 pb-0.5 cursor-pointer text-zinc-400 uppercase text-[11px]"
             >
-              <Navigation className="h-4 w-4 text-cyan-400" />
+              <Eye className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Upcoming Passes ({nakedEyeCount} Naked-Eye)</span>
+            </button>
+
+            <button
+              onClick={onDetectGps}
+              className="inline-flex items-center gap-1.5 hover:text-[#00e5ff] transition group cursor-pointer text-zinc-400 uppercase text-[11px]"
+              title="Pinpoint Observer GPS Sensor"
+            >
+              <Navigation className="h-3.5 w-3.5 text-zinc-500 group-hover:text-[#00e5ff]" />
               <span>Detect GPS</span>
-            </GlassButton>
+            </button>
           </motion.div>
         </div>
 
-        {/* Bottom Floating Telemetry Matrix Modules (Overlapping the Earth Scene) */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl"
-        >
-          {/* Module 1: Overhead Satellites */}
-          <GlassPanel
-            level={2}
-            className="p-4 flex flex-col justify-between min-h-[110px] cursor-pointer hover:border-cyan-400/40 transition"
+        {/* Bottom Editorial Content Row: Thumbnail/Summary Story Cards */}
+        <div className="pt-8 border-t border-zinc-900 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl text-left font-sans">
+          <button
             onClick={() => onScrollToSection("fleet-table-section")}
+            className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-white transition cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-              <span>OVERHEAD NOW</span>
-              <Activity className="h-3.5 w-3.5 text-cyan-400" />
-            </div>
-            <div className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">
-              {visibleCount}
-            </div>
-            <div className="text-[10px] font-mono text-cyan-400">
-              Above Local Horizon
-            </div>
-          </GlassPanel>
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Catalog Fleet</span>
+            <span className="text-xl font-bold text-white font-sans">{visibleCount}</span>
+            <span className="text-[11px] text-zinc-400 block truncate">Overhead horizon</span>
+          </button>
 
-          {/* Module 2: Naked-Eye Visible */}
-          <GlassPanel
-            level={2}
-            className="p-4 flex flex-col justify-between min-h-[110px] cursor-pointer hover:border-emerald-400/40 transition"
+          <button
+            onClick={() => onScrollToSection("passes-section")}
+            className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-emerald-400 transition cursor-pointer"
+          >
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Naked Eye</span>
+            <span className="text-xl font-bold text-emerald-400 font-sans">{nakedEyeCount}</span>
+            <span className="text-[11px] text-zinc-400 block truncate">Visible to eye</span>
+          </button>
+
+          <button
             onClick={() => onScrollToSection("fleet-table-section")}
+            className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-amber-400 transition cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-              <span>NAKED EYE</span>
-              <Eye className="h-3.5 w-3.5 text-emerald-400" />
-            </div>
-            <div className="text-3xl sm:text-4xl font-black text-emerald-300 font-mono tracking-tight">
-              {nakedEyeCount}
-            </div>
-            <div className="text-[10px] font-mono text-emerald-400/80">
-              Photometrically Visible
-            </div>
-          </GlassPanel>
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Sunlit Targets</span>
+            <span className="text-xl font-bold text-amber-400 font-sans">{sunlitCount}</span>
+            <span className="text-[11px] text-zinc-400 block truncate">Illuminated</span>
+          </button>
 
-          {/* Module 3: Sunlit Satellites */}
-          <GlassPanel
-            level={2}
-            className="p-4 flex flex-col justify-between min-h-[110px]"
+          <button
+            onClick={() => onScrollToSection("console-section")}
+            className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-cyan-400 transition cursor-pointer"
           >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-              <span>SUNLIT TARGETS</span>
-              <Radio className="h-3.5 w-3.5 text-amber-400" />
-            </div>
-            <div className="text-3xl sm:text-4xl font-black text-amber-300 font-mono tracking-tight">
-              {sunlitCount}
-            </div>
-            <div className="text-[10px] font-mono text-amber-400/80">
-              Outside Earth Umbra
-            </div>
-          </GlassPanel>
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Observer Site</span>
+            <span className="text-sm font-bold text-white font-sans truncate block">{(observer.name || "Observer Site").split(",")[0]}</span>
+            <span className="text-[11px] text-zinc-400 block">{observer.lat.toFixed(2)}°, {observer.lon.toFixed(2)}°</span>
+          </button>
+        </div>
 
-          {/* Module 4: Active Tracked Spacecraft */}
-          <GlassPanel
-            level={2}
-            className="p-4 flex flex-col justify-between min-h-[110px] border-cyan-400/30"
-          >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-              <span>ACTIVE TARGET</span>
-              <Target className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-            </div>
-            <div className="text-sm sm:text-base font-black text-white font-mono truncate">
-              {activeSatName}
-            </div>
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-300">
-              <span>{activeSatAltKm} km</span>
-              <span className="text-cyan-400">{activeSatElDeg.toFixed(1)}° EL</span>
-            </div>
-          </GlassPanel>
-        </motion.div>
       </div>
 
-      {/* Subtle Scroll Down Prompt */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none">
-        <ArrowDown className="h-3.5 w-3.5 animate-bounce text-cyan-400/70" />
+      {/* Subtle Scroll Indicator */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 text-[10px] font-sans text-zinc-600 uppercase tracking-widest pointer-events-none">
+        <ArrowDown className="h-3 w-3 animate-bounce text-zinc-500" />
       </div>
     </section>
   );
