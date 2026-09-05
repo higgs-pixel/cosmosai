@@ -592,7 +592,7 @@ export default function IntelligenceDashboard() {
   }, [selectedSat, timeMs]);
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#00e5ff]/20 selection:text-white">
+    <div className="min-h-screen bg-transparent text-white font-sans selection:bg-[#00e5ff]/20 selection:text-white">
       
       {/* ─────────────────────────────────────────────────────────────────────────────
           1. SLIM MINIMALIST NAVIGATION BAR

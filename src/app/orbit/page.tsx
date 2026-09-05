@@ -28,11 +28,12 @@ export default function OrbitPage() {
   return (
     <main
       id="main-content"
-      className="relative min-h-screen overflow-x-hidden bg-black text-white selection:bg-[#00e5ff]/20 selection:text-white pb-20"
+      className="relative min-h-screen overflow-x-hidden bg-[#02030a] text-white selection:bg-[#00e5ff]/20 selection:text-white pb-20"
     >
-      {/* Background Deep Space Ambiance */}
-      <AnimatedStarfield />
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(15,23,42,0.3),transparent_70%)]" />
+      {/* Premium 4-Spike Silver Twinkling Starfield */}
+      <AnimatedStarfield density="medium" />
+      {/* Very subtle top radial atmosphere glow - doesn't occlude stars */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(10,20,55,0.18),transparent_65%)]" />
 
       {/* Primary Layout */}
       <div className="relative z-10 w-full">
