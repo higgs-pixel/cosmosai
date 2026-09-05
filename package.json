@@ -50,17 +50,12 @@
     "@types/react-dom": "^19.0.2",
     "@types/three": "^0.171.0",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.17.0",
-    "eslint-config-next": "16.2.11",
     "postcss": "^8.5.26",
     "server-only": "^0.0.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2"
   },
   "overrides": {
-    "@eslint/eslintrc": {
-      "js-yaml": "4.3.1"
-    },
     "minimatch@3.1.5": {
       "brace-expansion": "1.1.18"
     },
