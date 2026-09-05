@@ -78,21 +78,21 @@ function getCardinalText(azDeg: number): string {
 // SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// HUMAN EYE DIRECT GAZE FIELD (HEAD STRAIGHT: 30° UPWARD TO 40° DOWNWARD)
+// GOLDEN RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT)
 // ─────────────────────────────────────────────────────────────────────────────
-// Ergonomics: Keeping the head straight, the natural human visual field
-// without turning the head spans 30° upward (+30°) to 40° downward (-40°).
-// Color: Vivid luminous Orange (#ff6a00 / #f97316 / #ff8c00).
+// The golden rectangle curvature is symmetrically anchored at ±10° (+10° upward,
+// -10° downward) directly centered on and fixed to the bot's blue line of sight.
+// Color: Glowing Golden/Amber (#ffd700 / #fbbf24 / #f59e0b) with bright cyan-blue anchor.
 function HumanPrimaryGazeField({
   radius = 236,
-  opacity = 0.35,
+  opacity = 0.36,
 }: {
   radius?: number;
   opacity?: number;
 }) {
-  const upDeg = 30; // +30° Upward angle
-  const downDeg = 40; // -40° Downward angle
-  const hSpanDeg = 130; // 130° horizontal direct gaze span (±65°)
+  const upDeg = 10; // +10° Upward angle
+  const downDeg = 10; // -10° Downward angle
+  const hSpanDeg = 60; // Golden rectangle curved horizontal field span (±30°)
 
   const upRad = (upDeg * Math.PI) / 180;
   const downRad = (-downDeg * Math.PI) / 180;
@@ -118,7 +118,7 @@ function HumanPrimaryGazeField({
 
     for (let j = 0; j <= numV; j++) {
       const vFrac = j / numV;
-      // Interpolate from downward (-40°) to upward (+30°)
+      // Interpolate from downward (-10°) to upward (+10°)
       const phi = downRad + vFrac * (upRad - downRad);
       for (let i = 0; i <= numH; i++) {
         const hFrac = i / numH;
@@ -149,7 +149,7 @@ function HumanPrimaryGazeField({
     visorGeo.setIndex(indices);
     visorGeo.computeVertexNormals();
 
-    // Top boundary arc (+30° Upward)
+    // Top boundary arc (+10° Upward)
     const topPts: THREE.Vector3[] = [];
     for (let i = 0; i <= numH; i++) {
       const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
@@ -159,7 +159,7 @@ function HumanPrimaryGazeField({
       topPts.push(new THREE.Vector3(x, y, z));
     }
 
-    // Bottom boundary arc (-40° Downward)
+    // Bottom boundary arc (-10° Downward)
     const botPts: THREE.Vector3[] = [];
     for (let i = 0; i <= numH; i++) {
       const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
@@ -169,7 +169,7 @@ function HumanPrimaryGazeField({
       botPts.push(new THREE.Vector3(x, y, z));
     }
 
-    // Left border (connecting -40° to +30° at -hHalfRad)
+    // Left border (connecting -10° to +10° at -hHalfRad)
     const leftPts: THREE.Vector3[] = [];
     for (let j = 0; j <= numV; j++) {
       const phi = downRad + (j / numV) * (upRad - downRad);
@@ -179,7 +179,7 @@ function HumanPrimaryGazeField({
       leftPts.push(new THREE.Vector3(x, y, z));
     }
 
-    // Right border (connecting -40° to +30° at +hHalfRad)
+    // Right border (connecting -10° to +10° at +hHalfRad)
     const rightPts: THREE.Vector3[] = [];
     for (let j = 0; j <= numV; j++) {
       const phi = downRad + (j / numV) * (upRad - downRad);
@@ -189,7 +189,7 @@ function HumanPrimaryGazeField({
       rightPts.push(new THREE.Vector3(x, y, z));
     }
 
-    // 0° Eye-level Horizon Meridian Arc
+    // 0° Eye-level Horizon Meridian Arc (fixed on blue line of sight)
     const horizPts: THREE.Vector3[] = [];
     for (let i = 0; i <= numH; i++) {
       const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
@@ -199,7 +199,7 @@ function HumanPrimaryGazeField({
       horizPts.push(new THREE.Vector3(x, y, z));
     }
 
-    // Central Vertical Gaze Meridian (0° azimuth from -40° to +30°)
+    // Central Vertical Gaze Meridian (0° azimuth from -10° to +10°)
     const vertGazePts: THREE.Vector3[] = [];
     for (let j = 0; j <= numV; j++) {
       const phi = downRad + (j / numV) * (upRad - downRad);
@@ -246,21 +246,21 @@ function HumanPrimaryGazeField({
 
   return (
     <group>
-      {/* Volumetric Frustum Walls (Subtle Translucent Orange) */}
+      {/* Volumetric Frustum Walls (Subtle Translucent Gold/Amber) */}
       <mesh geometry={frustumWallGeo}>
         <meshBasicMaterial
-          color="#ff6600"
+          color="#f59e0b"
           transparent
-          opacity={opacity * 0.28}
+          opacity={opacity * 0.22}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
 
-      {/* Main Curved Visor Canopy (Luminous Orange Surface) */}
+      {/* Main Curved Visor Canopy (Luminous Golden Amber Surface) */}
       <mesh geometry={visorGeometry}>
         <meshBasicMaterial
-          color="#ff7300"
+          color="#fbbf24"
           transparent
           opacity={opacity}
           side={THREE.DoubleSide}
@@ -268,68 +268,84 @@ function HumanPrimaryGazeField({
         />
       </mesh>
 
-      {/* Top Arc Boundary (+30° Upward) */}
+      {/* Top Arc Boundary (+10° Upward) */}
       <Line
         points={topArc}
-        color="#ff8c00"
-        lineWidth={3.2}
+        color="#ffd700"
+        lineWidth={3.6}
         transparent
-        opacity={0.95}
+        opacity={0.98}
       />
 
-      {/* Bottom Arc Boundary (-40° Downward) */}
+      {/* Bottom Arc Boundary (-10° Downward) */}
       <Line
         points={bottomArc}
-        color="#ff4500"
-        lineWidth={3.2}
+        color="#ffd700"
+        lineWidth={3.6}
         transparent
-        opacity={0.95}
+        opacity={0.98}
       />
 
       {/* Left & Right Outer Edges */}
       <Line
         points={leftBorder}
-        color="#ff7300"
-        lineWidth={2.2}
+        color="#fbbf24"
+        lineWidth={2.8}
         transparent
-        opacity={0.8}
+        opacity={0.9}
       />
       <Line
         points={rightBorder}
-        color="#ff7300"
-        lineWidth={2.2}
+        color="#fbbf24"
+        lineWidth={2.8}
         transparent
-        opacity={0.8}
+        opacity={0.9}
       />
 
-      {/* Eye Level 0° Horizon Arc */}
+      {/* Eye Level 0° Horizon Arc (Golden Center Meridian) */}
       <Line
         points={horizonArc}
-        color="#ffb703"
-        lineWidth={2.4}
+        color="#fef08a"
+        lineWidth={2.6}
         transparent
-        opacity={0.85}
+        opacity={0.9}
       />
 
       {/* Central Vertical Sight Line (Prime Meridian) */}
       <Line
         points={vertGazeMeridian}
-        color="#ffa200"
-        lineWidth={2.4}
+        color="#fef08a"
+        lineWidth={2.6}
         transparent
-        opacity={0.85}
+        opacity={0.9}
       />
 
-      {/* Degree Markers on Curved Visor Canopy */}
-      <Html center position={[0, radius * Math.sin(upRad) + 5, radius * Math.cos(upRad)]} className="pointer-events-none select-none">
-        <div className="px-2 py-0.5 rounded bg-orange-950/90 border border-orange-500 text-orange-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
-          ▲ +30° Eye Upward (Head Straight)
+      {/* Reticle Node Anchoring Golden Rectangle Curvature to Blue Line of Sight */}
+      <mesh position={[0, 2.2, radius]}>
+        <ringGeometry args={[1.5, 2.6, 32]} />
+        <meshBasicMaterial color="#00f0ff" side={THREE.DoubleSide} transparent opacity={0.95} />
+      </mesh>
+      <mesh position={[0, 2.2, radius]}>
+        <ringGeometry args={[0.3, 0.9, 16]} />
+        <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.95} />
+      </mesh>
+
+      {/* Degree Markers on Golden Rectangle Canopy */}
+      <Html center position={[0, radius * Math.sin(upRad) + 4.5, radius * Math.cos(upRad)]} className="pointer-events-none select-none">
+        <div className="px-2 py-0.5 rounded bg-amber-950/90 border border-amber-400 text-amber-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
+          ▲ +10° Upward Golden Field
         </div>
       </Html>
 
-      <Html center position={[0, radius * Math.sin(downRad) - 5, radius * Math.cos(downRad)]} className="pointer-events-none select-none">
-        <div className="px-2 py-0.5 rounded bg-orange-950/90 border border-orange-600 text-orange-300 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
-          ▼ -40° Eye Downward (Head Straight)
+      <Html center position={[0, radius * Math.sin(downRad) - 4.5, radius * Math.cos(downRad)]} className="pointer-events-none select-none">
+        <div className="px-2 py-0.5 rounded bg-amber-950/90 border border-amber-400 text-amber-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
+          ▼ -10° Downward Golden Field
+        </div>
+      </Html>
+
+      <Html center position={[0, 2.2 - 4.5, radius]} className="pointer-events-none select-none">
+        <div className="px-2 py-0.5 rounded bg-cyan-950/90 border border-cyan-400 text-cyan-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
+          ⚡ Blue Line of Sight (Bot Axis)
         </div>
       </Html>
     </group>
@@ -525,14 +541,6 @@ function HumanBinocularSightField({
         opacity={0.65}
       />
 
-      {/* 7. Central Foveal Gaze Core Beam (Line of Sight Laser) */}
-      <Line
-        points={[new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(0, 2.2, 260)]}
-        color={color}
-        lineWidth={3.8}
-        transparent
-        opacity={0.95}
-      />
     </group>
   );
 }
@@ -633,13 +641,13 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#1e293b" roughness={0.15} metalness={0.85} />
         </mesh>
 
-        {/* Lens Aperture Eye */}
+        {/* Lens Aperture Eye (Luminous Electric Blue) */}
         <mesh position={[0, 2.2, 3.8]}>
           <sphereGeometry args={[0.95, 16, 16]} />
           <meshStandardMaterial
-            color={sightColor}
-            emissive={sightColor}
-            emissiveIntensity={4.5}
+            color="#00f0ff"
+            emissive="#00f0ff"
+            emissiveIntensity={4.8}
           />
         </mesh>
 
@@ -648,10 +656,26 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.9} />
         </mesh>
 
-        {/* 1. CURVED FIELD VIEW IN ORANGE (+30° UPWARD TO -40° DOWNWARD, HEAD STRAIGHT) */}
+        {/* ⚡ BLUE LINE OF SIGHT FROM THE BOT (PRIMARY COLLIMATED SIGHT AXIS) */}
+        <Line
+          points={[new THREE.Vector3(0, 2.2, 3.8), new THREE.Vector3(0, 2.2, 260)]}
+          color="#00f0ff"
+          lineWidth={4.2}
+          transparent
+          opacity={0.98}
+        />
+        <Line
+          points={[new THREE.Vector3(0, 2.2, 3.8), new THREE.Vector3(0, 2.2, 260)]}
+          color="#ffffff"
+          lineWidth={1.8}
+          transparent
+          opacity={0.92}
+        />
+
+        {/* 1. GOLDEN RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT) */}
         <HumanPrimaryGazeField
           radius={236}
-          opacity={mobileOrientation ? 0.38 : 0.32}
+          opacity={mobileOrientation ? 0.40 : 0.34}
         />
 
         {/* 2. HUMAN EYE PERIPHERAL BINOCULAR FIELD (210°H × 140°V ENVELOPE) */}
@@ -682,17 +706,17 @@ function ObserverGroundStation({
       <Html center position={[0, 9.5, 0]} className="pointer-events-none select-none">
         <div className={`px-3.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-2xl border backdrop-blur-md whitespace-nowrap transition ${
           mobileOrientation
-            ? "bg-orange-950/95 border-orange-400 text-orange-300 shadow-[0_0_20px_rgba(249,115,22,0.6)]"
-            : targetSat
             ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]"
-            : "bg-emerald-950/95 border-emerald-500/60 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
+            : targetSat
+            ? "bg-cyan-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.6)]"
+            : "bg-slate-950/95 border-cyan-500/60 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.35)]"
         }`}>
           <span>
             {mobileOrientation
-              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • 👁️ DIRECT GAZE: +30° / -40° (ORANGE)`
+              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • ⚡ BLUE SIGHT: ±10° GOLDEN RECTANGLE`
               : targetSat
-              ? `🎯 SIGHT LOCKED: ${targetSat.name} • 👁️ DIRECT GAZE: +30° / -40°`
-              : "👁️ HUMAN EYE SIGHT: +30° UP / -40° DOWN GAZE • 210° × 140° BINOCULAR"}
+              ? `🎯 SIGHT LOCKED: ${targetSat.name} • ⚡ BLUE SIGHT: ±10° GOLDEN RECTANGLE`
+              : "⚡ BOT BLUE LINE OF SIGHT • 🌟 GOLDEN RECTANGLE: +10° UP / -10° DOWN"}
           </span>
         </div>
       </Html>
