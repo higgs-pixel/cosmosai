@@ -6,7 +6,8 @@ import { getPosition as getSunPosition, getMoonPosition } from "suncalc";
 
 import { SatelliteVisibilityResult, ObserverTwilightInfo } from "@/lib/orbit/visibility";
 import { Compass, Sun, Moon, Sparkles, Eye, Info, MapPin, Target, Layers, Filter } from "lucide-react";
-import { GlassPanel } from "@/components/glass/GlassPanel";
+import { GlassBadge } from "@/components/glass/GlassBadge";
+import { SpaceTechCard } from "@/components/ui/SpaceTechCard";
 
 interface SkyDomeChartProps {
   visibleSats: SatelliteVisibilityResult[];
@@ -116,83 +117,99 @@ function SkyDomeChart({
   const sunlitCount = visibleSats.filter((s) => s.isAboveHorizon && s.isSunlit && !s.isNakedEyeVisible).length;
 
   return (
-    <GlassPanel level={2} className="p-4 sm:p-5 flex flex-col items-center w-full font-sans">
-      
+    <SpaceTechCard
+      moduleTag="VIEWPORT-POLAR // TOPOCENTRIC SKY DOME"
+      statusText="ZENITH TRACKING"
+      statusColor="cyan"
+      tilt={false}
+      className="h-full p-5 flex flex-col justify-between"
+    >
       {/* Header & Controls Bar */}
-      <div className="w-full flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-3">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <Compass className="h-4 w-4 text-[#00e5ff]" />
-            Polar Sky Dome &amp; Visual Horizon
+      <div className="w-full flex flex-col gap-2.5 border-b border-cyan-500/20 pb-3 mb-2 shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+            <Compass className="h-4 w-4 text-cyan-400" />
+            <span>Polar Sky Dome (360° Overhead)</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Topocentric 360° sky projection centered on <span className="text-[#00e5ff] font-bold">Zenith (90° Overhead)</span>.
-          </p>
+          <GlassBadge tone="cyan" dot={true}>
+            Zenith 90°
+          </GlassBadge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Compact HUD Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           {/* Label Declutter Mode Selector */}
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 p-0.5 rounded-lg">
-            <span className="text-[10px] font-mono text-slate-400 px-1 font-bold">LABELS:</span>
+          <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700/80 p-0.5 rounded-lg">
+            <span className="text-[9px] font-mono text-slate-400 px-1 font-bold">LABELS:</span>
             {(["smart", "selected", "all"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setLabelDensity(mode)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition ${labelDensity === mode ? "bg-[#00e5ff] text-slate-950 shadow-sm" : "text-slate-400 hover:text-white"}`}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase transition ${
+                  labelDensity === mode
+                    ? "bg-cyan-400 text-black shadow-sm font-black"
+                    : "text-slate-400 hover:text-white"
+                }`}
               >
                 {mode}
               </button>
             ))}
           </div>
 
-          {/* Quick Satellite Selector Dropdown */}
-          <select
-            value={selectedSatId || ""}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              if (!isNaN(val)) onSelectSat(val);
-            }}
-            className="h-8 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:outline-none focus:border-[#00e5ff] max-w-[180px]"
-          >
-            <option value="">Select Satellite on Dome...</option>
-            {renderSats.slice(0, 30).map((s) => (
-              <option key={`opt-${s.satId}`} value={s.satId}>
-                {s.satName} ({s.elevationDeg > 0 ? `${s.elevationDeg}°` : "Approaching"})
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            {/* Quick Satellite Selector Dropdown */}
+            <select
+              value={selectedSatId || ""}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) onSelectSat(val);
+              }}
+              className="h-7 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2 text-[11px] font-mono font-semibold text-white focus:outline-none focus:border-cyan-400 max-w-[170px]"
+            >
+              <option value="">Select Target on Dome...</option>
+              {renderSats.slice(0, 30).map((s) => (
+                <option key={`opt-${s.satId}`} value={s.satId}>
+                  {s.satName} ({s.elevationDeg > 0 ? `${s.elevationDeg}°` : "Appr."})
+                </option>
+              ))}
+            </select>
 
-          {/* Toggle Approaching Satellites */}
-          <button
-            onClick={() => setShowApproaching(!showApproaching)}
-            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 ${showApproaching ? "bg-[#00e5ff]/15 border-[#00e5ff]/40 text-[#00e5ff]" : "bg-slate-900 border-slate-700 text-slate-400"}`}
-          >
-            <Target className="h-3.5 w-3.5" />
-            <span>{showApproaching ? "All Targets" : "Overhead Only"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Visibility Badges */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-2 text-xs mb-2">
-        <div className="flex items-center gap-2">
-          <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 flex items-center gap-1.5">
-            <Eye className="h-3.5 w-3.5 text-emerald-400" />
-            {nakedEyeCount} Naked-Eye Visible
-          </div>
-          <div className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-950/70 border border-amber-500/40 text-amber-300">
-            {sunlitCount} Sunlit Above Horizon
+            {/* Toggle Approaching Satellites */}
+            <button
+              onClick={() => setShowApproaching(!showApproaching)}
+              className={`h-7 px-2 rounded-lg border text-[11px] font-mono font-bold transition flex items-center gap-1 ${
+                showApproaching
+                  ? "bg-cyan-500/20 border-cyan-400/50 text-cyan-300"
+                  : "bg-slate-900/80 border-slate-700/80 text-slate-400"
+              }`}
+            >
+              <Target className="h-3 w-3" />
+              <span>{showApproaching ? "All Sats" : "Overhead"}</span>
+            </button>
           </div>
         </div>
 
-        <div className="text-slate-400 text-xs font-mono">
-          Sky Objects Rendered: <span className="text-white font-bold">{renderSats.length}</span>
+        {/* Target Counts Summary */}
+        <div className="flex items-center justify-between text-[10px] font-mono">
+          <div className="flex items-center gap-1.5">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1">
+              <Eye className="h-2.5 w-2.5" />
+              {nakedEyeCount} Naked-Eye
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+              {sunlitCount} Sunlit
+            </span>
+          </div>
+          <span className="text-slate-400">
+            Rendered: <strong className="text-white">{renderSats.length}</strong>
+          </span>
         </div>
       </div>
 
       {/* Responsive SVG Polar Plot Chart Container */}
-      <div className="relative w-full max-w-[480px] aspect-square flex items-center justify-center my-2 select-none">
-        <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
+      <div className="flex-1 min-h-[360px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2">
+        <div className="relative w-full h-full max-h-[420px] aspect-square flex items-center justify-center select-none">
+          <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
           {/* Background Radial Gradient */}
           <defs>
             <radialGradient id="skyGrad" cx="50%" cy="50%" r="50%">
@@ -383,24 +400,25 @@ function SkyDomeChart({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Interactive Legend Bar */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-slate-400 pt-3 border-t border-slate-800/80 mt-1 font-mono">
+      <div className="w-full flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-slate-400 pt-2.5 border-t border-cyan-500/20 mt-1 font-mono shrink-0">
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]" />
-          <span>Naked-Eye Visible</span>
+          <span className="h-2 w-2 rounded-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]" />
+          <span>Naked-Eye</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#f59e0b]" />
-          <span>Sunlit Above Horizon</span>
+          <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+          <span>Sunlit</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-slate-500" />
-          <span>Approaching / Eclipsed</span>
+          <span className="h-2 w-2 rounded-full bg-slate-500" />
+          <span>Approaching</span>
         </div>
       </div>
-    </GlassPanel>
+    </SpaceTechCard>
   );
 }
 

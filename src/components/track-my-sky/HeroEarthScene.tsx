@@ -69,21 +69,179 @@ function FallbackEarth() {
   );
 }
 
-// 3D Orbital Trajectory Ring with Moving Satellite Beacon
+// Realistic 3D Satellite Spacecraft Model with Central Bus, Solar Panels & Dish Antenna
+function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: string; scale?: number }) {
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Central Equipment Bus (Gold/Beryllium Thermal Insulation) */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.12, 0.16, 0.12]} />
+        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.25} />
+      </mesh>
+
+      {/* Instrument Module Top */}
+      <mesh position={[0, 0.09, 0]}>
+        <cylinderGeometry args={[0.045, 0.055, 0.04, 16]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* Parabolic Communications Antenna Dish */}
+      <group position={[0, 0.07, 0.09]} rotation={[-0.4, 0, 0]}>
+        <mesh>
+          <coneGeometry args={[0.08, 0.035, 16, 1, true]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.6} roughness={0.3} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Feed Horn */}
+        <mesh position={[0, 0.03, 0]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.04, 8]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        </mesh>
+      </group>
+
+      {/* Solar Array Booms */}
+      <mesh position={[-0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.18, 8]} />
+        <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.24, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.18, 8]} />
+        <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.4} />
+      </mesh>
+
+      {/* Left Dual Photovoltaic Solar Array Wings */}
+      <group position={[-0.42, 0, 0]}>
+        {/* Solar Cell Panel */}
+        <mesh>
+          <boxGeometry args={[0.24, 0.11, 0.012]} />
+          <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} />
+        </mesh>
+        {/* Panel Frame */}
+        <mesh>
+          <boxGeometry args={[0.246, 0.116, 0.01]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.3} />
+        </mesh>
+      </group>
+
+      {/* Right Dual Photovoltaic Solar Array Wings */}
+      <group position={[0.42, 0, 0]}>
+        {/* Solar Cell Panel */}
+        <mesh>
+          <boxGeometry args={[0.24, 0.11, 0.012]} />
+          <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} />
+        </mesh>
+        {/* Panel Frame */}
+        <mesh>
+          <boxGeometry args={[0.246, 0.116, 0.01]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.3} />
+        </mesh>
+      </group>
+
+      {/* Thruster Nozzle Aft */}
+      <mesh position={[0, -0.10, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.035, 0.05, 12]} />
+        <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.4} />
+      </mesh>
+
+      {/* Strobe / Laser Tracking Beacon Glow */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.04, 12, 12]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.10, 12, 12]} />
+        <meshBasicMaterial color={color} transparent opacity={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+// Authentic ISS (International Space Station) Model with Modules, Truss & 4 Solar Arrays
+function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
+  return (
+    <group scale={[scale, scale, scale]}>
+      {/* Integrated Truss Structure (Main Beam) */}
+      <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <boxGeometry args={[0.03, 0.9, 0.03]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* Central Pressurized Modules Cluster (Zvezda / Destiny / Harmony) */}
+      <group position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.28, 16]} />
+          <meshStandardMaterial color="#f1f5f9" metalness={0.85} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, -0.16, 0]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.14, 16]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.85} roughness={0.25} />
+        </mesh>
+      </group>
+
+      {/* 4 Giant Photovoltaic Solar Array Wings */}
+      {/* Port Outer Wing */}
+      <group position={[-0.38, 0, 0]}>
+        <mesh position={[0, 0.14, 0]}>
+          <boxGeometry args={[0.13, 0.24, 0.01]} />
+          <meshStandardMaterial color="#b45309" metalness={0.65} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.13, 0.24, 0.01]} />
+          <meshStandardMaterial color="#b45309" metalness={0.65} roughness={0.25} />
+        </mesh>
+      </group>
+
+      {/* Starboard Outer Wing */}
+      <group position={[0.38, 0, 0]}>
+        <mesh position={[0, 0.14, 0]}>
+          <boxGeometry args={[0.13, 0.24, 0.01]} />
+          <meshStandardMaterial color="#b45309" metalness={0.65} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, -0.14, 0]}>
+          <boxGeometry args={[0.13, 0.24, 0.01]} />
+          <meshStandardMaterial color="#b45309" metalness={0.65} roughness={0.25} />
+        </mesh>
+      </group>
+
+      {/* Thermal Radiators */}
+      <mesh position={[-0.12, 0, 0.08]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[0.12, 0.16, 0.008]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.6} />
+      </mesh>
+      <mesh position={[0.12, 0, 0.08]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[0.12, 0.16, 0.008]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.6} />
+      </mesh>
+
+      {/* Status Beacon */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.045, 12, 12]} />
+        <meshBasicMaterial color="#00e5ff" />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.12, 12, 12]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+// 3D Orbital Trajectory Ring with Moving Satellite Craft
 function OrbitRingWithSatellite({
   radius,
   inclinationDeg,
   color,
   speed,
   satName,
-  size = 0.08,
+  isStation = false,
+  modelScale = 1.0,
 }: {
   radius: number;
   inclinationDeg: number;
   color: string;
   speed: number;
   satName: string;
-  size?: number;
+  isStation?: boolean;
+  modelScale?: number;
 }) {
   const satRef = useRef<THREE.Group>(null);
 
@@ -104,8 +262,7 @@ function OrbitRingWithSatellite({
   }, [radius, inclinationDeg]);
 
   const lineGeo = useMemo(() => {
-    const geo = new THREE.BufferGeometry().setFromPoints(points);
-    return geo;
+    return new THREE.BufferGeometry().setFromPoints(points);
   }, [points]);
 
   useFrame(({ clock }) => {
@@ -116,6 +273,14 @@ function OrbitRingWithSatellite({
       const y = radius * Math.sin(t) * Math.sin(incRad);
       const z = radius * Math.sin(t) * Math.cos(incRad);
       satRef.current.position.set(x, y, z);
+
+      // Tangent velocity vector to orient satellite head-first along orbital track
+      const dt = 0.05;
+      const tNext = t + dt;
+      const nextX = radius * Math.cos(tNext);
+      const nextY = radius * Math.sin(tNext) * Math.sin(incRad);
+      const nextZ = radius * Math.sin(tNext) * Math.cos(incRad);
+      satRef.current.lookAt(nextX, nextY, nextZ);
     }
   });
 
@@ -129,16 +294,13 @@ function OrbitRingWithSatellite({
       {/* Delicate Trajectory Line */}
       <primitive object={lineObj} />
 
-      {/* Moving Satellite Marker */}
+      {/* Moving Authentic 3D Satellite Spacecraft Model */}
       <group ref={satRef}>
-        <mesh>
-          <sphereGeometry args={[size, 16, 16]} />
-          <meshBasicMaterial color={color} />
-        </mesh>
-        <mesh scale={[2.2, 2.2, 2.2]}>
-          <sphereGeometry args={[size, 12, 12]} />
-          <meshBasicMaterial color={color} transparent opacity={0.25} />
-        </mesh>
+        {isStation ? (
+          <ISSSpaceStationModel scale={modelScale} />
+        ) : (
+          <SatelliteSpacecraftModel color={color} scale={modelScale} />
+        )}
       </group>
     </group>
   );
@@ -168,7 +330,8 @@ export function HeroEarthScene() {
           color="#00e5ff"
           speed={0.45}
           satName="ISS"
-          size={0.11}
+          isStation={true}
+          modelScale={1.35}
         />
 
         {/* Tiangong Orbit (41.5° inclination) */}
@@ -178,7 +341,7 @@ export function HeroEarthScene() {
           color="#a855f7"
           speed={0.38}
           satName="TIANGONG"
-          size={0.09}
+          modelScale={1.15}
         />
 
         {/* Polar Earth Observation Orbit (98.2° inclination) */}
@@ -188,7 +351,7 @@ export function HeroEarthScene() {
           color="#10b981"
           speed={0.28}
           satName="NOAA"
-          size={0.08}
+          modelScale={1.0}
         />
 
         {/* Navigation Medium Earth Orbit (55° inclination) */}
@@ -198,7 +361,7 @@ export function HeroEarthScene() {
           color="#f59e0b"
           speed={0.16}
           satName="NAVSTAR"
-          size={0.08}
+          modelScale={1.05}
         />
 
         <OrbitControls

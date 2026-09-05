@@ -281,6 +281,86 @@ export function Passes3DCarousel({
     setActiveIndex((prev) => (prev - 1 + passes.length) % passes.length);
   }, [passes.length]);
 
+  // Touch & Pointer Drag Swipe Gesture Handling
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const pointerStartX = useRef<number | null>(null);
+  const pointerStartY = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    hasDraggedRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const diffX = touchStartX.current - e.touches[0].clientX;
+    const diffY = touchStartY.current - e.touches[0].clientY;
+    if (Math.abs(diffX) > 10) {
+      hasDraggedRef.current = true;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartX.current - touchEndX;
+    const diffY = touchStartY.current - touchEndY;
+
+    const SWIPE_THRESHOLD = 35;
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
+      if (diffX > 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Skip if clicking a navigation button or action button
+    if ((e.target as HTMLElement).closest("button")) return;
+    pointerStartX.current = e.clientX;
+    pointerStartY.current = e.clientY;
+    hasDraggedRef.current = false;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pointerStartX.current === null) return;
+    const diffX = pointerStartX.current - e.clientX;
+    if (Math.abs(diffX) > 10) {
+      hasDraggedRef.current = true;
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (pointerStartX.current === null) return;
+    const diffX = pointerStartX.current - e.clientX;
+    const diffY = (pointerStartY.current || 0) - e.clientY;
+
+    const DRAG_THRESHOLD = 40;
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > DRAG_THRESHOLD) {
+      if (diffX > 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+    pointerStartX.current = null;
+    pointerStartY.current = null;
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  };
+
   // Keyboard navigation (ArrowLeft, ArrowRight)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -309,7 +389,15 @@ export function Passes3DCarousel({
   const currentPass = passes[activeIndex] || passes[0];
 
   return (
-    <div className="relative w-full overflow-hidden select-none py-6">
+    <div
+      className="relative w-full overflow-hidden select-none py-6 touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
       {/* Top Carousel Status Readout */}
       <div className="flex items-center justify-between px-4 mb-4 text-xs font-mono">
         <div className="flex items-center gap-2 text-cyan-400">
@@ -328,7 +416,7 @@ export function Passes3DCarousel({
 
       {/* 3D Spatial Carousel Stage */}
       <div
-        className="relative w-full h-[420px] flex items-center justify-center"
+        className="relative w-full h-[420px] flex items-center justify-center cursor-grab active:cursor-grabbing"
         style={{ perspective: 1200 }}
       >
         <div
@@ -378,6 +466,7 @@ export function Passes3DCarousel({
                   isSelected={isSelected}
                   isActiveCenter={isCenter}
                   onSelect={() => {
+                    if (hasDraggedRef.current) return;
                     setActiveIndex(idx);
                     onSelectPass(pass);
                     onSelectSatId(pass.noradId);

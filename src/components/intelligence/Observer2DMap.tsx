@@ -75,12 +75,23 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
     };
   }, []);
 
-  // Hook 2: Invalidate Map Size on Window Resize
+  // Hook 2: Invalidate Map Size on Window & Container Resize
   useEffect(() => {
     if (!map) return;
     const handleResize = () => map.invalidateSize();
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      ro.observe(mapContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      ro.disconnect();
+    };
   }, [map]);
 
   // Hook 3: Observer Location Pin & Horizon Circle
@@ -102,7 +113,7 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
 
     obsMarkerRef.current = L.marker([obsLat, obsLon], { icon: customIcon })
       .addTo(map)
-      .bindTooltip(`📍 Observer: ${observer?.name || "GPS Location"}<br/>Lat: ${obsLat.toFixed(4)}°, Lon: ${obsLon.toFixed(4)}°`, {
+      .bindTooltip(`SITE: ${observer?.name || "GPS Location"}<br/>Lat: ${obsLat.toFixed(4)}°, Lon: ${obsLon.toFixed(4)}°`, {
         permanent: false,
         direction: "top",
         className: "leaflet-tooltip-custom",
@@ -274,7 +285,7 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
   }, [map, simPoint, selectedPass, timeMs, observer]);
 
   return (
-    <div className="h-full w-full min-h-[480px] relative z-0">
+    <div className="h-full w-full relative z-0">
       {/* Top-Left Corner HUD Satellite Tracking Badge (Matching Orbit Page) */}
       {simPoint && (
         <div className="absolute left-4 top-4 z-[1000] flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
@@ -308,7 +319,7 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
         </div>
       )}
 
-      <div ref={mapContainerRef} className="h-full w-full min-h-[480px] bg-[#0d1117] rounded-xl overflow-hidden shadow-inner" />
+      <div ref={mapContainerRef} className="h-full w-full bg-[#0d1117] rounded-xl overflow-hidden shadow-inner" />
     </div>
   );
 }

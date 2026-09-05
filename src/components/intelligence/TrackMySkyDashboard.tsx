@@ -545,7 +545,7 @@ export default function TrackMySkyDashboard() {
   // Performance Bucket 2: 60-Second Time Bucket for pass predictions
   const passCalcBucket = useMemo(() => Math.floor(timeMs / 60000), [timeMs]);
 
-  const date = useMemo(() => new Date(timeMs), [timeSecBucket, timeMs]);
+  const date = useMemo(() => new Date(timeSecBucket * 2000), [timeSecBucket]);
 
   const twilight = useMemo(() => {
     return getObserverTwilight(date, observer.lat, observer.lon);
@@ -789,93 +789,99 @@ export default function TrackMySkyDashboard() {
         </GlassPanel>
 
         {/* Viewports Grid */}
-        <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3 lg:grid-cols-2" : "grid-cols-1"} gap-6 w-full`}>
+        <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3" : "max-w-5xl mx-auto"} gap-6 w-full`}>
           {/* Polar Sky Dome SVG Chart */}
           {(activeMapView === "all" || activeMapView === "polar") && (
-            <SkyDomeChart
-              visibleSats={visibilityResults}
-              allEvaluatedSats={allEvaluatedSats}
-              twilight={twilight}
-              observer={{ ...observer, name: observer.name || "Observer Site" }}
-              timeMs={timeMs}
-              selectedSatId={selectedSatId}
-              onSelectSat={(id) => setSelectedSatId(id)}
-            />
+            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+              <SkyDomeChart
+                visibleSats={visibilityResults}
+                allEvaluatedSats={allEvaluatedSats}
+                twilight={twilight}
+                observer={{ ...observer, name: observer.name || "Observer Site" }}
+                timeMs={timeMs}
+                selectedSatId={selectedSatId}
+                onSelectSat={(id) => setSelectedSatId(id)}
+              />
+            </div>
           )}
 
           {/* Observer-Centered 3D Simulation Globe */}
           {(activeMapView === "all" || activeMapView === "3d") && (
-            <SpaceTechCard
-              moduleTag="VIEWPORT-3D // ORBITAL SPATIAL GLOBE"
-              statusText="SGP4 PROPAGATING"
-              statusColor="cyan"
-              tilt={false}
-              className="h-full p-5 flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-cyan-400" />
-                  <span>3D Orbital Globe &amp; Trajectory</span>
-                </h2>
-                <GlassBadge tone="cyan" dot={true}>
-                  {observer.name}
-                </GlassBadge>
-              </div>
+            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+              <SpaceTechCard
+                moduleTag="VIEWPORT-3D // ORBITAL SPATIAL GLOBE"
+                statusText="SGP4 PROPAGATING"
+                statusColor="cyan"
+                tilt={false}
+                className="h-full p-5 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-cyan-400" />
+                    <span>3D Orbital Globe &amp; Trajectory</span>
+                  </h2>
+                  <GlassBadge tone="cyan" dot={true}>
+                    {observer.name}
+                  </GlassBadge>
+                </div>
 
-              <div className="flex-1 min-h-[480px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
-                <Observer3DView
-                  observer={observer}
-                  selectedPass={selectedPass}
-                  timeMs={timeMs}
-                  simPoint={selectedSat ? {
-                    lat: selectedSat.satLat,
-                    lon: selectedSat.satLon,
-                    altKm: selectedSat.satAltKm,
-                    satName: selectedSat.satName,
-                    elDeg: selectedSat.elevationDeg,
-                    line1: selectedSat.line1,
-                    line2: selectedSat.line2,
-                  } : null}
-                />
-              </div>
-            </SpaceTechCard>
+                <div className="flex-1 h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
+                  <Observer3DView
+                    observer={observer}
+                    selectedPass={selectedPass}
+                    timeMs={timeMs}
+                    simPoint={selectedSat ? {
+                      lat: selectedSat.satLat,
+                      lon: selectedSat.satLon,
+                      altKm: selectedSat.satAltKm,
+                      satName: selectedSat.satName,
+                      elDeg: selectedSat.elevationDeg,
+                      line1: selectedSat.line1,
+                      line2: selectedSat.line2,
+                    } : null}
+                  />
+                </div>
+              </SpaceTechCard>
+            </div>
           )}
 
           {/* Observer-Centered 2D Live Leaflet Radar Map */}
           {(activeMapView === "all" || activeMapView === "2d") && (
-            <SpaceTechCard
-              moduleTag="VIEWPORT-2D // LEAFLET RADAR FOOTPRINT"
-              statusText="GROUND TRACK ONLINE"
-              statusColor="emerald"
-              tilt={false}
-              className="h-full p-5 flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <MapIcon className="h-4 w-4 text-emerald-400" />
-                  <span>2D Live Ground Track Radar</span>
-                </h2>
-                <GlassBadge tone="emerald" dot={true}>
-                  Footprint Coverage
-                </GlassBadge>
-              </div>
+            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+              <SpaceTechCard
+                moduleTag="VIEWPORT-2D // LEAFLET RADAR FOOTPRINT"
+                statusText="GROUND TRACK ONLINE"
+                statusColor="emerald"
+                tilt={false}
+                className="h-full p-5 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <MapIcon className="h-4 w-4 text-emerald-400" />
+                    <span>2D Live Ground Track Radar</span>
+                  </h2>
+                  <GlassBadge tone="emerald" dot={true}>
+                    Footprint Coverage
+                  </GlassBadge>
+                </div>
 
-              <div className="flex-1 min-h-[480px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
-                <Observer2DMap
-                  observer={observer}
-                  selectedPass={selectedPass}
-                  timeMs={timeMs}
-                  simPoint={selectedSat ? {
-                    lat: selectedSat.satLat,
-                    lon: selectedSat.satLon,
-                    satName: selectedSat.satName,
-                    elDeg: selectedSat.elevationDeg,
-                    line1: selectedSat.line1,
-                    line2: selectedSat.line2,
-                  } : null}
-                />
-              </div>
-            </SpaceTechCard>
+                <div className="flex-1 h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
+                  <Observer2DMap
+                    observer={observer}
+                    selectedPass={selectedPass}
+                    timeMs={timeMs}
+                    simPoint={selectedSat ? {
+                      lat: selectedSat.satLat,
+                      lon: selectedSat.satLon,
+                      satName: selectedSat.satName,
+                      elDeg: selectedSat.elevationDeg,
+                      line1: selectedSat.line1,
+                      line2: selectedSat.line2,
+                    } : null}
+                  />
+                </div>
+              </SpaceTechCard>
+            </div>
           )}
 
           {/* Star Gaze 3D Interactive Planetarium Sky Dome */}
