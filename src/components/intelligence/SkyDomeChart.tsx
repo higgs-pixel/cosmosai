@@ -6,6 +6,7 @@ import { getPosition as getSunPosition, getMoonPosition } from "suncalc";
 
 import { SatelliteVisibilityResult, ObserverTwilightInfo } from "@/lib/orbit/visibility";
 import { Compass, Sun, Moon, Sparkles, Eye, Info, MapPin, Target, Layers, Filter } from "lucide-react";
+import { GlassPanel } from "@/components/glass/GlassPanel";
 
 interface SkyDomeChartProps {
   visibleSats: SatelliteVisibilityResult[];
@@ -115,7 +116,7 @@ function SkyDomeChart({
   const sunlitCount = visibleSats.filter((s) => s.isAboveHorizon && s.isSunlit && !s.isNakedEyeVisible).length;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-[#0f1422]/90 p-4 sm:p-5 shadow-2xl flex flex-col items-center w-full font-sans">
+    <GlassPanel level={2} className="p-4 sm:p-5 flex flex-col items-center w-full font-sans">
       
       {/* Header & Controls Bar */}
       <div className="w-full flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-3">
@@ -259,8 +260,8 @@ function SkyDomeChart({
             <circle cx={CENTER} cy={CENTER} r="4" fill="#ffffff" stroke="#00e5ff" strokeWidth="2" />
 
             {/* Zenith & Observer Label */}
-            <text x={CENTER} y={CENTER - 14} fill="#00e5ff" fontSize="16" fontWeight="bold" textAnchor="middle" className="font-mono">
-              🧍 ({observer.name.split(",")[0]})
+            <text x={CENTER} y={CENTER - 14} fill="#00e5ff" fontSize="11" fontWeight="bold" textAnchor="middle" className="font-mono uppercase tracking-wider">
+              SITE: {observer.name.split(",")[0]}
             </text>
             <text x={CENTER} y={CENTER + 18} fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle" className="font-mono opacity-80">
               Zenith 90°
@@ -399,7 +400,7 @@ function SkyDomeChart({
           <span>Approaching / Eclipsed</span>
         </div>
       </div>
-    </div>
+    </GlassPanel>
   );
 }
 

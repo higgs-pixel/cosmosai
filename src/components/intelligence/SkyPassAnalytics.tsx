@@ -9,6 +9,7 @@ import * as satellite from "satellite.js";
 import { SatelliteVisibilityResult, estimateVisualMagnitude } from "@/lib/orbit/visibility";
 import { ObserverCoords, SatellitePass } from "./PassPredictor";
 import { Activity, Sparkles, Clock, Layers, TrendingUp, Compass, Orbit, Gauge, Eye, Zap } from "lucide-react";
+import { GlassPanel } from "@/components/glass/GlassPanel";
 
 interface SkyPassAnalyticsProps {
   selectedSat: SatelliteVisibilityResult | null;
@@ -219,10 +220,10 @@ function SkyPassAnalytics({
   }, [passProfileData]);
 
   return (
-    <div className="flex flex-col gap-6 w-full font-sans">
+    <div id="analytics-section" className="flex flex-col gap-6 w-full font-sans pt-4">
       {/* 1. Selected Satellite Interactive Telemetry Header Card */}
       {selectedSat ? (
-        <div className="rounded-xl border border-[#00e5ff]/40 bg-[#071126]/95 p-5 shadow-[0_0_25px_rgba(0,229,255,0.12)]">
+        <GlassPanel level={2} className="p-5 border-cyan-400/30 shadow-[0_0_25px_rgba(0,229,255,0.12)]">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -277,19 +278,19 @@ function SkyPassAnalytics({
               </div>
             </div>
           </div>
-        </div>
+        </GlassPanel>
       ) : (
-        <div className="rounded-xl border border-slate-800 bg-[#0f1422]/80 p-4 text-xs font-mono text-slate-400 flex items-center justify-between">
+        <GlassPanel level={1} className="p-4 text-xs font-mono text-slate-400 flex items-center justify-between">
           <span>Click any satellite on the Sky Dome, 3D Globe, or 2D Map to inspect live telemetry &amp; pass trajectories.</span>
           <span className="text-[#00e5ff] font-bold">Interactive Telemetry Enabled</span>
-        </div>
+        </GlassPanel>
       )}
 
       {/* 2. Three High-Aesthetics Recharts Visual Analytics Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         
         {/* Chart 1: Pass Elevation Profile */}
-        <div className="rounded-xl border border-slate-800 bg-[#0f1422]/95 p-5 shadow-2xl flex flex-col justify-between">
+        <GlassPanel level={2} className="p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-1">
@@ -343,10 +344,10 @@ function SkyPassAnalytics({
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </GlassPanel>
 
         {/* Chart 2: Visual Magnitude Brightness Curve */}
-        <div className="rounded-xl border border-slate-800 bg-[#0f1422]/95 p-5 shadow-2xl flex flex-col justify-between">
+        <GlassPanel level={2} className="p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-1">
               <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -393,10 +394,10 @@ function SkyPassAnalytics({
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </GlassPanel>
 
         {/* Chart 3: Overhead Object Category Breakdown Donut */}
-        <div className="rounded-xl border border-slate-800 bg-[#0f1422]/95 p-5 shadow-2xl flex flex-col justify-between">
+        <GlassPanel level={2} className="p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-1">
               <Layers className="h-4 w-4 text-purple-400" />
@@ -445,7 +446,7 @@ function SkyPassAnalytics({
               ))}
             </div>
           </div>
-        </div>
+        </GlassPanel>
 
       </div>
     </div>
