@@ -883,11 +883,13 @@ function Live3DSatelliteNode({
   sat,
   isSelected,
   showLabels,
+  rank,
   onSelectSat,
 }: {
   sat: ComputedSatelliteSkyState;
   isSelected: boolean;
   showLabels: boolean;
+  rank?: number;
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
 }) {
   const nodeRef = useRef<THREE.Group>(null);
@@ -896,7 +898,9 @@ function Live3DSatelliteNode({
   const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
   const color = isSelected ? "#ffe600" : catStyle.colorHex;
 
+  // Performance: Only run useFrame animation for the selected satellite (avoids 80 per-frame loops)
   useFrame(({ clock }) => {
+    if (!isSelected) return;
     const t = clock.getElapsedTime();
     if (glowRef.current) {
       glowRef.current.rotation.z = t * 0.8;
@@ -905,6 +909,9 @@ function Live3DSatelliteNode({
       nodeRef.current.rotation.y = t * 0.4;
     }
   });
+
+  // Performance: Only render heavy Drei HTML DOM projection for selected satellite or top 16 brightest overhead
+  const shouldRenderLabel = isSelected || (showLabels && rank != null && rank < 16);
 
   return (
     <group position={sat.vec3.toArray()} onClick={() => onSelectSat(sat)}>
@@ -950,7 +957,7 @@ function Live3DSatelliteNode({
       </group>
 
       {/* Interactive 3D Label */}
-      {(showLabels || isSelected) && (
+      {shouldRenderLabel && (
         <Html distanceFactor={140} position={[0, 3.8, 0]} className="pointer-events-auto select-none">
           <div
             onClick={() => onSelectSat(sat)}
@@ -982,17 +989,24 @@ function OrbitTrajectoriesLayer({
   selectedSatId: number | null;
   showOrbits: boolean;
 }) {
-  if (!showOrbits) return null;
+  const visibleTrajSats = useMemo(() => {
+    if (!showOrbits) return [];
+    // Only draw trajectory lines for the selected satellite plus up to 10 prominent overhead satellites
+    return satellites
+      .filter((s) => s.id === selectedSatId || (s.isAboveHorizon && s.trajectoryPoints && s.trajectoryPoints.length >= 2))
+      .slice(0, 10);
+  }, [satellites, selectedSatId, showOrbits]);
+
+  if (!showOrbits || visibleTrajSats.length === 0) return null;
 
   return (
     <group>
-      {satellites.map((sat) => {
+      {visibleTrajSats.map((sat) => {
         const isSelected = sat.id === selectedSatId;
         const pts = sat.trajectoryPoints;
 
         if (!pts || pts.length < 2) return null;
 
-        // USER REQUEST: Make the path of the satellite in PINK color
         const strokeColor = isSelected ? "#ff1493" : "#ec4899";
 
         return (
@@ -1092,7 +1106,7 @@ function Clean3DSkyDome({
 
   return (
     <group>
-      <Stars radius={450} depth={100} count={9000} factor={8} saturation={0.3} fade speed={1.5} />
+      <Stars radius={450} depth={100} count={3000} factor={6} saturation={0.2} fade speed={0.4} />
 
       <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[SKY_RADIUS * 0.96, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -2007,12 +2021,21 @@ function SatelliteTrackerCelestialScene({
 }) {
   const smoothedTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 40, 200));
   const isTargetInit = useRef<boolean>(false);
+  const lastFacingAz = useRef<number>(0);
+  const lastFacingTime = useRef<number>(0);
 
   useFrame(({ camera }, delta) => {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
     const facingAz = ((Math.atan2(dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
-    onUpdateHeading(facingAz);
+
+    // Performance: Throttle onUpdateHeading to prevent re-rendering the entire root component at 60 FPS
+    const now = performance.now();
+    if (Math.abs(facingAz - lastFacingAz.current) >= 1.5 && now - lastFacingTime.current > 180) {
+      lastFacingAz.current = facingAz;
+      lastFacingTime.current = now;
+      onUpdateHeading(Math.round(facingAz));
+    }
 
     if (mobileOrientation) {
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
@@ -2058,19 +2081,20 @@ function SatelliteTrackerCelestialScene({
         showOrbits={showOrbits}
       />
 
-      {/* 3D Satellite Nodes (Green 3D Globe Satellite Model) */}
-      {satellites.map((sat) => {
-        if (!sat.isAboveHorizon && sat.id !== selectedSat?.id) return null;
-        return (
+      {/* 3D Satellite Nodes (Green 3D Globe Satellite Model - capped at top 40 for optimal 60fps performance) */}
+      {satellites
+        .filter((sat) => sat.isAboveHorizon || sat.id === selectedSat?.id)
+        .slice(0, 40)
+        .map((sat, idx) => (
           <Live3DSatelliteNode
             key={sat.id}
             sat={sat}
             isSelected={sat.id === selectedSat?.id}
             showLabels={showLabels}
+            rank={idx}
             onSelectSat={onSelectSat}
           />
-        );
-      })}
+        ))}
 
       {/* Sky Dome, Compass, Robot Sight Beam & Starfield */}
       <Clean3DSkyDome
@@ -2085,14 +2109,14 @@ function SatelliteTrackerCelestialScene({
         onAligned={onAligned}
       />
 
-      {/* OrbitControls: Free 180° rotation when is180DomeView is true, fixed observer lock when false */}
+      {/* OrbitControls: When is180DomeView is true, fix into dome view (no rotation). When false (unclicked), free dome navigation */}
       <OrbitControls
         ref={controlsRef}
         enableDamping
         dampingFactor={0.05}
         rotateSpeed={0.6}
-        enableRotate={is180DomeView && mobileSightMode !== "ar"}
-        target={is180DomeView ? [0, 60, 0] : [0, 25, 0]}
+        enableRotate={!is180DomeView && mobileSightMode !== "ar"}
+        target={is180DomeView ? [0, 25, 0] : [0, 60, 0]}
         minPolarAngle={0.001}
         maxPolarAngle={Math.PI / 2 + 0.1}
         minDistance={10}
@@ -2127,7 +2151,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showRadar, setShowRadar] = useState<boolean>(true);
   const [showSimDock, setShowSimDock] = useState<boolean>(false);
-  const [is180DomeView, setIs180DomeView] = useState<boolean>(true);
+  const [is180DomeView, setIs180DomeView] = useState<boolean>(false);
 
   // Filters & State: Default to strictly "Visible in 24 Hours" from observer site
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -2147,7 +2171,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [mobileSightMode, setMobileSightMode] = useState<"ar" | "track">("track");
   const [isMobileSynced, setIsMobileSynced] = useState<boolean>(false);
   const [mobileSyncUrl, setMobileSyncUrl] = useState<string>("");
-  const [showQrPanel, setShowQrPanel] = useState<boolean>(true);
+  // Default to hidden: User must touch Sync Phone tab to view QR code
+  const [showQrPanel, setShowQrPanel] = useState<boolean>(false);
   const wasMobileSyncedRef = useRef<boolean>(false);
 
   // 24-Hour Pass Telemetry Panel: Compressed into Upper Right Animated Icon by default
@@ -2161,7 +2186,6 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     setMobileOrientation(null);
     setIsMobileSynced(false);
     wasMobileSyncedRef.current = false;
-    setShowQrPanel(true);
     showToast(`🔄 New QR Session Generated: #${newId}`);
   }, []);
 
@@ -2231,8 +2255,13 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       };
     }
 
-    // 2. HTTP Polling Fallback
+    // 2. HTTP Polling Fallback (adaptive, throttled to prevent main-thread lag)
+    let isPollingBusy = false;
     const interval = setInterval(async () => {
+      // If broadcast channel is actively receiving orientation packets, skip network polling
+      if (channel && wasMobileSyncedRef.current) return;
+      if (isPollingBusy) return;
+      isPollingBusy = true;
       try {
         const res = await fetch(`/api/stargaze/compass-sync?session=${sessionId}`);
         if (!res.ok) return;
@@ -2258,8 +2287,10 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
         }
       } catch {
         /* skip network hiccups */
+      } finally {
+        isPollingBusy = false;
       }
-    }, 50);
+    }, 150);
 
     return () => {
       isSubscribed = false;
@@ -2268,30 +2299,30 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     };
   }, [sessionId]);
 
-  // Toggle 180° Free Dome View vs Fixed Observer Perspective View
+  // Toggle Fixed Dome View vs Free 3D Dome Perspective View
   const toggle180DomeView = useCallback(() => {
     setIs180DomeView((prev) => {
       const next = !prev;
       if (next) {
-        showToast("🔭 Mode: 180° Free 3D Dome View Enabled");
-        if (controlsRef.current) {
-          controlsRef.current.object.position.set(0, 240, 320);
-          controlsRef.current.target.set(0, 60, 0);
-          controlsRef.current.update();
-        }
-      } else {
-        showToast("📱 Mobile Compass QR Sync Active! Scan newly generated QR code");
+        // When clicked: fixes into the dome view (locked observer perspective)
+        showToast("🔭 Fixed Dome View: Camera locked to observer dome horizon");
         if (controlsRef.current) {
           controlsRef.current.object.position.set(0, 25, 200);
           controlsRef.current.target.set(0, 25, 0);
           controlsRef.current.update();
         }
+      } else {
+        // When unclicked: allows accessing the free rotation of the dome
+        showToast("🌌 Free Dome View: Free camera navigation enabled");
+        if (controlsRef.current) {
+          controlsRef.current.object.position.set(0, 240, 320);
+          controlsRef.current.target.set(0, 60, 0);
+          controlsRef.current.update();
+        }
       }
       return next;
     });
-    // Generate a fresh unique session ID every time 180° dome view button is touched
-    handleRegenerateSession();
-  }, [handleRegenerateSession]);
+  }, []);
 
   // Live Real-Time CelesTrak NORAD TLE Data Catalog State
   const [satCatalog, setSatCatalog] = useState<SatelliteData[]>(DEFAULT_SATELLITE_CATALOG);
@@ -2577,19 +2608,19 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
             {/* Mobile Compass Sync & Dome Perspective Controls */}
             <div className="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800/80 p-1.5 rounded-2xl backdrop-blur-2xl shadow-2xl shrink-0 whitespace-nowrap ml-auto">
-              {/* 180° Dome View Toggle */}
+              {/* 180° Dome View Toggle: Fixed Horizon vs Free Dome Navigation */}
               <button
                 onClick={toggle180DomeView}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border cursor-pointer ${
                   is180DomeView
-                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                    ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] font-bold"
                     : "bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800"
                 }`}
-                title={is180DomeView ? "Switch to Fixed Observer View" : "Switch to 180° Free Dome View"}
+                title={is180DomeView ? "Click to unlock: Free Dome View" : "Click to lock: Fixed Dome View"}
               >
                 <Maximize2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">180° Dome</span>
-                <span className="sm:hidden">Dome</span>
+                <span className="hidden sm:inline">{is180DomeView ? "Fixed Dome" : "Free Dome"}</span>
+                <span className="sm:hidden">{is180DomeView ? "Fixed" : "Free"}</span>
               </button>
 
               {/* Divider */}
