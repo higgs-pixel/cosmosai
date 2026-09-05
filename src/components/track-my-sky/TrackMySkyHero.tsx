@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -35,6 +36,15 @@ const HeroEarthScene = dynamic(
   }
 );
 
+// Decoupled, pure memoized 3D background layer — zero re-renders on telemetry count changes
+const PureHeroEarthBackground = memo(function PureHeroEarthBackground() {
+  return (
+    <div className="absolute top-0 right-0 w-full lg:w-[62%] h-full pointer-events-auto z-0 opacity-90 lg:opacity-100">
+      <HeroEarthScene />
+    </div>
+  );
+});
+
 interface TrackMySkyHeroProps {
   observer: ObserverCoords;
   visibleCount: number;
@@ -63,9 +73,7 @@ export function TrackMySkyHero({
   return (
     <section className="relative w-full min-h-[85vh] lg:min-h-[92vh] flex flex-col justify-between pt-24 pb-12 overflow-hidden">
       {/* Background 3D Earth Layer (Asymmetric placement right/center) */}
-      <div className="absolute top-0 right-0 w-full lg:w-[62%] h-full pointer-events-auto z-0 opacity-90 lg:opacity-100">
-        <HeroEarthScene />
-      </div>
+      <PureHeroEarthBackground />
 
       {/* Hero Foreground Content */}
       <div className="relative z-10 max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-between">

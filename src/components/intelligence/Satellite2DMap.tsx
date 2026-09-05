@@ -383,7 +383,7 @@ const createSatDivIcon = (isSelected: boolean) => {
       {showDebug && debugLat !== null && debugLon !== null && (
         <div className="absolute top-2 left-2 z-[9999] bg-slate-950/90 border border-yellow-400/60 text-yellow-300 font-mono text-[9px] px-2 py-1.5 rounded-lg shadow-lg pointer-events-none space-y-0.5">
           <p className="text-yellow-400 font-bold uppercase tracking-wider text-[8px] mb-1">
-            ⚠ Position Debug (shared buffer)
+            [DEBUG] Position Telemetry (shared buffer)
           </p>
           <p>2D map lat : {debugLat.toFixed(5)}°</p>
           <p>2D map lon : {debugLon.toFixed(5)}°</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, Suspense } from "react";
+import { useMemo, useRef, Suspense, memo } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
@@ -306,12 +306,14 @@ function OrbitRingWithSatellite({
   );
 }
 
-export function HeroEarthScene() {
+export const HeroEarthScene = memo(function HeroEarthScene() {
   return (
-    <div className="relative w-full h-full min-h-[420px] lg:min-h-[560px] pointer-events-auto">
+    <div className="relative w-full h-full min-h-[420px] lg:min-h-[560px] pointer-events-auto select-none">
       <Canvas
         camera={{ position: [0, 2.5, 9.5], fov: 42 }}
+        frameloop="always"
         gl={{ antialias: true, powerPreference: "high-performance" }}
+        style={{ touchAction: "none" }}
         className="w-full h-full"
       >
         <ambientLight intensity={0.45} />
@@ -381,4 +383,4 @@ export function HeroEarthScene() {
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_45%,#02040a_85%)]" />
     </div>
   );
-}
+});

@@ -235,7 +235,7 @@ function SatellitesInstancedMesh({
   onTrackSatellite,
 }: {
   satellites: SatelliteData[];
-  latestPositions: React.RefObject<Float32Array | null>;
+  latestPositions?: React.RefObject<Float32Array | null>;
   selectedId: number | null;
   onEcefPosUpdate: (pos: THREE.Vector3 | null) => void;
   onHoverChange: (sat: SatelliteData | null) => void;
@@ -264,14 +264,93 @@ function SatellitesInstancedMesh({
     return map;
   }, [satellites]);
 
+  // Pre-parse satrecs for fallback propagation when worker is not active
+  const fallbackSatrecMap = useMemo(() => {
+    const map = new Map<number, satellite.SatRec>();
+    for (let i = 0; i < Math.min(satellites.length, 120); i++) {
+      const sat = satellites[i];
+      try {
+        const sr = satellite.twoline2satrec(sat.line1, sat.line2);
+        if (sr && !sr.error) map.set(sat.id, sr);
+      } catch {
+        /* skip */
+      }
+    }
+    return map;
+  }, [satellites]);
+
   useFrame(({ gl }) => {
     // Guard: bail if WebGL context has been lost
     if (!gl || !gl.domElement || gl.domElement.classList.contains("webgl-context-lost")) return;
 
     const mesh = instancedMeshRef.current;
     const hitMesh = hitMeshRef.current;
-    const positions = latestPositions.current;
-    if (!mesh || !positions) return;
+    if (!mesh) return;
+
+    const positions = latestPositions?.current;
+
+    // Fallback if worker positions buffer not yet ready: propagate locally
+    if (!positions) {
+      const count = Math.min(satellites.length, 120);
+      mesh.count = count;
+      if (hitMesh) hitMesh.count = count;
+      const targetDate = new Date(useOrbitalStore.getState().timeMs);
+      const gmstT = satellite.gstime(targetDate);
+      let selectedEcef: THREE.Vector3 | null = null;
+
+      for (let i = 0; i < count; i++) {
+        const sat = satellites[i];
+        const sr = fallbackSatrecMap.get(sat.id);
+        if (!sr) {
+          dummy.scale.set(0, 0, 0);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(i, dummy.matrix);
+          if (hitMesh) hitMesh.setMatrixAt(i, dummy.matrix);
+          continue;
+        }
+
+        const pv = satellite.propagate(sr, targetDate);
+        const p = pv?.position;
+        if (!p || typeof p === "boolean" || isNaN(p.x)) {
+          dummy.scale.set(0, 0, 0);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(i, dummy.matrix);
+          if (hitMesh) hitMesh.setMatrixAt(i, dummy.matrix);
+          continue;
+        }
+
+        const gd = satellite.eciToGeodetic(p as satellite.EciVec3<number>, gmstT);
+        const lat = satellite.degreesLat(gd.latitude);
+        let lon = satellite.degreesLong(gd.longitude);
+        if (lon > 180) lon -= 360;
+        const r = EARTH_RADIUS_3D * (1 + (gd.height || 500) / EARTH_RADIUS_KM);
+        const ecefPos = latLonToVector3(lat, lon, r);
+
+        dummy.position.copy(ecefPos);
+        dummy.lookAt(0, 0, 0);
+
+        if (sat.id === selectedId) {
+          selectedEcef = ecefPos.clone();
+          dummy.scale.set(0, 0, 0);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(i, dummy.matrix);
+          dummy.scale.set(0.75, 0.75, 0.75);
+          dummy.updateMatrix();
+          if (hitMesh) hitMesh.setMatrixAt(i, dummy.matrix);
+          continue;
+        }
+
+        dummy.scale.set(0.38, 0.38, 0.38);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        if (hitMesh) hitMesh.setMatrixAt(i, dummy.matrix);
+      }
+
+      mesh.instanceMatrix.needsUpdate = true;
+      if (hitMesh) hitMesh.instanceMatrix.needsUpdate = true;
+      onEcefPosUpdate(selectedEcef);
+      return;
+    }
 
     mesh.count = satellites.length;
     if (hitMesh) hitMesh.count = satellites.length;
@@ -434,17 +513,20 @@ function EarthScene({
   satellites,
   latestPositions,
   lockCamera,
+  controlsRef,
   onTrackSatellite,
   onHoverChange,
+  observer,
 }: {
   satellites: SatelliteData[];
-  latestPositions: React.RefObject<Float32Array | null>;
+  latestPositions?: React.RefObject<Float32Array | null>;
   lockCamera: boolean;
+  controlsRef: React.RefObject<any>;
   onTrackSatellite?: (id: number) => void;
   onHoverChange: (sat: SatelliteData | null) => void;
+  observer?: { lat: number; lon: number; name?: string };
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const controlsRef = useRef<any>(null);
   const selectedId = useOrbitalStore((s) => s.selectedSatelliteId);
 
   const [selectedEcef, setSelectedEcef] = useState<THREE.Vector3 | null>(null);
@@ -473,6 +555,20 @@ function EarthScene({
       <group ref={groupRef}>
         <EarthMesh texturePath="/textures/planets/2k_earth_daymap.jpg" />
 
+        {/* Observer Ground Station Pin & Beacon */}
+        {observer && (
+          <group position={latLonToVector3(observer.lat, observer.lon, EARTH_RADIUS_3D + 0.04)}>
+            <mesh>
+              <sphereGeometry args={[0.08, 16, 16]} />
+              <meshBasicMaterial color="#ff3366" />
+            </mesh>
+            <mesh>
+              <ringGeometry args={[0.11, 0.16, 24]} />
+              <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.8} />
+            </mesh>
+          </group>
+        )}
+
         <SatellitesInstancedMesh
           satellites={satellites}
           latestPositions={latestPositions}
@@ -498,10 +594,13 @@ function EarthScene({
 
       <OrbitControls
         ref={controlsRef}
+        makeDefault
         enableDamping
         dampingFactor={0.05}
-        maxDistance={40}
-        minDistance={4.8}
+        maxDistance={45}
+        minDistance={4.6}
+        zoomSpeed={1.2}
+        rotateSpeed={0.8}
       />
     </>
   );
@@ -510,32 +609,55 @@ function EarthScene({
 // ─────────────────────────────────────────────────────────────────────────────
 // Public export
 // ─────────────────────────────────────────────────────────────────────────────
-interface Satellite3DViewProps {
+export interface Satellite3DViewProps {
   satellites: SatelliteData[];
-  latestPositions: React.RefObject<Float32Array | null>;
-  lockCamera: boolean;
+  latestPositions?: React.RefObject<Float32Array | null>;
+  lockCamera?: boolean;
   onTrackSatellite?: (id: number) => void;
+  observer?: { lat: number; lon: number; name?: string };
 }
 
 export default function Satellite3DView({
   satellites,
   latestPositions,
-  lockCamera,
+  lockCamera = false,
   onTrackSatellite,
+  observer,
 }: Satellite3DViewProps) {
   const selectedId = useOrbitalStore((s) => s.selectedSatelliteId);
   const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
+  const controlsRef = useRef<any>(null);
 
   const selectedSatName = useMemo(
     () => satellites.find((s) => s.id === selectedId)?.name ?? "",
     [satellites, selectedId]
   );
 
+  const handleZoomIn = () => {
+    if (controlsRef.current) {
+      controlsRef.current.dollyIn(1.28);
+      controlsRef.current.update();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (controlsRef.current) {
+      controlsRef.current.dollyOut(1.28);
+      controlsRef.current.update();
+    }
+  };
+
+  const handleResetCamera = () => {
+    if (controlsRef.current) {
+      controlsRef.current.reset();
+    }
+  };
+
   return (
-    <div className="h-full w-full bg-[#03040a] relative">
+    <div className="h-full w-full bg-[#03040a] relative isolate select-none">
       {/* Top-Left Corner HUD Satellite Tracking Overlay */}
       {selectedSatName && (
-        <div className="absolute left-4 top-14 z-20 flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
+        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
           <span className="flex h-2 w-2 rounded-full bg-[#00ff88] animate-ping" />
           <span className="font-mono text-[9px] font-bold text-[#00ff88] uppercase tracking-widest">
             Tracking:
@@ -548,7 +670,7 @@ export default function Satellite3DView({
 
       {/* Top-Right Corner HUD Satellite Hover Details Overlay */}
       {hoveredSat && (
-        <div className="absolute right-4 top-14 z-20 flex flex-col gap-1 bg-slate-950/95 border border-[#00e5ff]/60 px-3.5 py-2.5 rounded-lg shadow-[0_0_20px_rgba(0,229,255,0.25)] pointer-events-none select-none min-w-[170px]">
+        <div className="absolute right-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/95 border border-[#00e5ff]/60 px-3.5 py-2.5 rounded-lg shadow-[0_0_20px_rgba(0,229,255,0.25)] pointer-events-none select-none min-w-[170px]">
           <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 gap-3">
             <span className="font-mono text-[9px] font-bold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00e5ff] animate-pulse" />
@@ -566,11 +688,40 @@ export default function Satellite3DView({
         </div>
       )}
 
+      {/* Floating HUD Controls for Zoom & Reset */}
+      <div className="absolute right-3 bottom-3 z-20 flex flex-col items-center gap-1 bg-slate-950/85 border border-white/15 p-1.5 rounded-xl shadow-2xl backdrop-blur-md">
+        <button
+          onClick={handleZoomIn}
+          title="Zoom In (+)"
+          type="button"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-200 hover:text-cyan-400 border border-white/10 flex items-center justify-center font-mono font-bold text-base transition select-none active:scale-95 cursor-pointer"
+        >
+          +
+        </button>
+        <button
+          onClick={handleZoomOut}
+          title="Zoom Out (-)"
+          type="button"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-200 hover:text-cyan-400 border border-white/10 flex items-center justify-center font-mono font-bold text-base transition select-none active:scale-95 cursor-pointer"
+        >
+          -
+        </button>
+        <button
+          onClick={handleResetCamera}
+          title="Reset Orbit View"
+          type="button"
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-200 hover:text-cyan-400 border border-white/10 flex items-center justify-center font-mono font-bold text-[9px] transition select-none active:scale-95 uppercase cursor-pointer"
+        >
+          RST
+        </button>
+      </div>
+
       <Canvas
         camera={{ position: [0, 10, 18], fov: 45 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
+        style={{ touchAction: "none" }}
         onCreated={({ gl }) => {
-          // Guard against WebGL context loss events to prevent .save() on undefined
+          // Guard against WebGL context loss events
           gl.domElement.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
             console.warn("[Orbit 3D] WebGL context lost — suspending render loop.");
@@ -580,16 +731,19 @@ export default function Satellite3DView({
           });
         }}
       >
-        <ambientLight intensity={0.08} />
-        <directionalLight position={[15, 3, 10]} intensity={2.0} />
+        <ambientLight intensity={0.55} />
+        <directionalLight position={[15, 3, 10]} intensity={1.8} />
+        <directionalLight position={[-15, -3, -10]} intensity={0.8} />
         <Stars radius={200} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1.5} />
 
         <EarthScene
           satellites={satellites}
           latestPositions={latestPositions}
           lockCamera={lockCamera}
+          controlsRef={controlsRef}
           onTrackSatellite={onTrackSatellite}
           onHoverChange={setHoveredSat}
+          observer={observer}
         />
       </Canvas>
     </div>

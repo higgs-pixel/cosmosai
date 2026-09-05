@@ -161,7 +161,7 @@ export const SpaceTechCard = forwardRef<HTMLDivElement, SpaceTechCardProps>(
           )}
 
           {/* Inner Card Content */}
-          <div className="relative z-10">{children}</div>
+          <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">{children}</div>
         </motion.div>
       </div>
     );

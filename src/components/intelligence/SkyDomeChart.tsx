@@ -35,7 +35,7 @@ function SkyDomeChart({
 
   const SVG_SIZE = 520;
   const CENTER = SVG_SIZE / 2;
-  const RADIUS = 210; // Outer horizon radius (0° elevation)
+  const RADIUS = 200; // Outer horizon radius (0° elevation) cleanly centered in 520x520 box
 
   // Determine satellite set to render on Sky Chart
   const renderSats = useMemo(() => {
@@ -200,9 +200,9 @@ function SkyDomeChart({
       </div>
 
       {/* Responsive SVG Polar Plot Chart Container */}
-      <div className="flex-1 min-h-[440px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2">
-        <div className="relative w-full h-full max-h-[410px] aspect-square flex items-center justify-center select-none">
-          <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
+      <div className="flex-1 min-h-0 w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2 my-auto">
+        <div className="relative w-full max-w-[430px] h-full max-h-[430px] aspect-square flex items-center justify-center select-none mx-auto my-auto">
+          <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full max-w-full max-h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
           {/* Background Radial Gradient */}
           <defs>
             <radialGradient id="skyGrad" cx="50%" cy="50%" r="50%">
@@ -397,7 +397,7 @@ function SkyDomeChart({
       </div>
 
       {/* Interactive Legend Bar */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-slate-400 pt-2.5 border-t border-cyan-500/20 mt-1 font-mono shrink-0">
+      <div className="w-full flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-400 pt-2 border-t border-cyan-500/20 mt-1 font-mono shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]" />
           <span>Naked-Eye</span>

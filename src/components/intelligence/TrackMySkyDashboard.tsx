@@ -28,8 +28,9 @@ import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { SpaceTechCard } from "@/components/ui/SpaceTechCard";
+import { createSgp4Worker } from "./worker-code";
 
-const Observer3DView = dynamic(() => import("./Observer3DView"), {
+const Satellite3DView = dynamic(() => import("./Satellite3DView"), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full min-h-[480px] bg-[#03040a] rounded-xl flex flex-col items-center justify-center gap-3 text-slate-400 font-mono text-xs border border-slate-800">
@@ -304,6 +305,72 @@ export default function TrackMySkyDashboard() {
   const [loadingSats, setLoadingSats] = useState(false);
 
   const [sliderBaseTime, setSliderBaseTime] = useState(() => Date.now());
+
+  const setSelectedSatelliteId = useOrbitalStore((s) => s.setSelectedSatelliteId);
+  const setStoreSatellitesList = useOrbitalStore((s) => s.setSatellitesList);
+  const workerRef = useRef<Worker | null>(null);
+  const latestPositionsRef = useRef<Float32Array | null>(null);
+
+  // Sync satellitesList into orbital store for 3D trajectory calculation
+  useEffect(() => {
+    if (satellitesList.length > 0) {
+      setStoreSatellitesList(satellitesList);
+    }
+  }, [satellitesList, setStoreSatellitesList]);
+
+  // 1. Initialize SGP4 Web Worker on satellite list load
+  useEffect(() => {
+    if (satellitesList.length === 0) return;
+
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+
+    try {
+      const worker = createSgp4Worker();
+      workerRef.current = worker;
+      worker.postMessage({ type: "init", data: satellitesList });
+
+      worker.onmessage = (e) => {
+        const { type, buffer } = e.data;
+        if (type === "positions") {
+          latestPositionsRef.current = buffer;
+        }
+      };
+    } catch {
+      /* Worker fallback handled inside Satellite3DView */
+    }
+
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, [satellitesList]);
+
+  // 2. Continuous SGP4 propagation request loop for 3D globe satellites
+  useEffect(() => {
+    let frameId: number;
+    const loop = () => {
+      if (workerRef.current && satellitesList.length > 0) {
+        const currentTime = useOrbitalStore.getState().timeMs;
+        workerRef.current.postMessage({
+          type: "propagate",
+          timeMs: currentTime,
+        });
+      }
+      frameId = requestAnimationFrame(loop);
+    };
+    frameId = requestAnimationFrame(loop);
+
+    return () => cancelAnimationFrame(frameId);
+  }, [satellitesList]);
+
+  // 3. Keep selected satellite synchronized with store for 3D orbit track and model rendering
+  useEffect(() => {
+    if (selectedSatId) {
+      setSelectedSatelliteId(selectedSatId);
+    }
+  }, [selectedSatId, setSelectedSatelliteId]);
 
   const handleLiveSync = useCallback(() => {
     const now = Date.now();
@@ -778,13 +845,6 @@ export default function TrackMySkyDashboard() {
               <MapIcon className="h-3.5 w-3.5" />
               <span>2D RADAR</span>
             </button>
-            <Link
-              href="/stargaze"
-              className="px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-cyan-400 text-black shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:opacity-90"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-black" />
-              <span>STAR GAZE</span>
-            </Link>
           </div>
         </GlassPanel>
 
@@ -800,12 +860,12 @@ export default function TrackMySkyDashboard() {
                 observer={{ ...observer, name: observer.name || "Observer Site" }}
                 timeMs={timeMs}
                 selectedSatId={selectedSatId}
-                onSelectSat={(id) => setSelectedSatId(id)}
+                onSelectSat={(id) => handleSelectSat(id)}
               />
             </div>
           )}
 
-          {/* Observer-Centered 3D Simulation Globe */}
+          {/* Interactive 3D Simulation Globe (Orbit Page Engine) */}
           {(activeMapView === "all" || activeMapView === "3d") && (
             <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
               <SpaceTechCard
@@ -826,19 +886,14 @@ export default function TrackMySkyDashboard() {
                 </div>
 
                 <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
-                  <Observer3DView
+                  <Satellite3DView
+                    satellites={satellitesList}
+                    latestPositions={latestPositionsRef}
+                    lockCamera={false}
                     observer={observer}
-                    selectedPass={selectedPass}
-                    timeMs={timeMs}
-                    simPoint={selectedSat ? {
-                      lat: selectedSat.satLat,
-                      lon: selectedSat.satLon,
-                      altKm: selectedSat.satAltKm,
-                      satName: selectedSat.satName,
-                      elDeg: selectedSat.elevationDeg,
-                      line1: selectedSat.line1,
-                      line2: selectedSat.line2,
-                    } : null}
+                    onTrackSatellite={(id) => {
+                      handleSelectSat(id);
+                    }}
                   />
                 </div>
               </SpaceTechCard>

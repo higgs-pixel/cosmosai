@@ -4,16 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Orbit,
-  Sparkles,
   MapPin,
   Clock,
-  Smartphone,
-  BookOpen,
-  Compass,
-  Layers,
-  Activity,
-  Maximize2,
 } from "lucide-react";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GlassButton } from "@/components/glass/GlassButton";
@@ -23,8 +15,8 @@ import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 interface TrackMySkyNavProps {
   observer: ObserverCoords;
   formattedTime: string;
-  onOpenPairModal: () => void;
-  onOpenManual: () => void;
+  onOpenPairModal?: () => void;
+  onOpenManual?: () => void;
   onScrollToSection: (id: string) => void;
   activeSection?: string;
 }
@@ -114,41 +106,11 @@ export function TrackMySkyNav({
           {/* Clock Pill */}
           <GlassPanel
             level={1}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-emerald-400 font-bold shadow-xl shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-emerald-400 font-bold shadow-xl shrink-0"
           >
             <Clock className="h-3.5 w-3.5 text-emerald-400" />
             <span>{formattedTime}</span>
           </GlassPanel>
-
-          {/* Pair Companion Phone Button */}
-          <GlassButton
-            size="sm"
-            variant="default"
-            onClick={onOpenPairModal}
-            title="Pair smartphone hardware GPS"
-          >
-            <Smartphone className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="hidden lg:inline font-mono">Pair Phone</span>
-          </GlassButton>
-
-          {/* Star Gaze Link */}
-          <Link href="/stargaze">
-            <GlassButton variant="accent" size="sm" title="Launch 3D Planetarium View">
-              <Sparkles className="h-3.5 w-3.5 text-purple-300" />
-              <span className="hidden sm:inline font-mono">Star Gaze</span>
-            </GlassButton>
-          </Link>
-
-          {/* Technical Manual Trigger */}
-          <GlassButton
-            size="sm"
-            variant="ghost"
-            onClick={onOpenManual}
-            title="Open Technical Manual & Glossary"
-            className="p-2"
-          >
-            <BookOpen className="h-3.5 w-3.5 text-slate-300 hover:text-white" />
-          </GlassButton>
         </div>
       </div>
     </header>
