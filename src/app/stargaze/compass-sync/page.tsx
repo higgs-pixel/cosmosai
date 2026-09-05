@@ -344,20 +344,20 @@ export default function MobileCompassSyncPage() {
       </header>
 
       {/* Stellarium AR Sight Banner */}
-      <div className="w-full max-w-md my-2 p-3 rounded-2xl bg-cyan-950/90 border border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.3)] backdrop-blur-xl flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400 text-cyan-300 shrink-0 animate-pulse">
-          <Smartphone className="h-5 w-5" />
+      <div className="w-full max-w-md my-2 p-3 rounded-2xl bg-slate-950/60 border border-white/[0.12] shadow-[0_8px_32px_0_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.1)] backdrop-blur-2xl flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-400/40 text-cyan-300 shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.25)]">
+          <Smartphone className="h-5 w-5 animate-pulse" />
         </div>
         <div className="text-[11px] font-mono leading-tight flex-1">
           <div className="font-extrabold text-cyan-300 tracking-wide flex items-center justify-between">
             <span>
               {sightMode === "pointer"
-                ? "🧭 COMPASS POINTER MODE (TOP EDGE)"
+                ? "COMPASS POINTER MODE (TOP EDGE)"
                 : sightMode === "camera"
-                ? "📷 BACK CAMERA LENS SIGHT"
-                : "✨ SMART AUTO (POINTER / CAMERA)"}
+                ? "BACK CAMERA LENS SIGHT"
+                : "SMART AUTO (POINTER / CAMERA)"}
             </span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200 uppercase font-bold">
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/30 text-cyan-200 uppercase font-bold">
               {sightMode}
             </span>
           </div>
