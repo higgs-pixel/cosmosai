@@ -2055,12 +2055,19 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [isMobileSynced, setIsMobileSynced] = useState<boolean>(false);
   const [mobileSyncUrl, setMobileSyncUrl] = useState<string>("");
   const [showQrPanel, setShowQrPanel] = useState<boolean>(true);
+  const wasMobileSyncedRef = useRef<boolean>(false);
+
+  // 24-Hour Pass Telemetry Panel: Compressed into Upper Right Animated Icon by default
+  const [isTelemetryPanelOpen, setIsTelemetryPanelOpen] = useState<boolean>(false);
+  const [lastRefreshedDate, setLastRefreshedDate] = useState<Date>(new Date());
+  const [isRefreshingTles, setIsRefreshingTles] = useState<boolean>(false);
 
   const handleRegenerateSession = useCallback(() => {
     const newId = Math.random().toString(36).substring(2, 10);
     setSessionId(newId);
     setMobileOrientation(null);
     setIsMobileSynced(false);
+    wasMobileSyncedRef.current = false;
     setShowQrPanel(true);
     showToast(`🔄 New QR Session Generated: #${newId}`);
   }, []);
@@ -2121,8 +2128,12 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             roll: event.data.roll || 0,
           });
           setIsMobileSynced(true);
-          // Auto-close QR panel once data transmission starts
-          setShowQrPanel(false);
+          // Only auto-close once upon initial sync
+          if (!wasMobileSyncedRef.current) {
+            wasMobileSyncedRef.current = true;
+            setShowQrPanel(false);
+            showToast("📱 Mobile Phone Connected Successfully!");
+          }
         }
       };
     }
@@ -2141,9 +2152,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             roll: data.data.roll || 0,
           });
           setIsMobileSynced(true);
-          // Auto-close QR panel once data transmission starts
-          setShowQrPanel(false);
+          // Only auto-close once upon initial sync
+          if (!wasMobileSyncedRef.current) {
+            wasMobileSyncedRef.current = true;
+            setShowQrPanel(false);
+            showToast("📱 Mobile Phone Connected Successfully!");
+          }
         } else if (isSubscribed && !data.connected && !channel) {
+          wasMobileSyncedRef.current = false;
           setIsMobileSynced(false);
           setMobileOrientation(null);
         }
@@ -2188,36 +2204,49 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [satCatalog, setSatCatalog] = useState<SatelliteData[]>(DEFAULT_SATELLITE_CATALOG);
   const [tleStatusText, setTleStatusText] = useState<string>("Fetching Live CelesTrak NORAD TLEs...");
 
-  // Fetch fresh live real-time multi-group TLEs from CelesTrak proxy endpoint on mount
-  useEffect(() => {
-    let isMounted = true;
-    async function loadRealTimeTles() {
-      try {
-        const groups = ["visual", "stations", "bright", "weather", "resource"];
-        const fetchPromises = groups.map((g) =>
-          fetch(`/api/orbital?group=${g}&format=tle`)
-            .then((r) => (r.ok ? r.text() : ""))
-            .catch(() => "")
-        );
-        const results = await Promise.all(fetchPromises);
-        const combinedText = results.join("\n");
-        const liveSats = parseTleText(combinedText, "Active");
+  // Load Real-Time Multi-Group TLEs with 3-hour automatic refresh cycle
+  const loadRealTimeTles = useCallback(async (showManualFeedback = false) => {
+    setIsRefreshingTles(true);
+    try {
+      const groups = ["visual", "stations", "bright", "weather", "resource"];
+      const fetchPromises = groups.map((g) =>
+        fetch(`/api/orbital?group=${g}&format=tle&_t=${Date.now()}`)
+          .then((r) => (r.ok ? r.text() : ""))
+          .catch(() => "")
+      );
+      const results = await Promise.all(fetchPromises);
+      const combinedText = results.join("\n");
+      const liveSats = parseTleText(combinedText, "Active");
 
-        if (liveSats.length >= 5 && isMounted) {
-          setSatCatalog(liveSats);
-          setTleStatusText(`CelesTrak Multi-Group Live API (${liveSats.length} Real TLEs)`);
-          showToast(`📡 CelesTrak NORAD API: Synchronized ${liveSats.length} Real Satellites`);
+      if (liveSats.length >= 5) {
+        setSatCatalog(liveSats);
+        setLastRefreshedDate(new Date());
+        setTleStatusText(`CelesTrak Multi-Group Live API (${liveSats.length} Real TLEs)`);
+        if (showManualFeedback) {
+          showToast(`📡 Refreshed 24h Passes: ${liveSats.length} Real Satellites Synchronized`);
         }
-      } catch (err) {
-        console.warn("Using built-in NORAD TLE catalog fallback", err);
-        if (isMounted) setTleStatusText("Built-in NORAD Catalog (Offline Fallback)");
       }
+    } catch (err) {
+      console.warn("Using built-in NORAD TLE catalog fallback", err);
+      setTleStatusText("Built-in NORAD Catalog (Offline Fallback)");
+      if (showManualFeedback) {
+        showToast("⚠️ Fallback: Using Offline Satellite Catalog");
+      }
+    } finally {
+      setIsRefreshingTles(false);
     }
-    loadRealTimeTles();
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  // Fetch on mount & auto-refresh strictly every 3 hours (3 * 60 * 60 * 1000 ms)
+  useEffect(() => {
+    loadRealTimeTles(false);
+    const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+    const interval = setInterval(() => {
+      loadRealTimeTles(false);
+    }, THREE_HOURS_MS);
+
+    return () => clearInterval(interval);
+  }, [loadRealTimeTles]);
 
   // Time simulation playback loop
   useEffect(() => {
@@ -2295,6 +2324,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   // Telescope Track Satellite
   const handleTrackSatellite = (sat: ComputedSatelliteSkyState) => {
     setSelectedSat(sat);
+    setIsTelemetryPanelOpen(false); // Automatically compress 24h pass telemetry panel back into animated icon!
     showToast(`Precision Lock: ${sat.name}`);
     if (controlsRef.current) {
       const targetVec = sat.vec3;
@@ -2304,11 +2334,11 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-[calc(100vh-64px)] bg-slate-950 text-white overflow-hidden select-none font-sans">
+    <div className="relative w-full h-[calc(100vh-64px)] bg-slate-950 text-white overflow-hidden select-none font-sans">
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 3D PLANETARIUM VIEWPORT */}
+      {/* 3D PLANETARIUM VIEWPORT (100% FULL DISPLAY WINDOW) */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="relative flex-1 h-full min-h-[500px]">
+      <div className="relative w-full h-full min-h-[500px]">
         {/* 3D CANVAS (BACKGROUND LAYER CALIBRATED FOR ZENITH VISIBILITY) */}
         <Canvas
           camera={{ fov: 60, position: [0, 240, 320] }}
@@ -2461,6 +2491,35 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                   <span>{mobileSightMode === "ar" ? "AR View" : "Track"}</span>
                 </button>
               )}
+
+              {/* Divider */}
+              <div className="w-px h-5 bg-slate-800 shrink-0 mx-0.5" />
+
+              {/* COMPRESSED ANIMATED 24-HOUR PASS TELEMETRY ICON (PLACED AT RIGHT UPPER CORNER IN DISPLAY WINDOW) */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsTelemetryPanelOpen((prev) => !prev)}
+                className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 border shadow-lg cursor-pointer select-none ${
+                  isTelemetryPanelOpen
+                    ? "bg-emerald-500 border-emerald-400 text-slate-950 font-bold shadow-[0_0_20px_rgba(16,185,129,0.5)]"
+                    : "bg-slate-900/90 border-emerald-500/50 text-emerald-300 hover:border-emerald-400 hover:bg-slate-800/90 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+                }`}
+                title={isTelemetryPanelOpen ? "Compress 24-Hour Pass Telemetry Panel" : "Open 24-Hour Sky Pass Telemetry Panel"}
+              >
+                {/* Pulsing Radar Wave */}
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+                <Radio className={`h-3.5 w-3.5 ${isTelemetryPanelOpen ? "text-slate-950" : "text-emerald-400 animate-pulse"}`} />
+                <span className="font-mono font-extrabold tracking-wide hidden sm:inline">
+                  24h PASS ({visible24hCount})
+                </span>
+                <span className="font-mono font-extrabold sm:hidden">
+                  {visible24hCount}
+                </span>
+              </motion.button>
             </div>
           </div>
 
@@ -2581,8 +2640,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           </div>
         )}
 
-        {/* FULL MOBILE COMPASS QR SYNC MODAL (CLOSABLE & AUTO-CLOSES ON TRANSMISSION) */}
-        {!is180DomeView && showQrPanel && (
+        {/* FULL MOBILE COMPASS QR SYNC MODAL */}
+        {showQrPanel && (
           <div className="absolute top-20 right-6 z-40 w-80 p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] backdrop-blur-2xl font-mono text-xs animate-in fade-in slide-in-from-top-4 duration-200 pointer-events-auto">
             <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
               <div className="flex items-center gap-2">
@@ -2858,9 +2917,16 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                 </div>
               </div>
               <button
-                onClick={() => setSelectedSat(null)}
-                className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center transition shadow-md"
-                title="Close satellite details"
+                onClick={() => {
+                  setSelectedSat(null);
+                  if (controlsRef.current) {
+                    controlsRef.current.target.set(0, is180DomeView ? 60 : 25, 0);
+                    controlsRef.current.update();
+                  }
+                  showToast("🔭 Tracking Undone: Reset to Neutral Sight");
+                }}
+                className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center transition shadow-md cursor-pointer"
+                title="Close satellite details and undo tracking"
               >
                 ✕
               </button>
@@ -2922,181 +2988,203 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </button>
           </div>
         )}
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* RIGHT SIDE PANEL: NEATLY RESTRUCTURED TELEMETRY PANEL (FULL FRAME) */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="w-full md:w-[380px] shrink-0 bg-slate-950/90 border-l border-slate-800/80 p-4 flex flex-col justify-between z-30 pointer-events-auto backdrop-blur-2xl h-full overflow-hidden">
-        <div className="flex flex-col flex-1 min-h-0">
-          {/* Header */}
-          <div className="flex flex-col gap-1 border-b border-slate-800/80 pb-3 mb-3 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Radio className="h-4 w-4 text-emerald-400 animate-pulse" />
-                <span className="font-extrabold text-sm text-slate-100 font-sans tracking-wide">
-                  24-Hour Sky Pass Telemetry
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-                {visible24hCount} Visible in 24h ({visibleCount} Overhead)
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] font-mono text-emerald-300 bg-emerald-950/60 px-2.5 py-1 rounded-xl border border-emerald-500/40 mt-1">
-              <span>📡 TLE PROVENANCE:</span>
-              <span className="font-bold text-emerald-200">{tleStatusText}</span>
-            </div>
-          </div>
-
-          {/* Search Box */}
-          <div className="relative mb-3 shrink-0">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search Satellite / NORAD ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/60 font-mono"
-            />
-          </div>
-
-          {/* Filter Tabs: Strictly Visible in Next 24 Hours, Naked-Eye Visible, or Overhead Now */}
-          <div className="flex items-center gap-1 mb-3.5 text-[10px] font-medium shrink-0">
-            <button
-              onClick={() => setSelectedCategory("Visible in 24 Hours")}
-              className={`flex-1 py-1.5 px-2 rounded-xl transition text-center font-bold flex items-center justify-center gap-1 ${
-                selectedCategory === "Visible in 24 Hours"
-                  ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                  : "bg-slate-900/80 text-slate-400 hover:text-white"
-              }`}
+        {/* 24-HOUR PASS TELEMETRY COMPRESSIBLE DRAWER OVERLAY */}
+        <AnimatePresence>
+          {isTelemetryPanelOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: 60, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 60, scale: 0.96 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="absolute top-20 right-4 sm:right-6 bottom-6 z-50 w-full sm:w-[410px] max-w-[calc(100vw-2rem)] bg-slate-950/95 border-2 border-emerald-500/60 rounded-3xl shadow-[0_0_50px_rgba(16,185,129,0.35)] backdrop-blur-2xl p-4 flex flex-col justify-between pointer-events-auto overflow-hidden animate-in fade-in slide-in-from-right-4"
             >
-              <Calendar className="h-3 w-3" />
-              <span>Visible 24h ({visible24hCount})</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory("Naked-Eye Visible")}
-              className={`flex-1 py-1.5 px-2 rounded-xl transition text-center font-bold flex items-center justify-center gap-1 ${
-                selectedCategory === "Naked-Eye Visible"
-                  ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.5)] font-extrabold"
-                  : "bg-slate-900/80 text-slate-400 hover:text-white"
-              }`}
-              title="Physically Visible to the Human Eye (Sunlit + Dark Sky + Mag <= 6.0)"
-            >
-              <Eye className="h-3 w-3" />
-              <span>Naked Eye ({nakedEyeCount})</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedCategory("Overhead Now")}
-              className={`py-1.5 px-2.5 rounded-xl transition text-center font-bold ${
-                selectedCategory === "Overhead Now"
-                  ? "bg-pink-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.4)]"
-                  : "bg-slate-900/80 text-slate-400 hover:text-white"
-              }`}
-            >
-              <span>Overhead ({visibleCount})</span>
-            </button>
-          </div>
-
-          {/* Satellite Telemetry List (FULL FRAME FLEX-1 EXPANDED) */}
-          <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 text-xs">
-            {filteredSatellites.map((sat) => {
-              const isSelected = selectedSat?.id === sat.id;
-              const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
-
-              return (
-                <div
-                  key={sat.id}
-                  onClick={() => handleTrackSatellite(sat)}
-                  className={`p-3 rounded-2xl border transition cursor-pointer ${
-                    isSelected
-                      ? "bg-slate-900/90 border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                      : sat.isAboveHorizon
-                      ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
-                      : "bg-slate-950/40 border-slate-900 opacity-80 hover:opacity-100"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
+              <div className="flex flex-col flex-1 min-h-0">
+                {/* Header */}
+                <div className="flex flex-col gap-1 border-b border-slate-800/80 pb-3 mb-3 shrink-0">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: catStyle.colorHex }} />
-                      <span className="font-extrabold text-white text-xs truncate max-w-[130px]">
-                        {sat.name}
-                      </span>
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold ${catStyle.badgeClass}`}>
-                        {catStyle.label}
+                      <Radio className="h-4 w-4 text-emerald-400 animate-pulse" />
+                      <span className="font-extrabold text-sm text-slate-100 font-sans tracking-wide">
+                        24-Hour Sky Pass Telemetry
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {sat.isNakedEyeVisible && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300">
-                          👁️ NAKED EYE
-                        </span>
-                      )}
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold ${
-                          sat.isAboveHorizon
-                            ? sat.isSunlit
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                              : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
-                            : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                        }`}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => loadRealTimeTles(true)}
+                        disabled={isRefreshingTles}
+                        className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-300 hover:bg-slate-800 transition text-xs flex items-center gap-1 cursor-pointer"
+                        title="Refresh 24h passes now (Auto-refreshes every 3 hours)"
                       >
-                        {sat.isAboveHorizon ? (sat.isSunlit ? "☀️ SUNLIT" : "🌑 ECLIPSED") : "Pass in 24h"}
-                      </span>
+                        <RotateCcw className={`h-3.5 w-3.5 ${isRefreshingTles ? "animate-spin text-emerald-400" : ""}`} />
+                        <span className="text-[10px] font-mono hidden sm:inline">Refresh</span>
+                      </button>
+                      <button
+                        onClick={() => setIsTelemetryPanelOpen(false)}
+                        className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center transition shadow-md cursor-pointer font-bold"
+                        title="Compress into upper right icon"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
-
-                  {/* Telemetry Grid */}
-                  <div className="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 mb-2 font-mono">
-                    <div>
-                      <div className="text-slate-500">Elevation</div>
-                      <div className="font-bold text-emerald-300">{sat.elevationDeg.toFixed(1)}°</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">Azimuth</div>
-                      <div className="font-bold text-emerald-300">{Math.round(sat.azimuthDeg)}°</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">Sat Alt</div>
-                      <div className="font-bold text-amber-300">{Math.round(sat.satAltitudeKm)} km</div>
-                    </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-emerald-300 bg-emerald-950/60 px-2.5 py-1 rounded-xl border border-emerald-500/40 mt-1">
+                    <span>📡 3H CYCLE: {lastRefreshedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="font-bold text-emerald-200 truncate max-w-[190px]">{tleStatusText}</span>
                   </div>
+                </div>
 
+                {/* Search Box */}
+                <div className="relative mb-3 shrink-0">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Satellite / NORAD ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/60 font-mono"
+                  />
+                </div>
+
+                {/* Filter Tabs: Strictly Visible in Next 24 Hours, Naked-Eye Visible, or Overhead Now */}
+                <div className="flex items-center gap-1 mb-3.5 text-[10px] font-medium shrink-0">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTrackSatellite(sat);
-                    }}
-                    className={`w-full py-1.5 rounded-xl font-semibold transition flex items-center justify-center gap-1 text-[10px] ${
-                      isSelected
-                        ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
-                        : "bg-slate-900 border border-slate-800 text-emerald-300 hover:bg-emerald-600 hover:text-white"
+                    onClick={() => setSelectedCategory("Visible in 24 Hours")}
+                    className={`flex-1 py-1.5 px-2 rounded-xl transition text-center font-bold flex items-center justify-center gap-1 ${
+                      selectedCategory === "Visible in 24 Hours"
+                        ? "bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                        : "bg-slate-900/80 text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span>{isSelected ? " SIGHT LOCKED" : "AIM ROBOT SIGHT & TRACK"}</span>
-                    <ChevronRight className="h-3 w-3" />
+                    <Calendar className="h-3 w-3" />
+                    <span>Visible 24h ({visible24hCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedCategory("Naked-Eye Visible")}
+                    className={`flex-1 py-1.5 px-2 rounded-xl transition text-center font-bold flex items-center justify-center gap-1 ${
+                      selectedCategory === "Naked-Eye Visible"
+                        ? "bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.5)] font-extrabold"
+                        : "bg-slate-900/80 text-slate-400 hover:text-white"
+                    }`}
+                    title="Physically Visible to the Human Eye (Sunlit + Dark Sky + Mag <= 6.0)"
+                  >
+                    <Eye className="h-3 w-3" />
+                    <span>Naked Eye ({nakedEyeCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedCategory("Overhead Now")}
+                    className={`py-1.5 px-2.5 rounded-xl transition text-center font-bold ${
+                      selectedCategory === "Overhead Now"
+                        ? "bg-pink-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.4)]"
+                        : "bg-slate-900/80 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <span>Overhead ({visibleCount})</span>
                   </button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Footer */}
-        <div className="pt-3.5 border-t border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between mt-3 shrink-0">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-            <Zap className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Scientific SGP4 Physics</span>
-          </div>
-          <button
-            onClick={() => setShowManual(true)}
-            className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 cursor-pointer"
-          >
-            <BookOpen className="h-3 w-3" />
-            <span>User Manual</span>
-          </button>
-        </div>
+                {/* Satellite Telemetry List */}
+                <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 text-xs">
+                  {filteredSatellites.map((sat) => {
+                    const isSelected = selectedSat?.id === sat.id;
+                    const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
+
+                    return (
+                      <div
+                        key={sat.id}
+                        onClick={() => handleTrackSatellite(sat)}
+                        className={`p-3 rounded-2xl border transition cursor-pointer ${
+                          isSelected
+                            ? "bg-slate-900/90 border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                            : sat.isAboveHorizon
+                            ? "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
+                            : "bg-slate-950/40 border-slate-900 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: catStyle.colorHex }} />
+                            <span className="font-extrabold text-white text-xs truncate max-w-[130px]">
+                              {sat.name}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold ${catStyle.badgeClass}`}>
+                              {catStyle.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {sat.isNakedEyeVisible && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                                👁️ NAKED EYE
+                              </span>
+                            )}
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold ${
+                                sat.isAboveHorizon
+                                  ? sat.isSunlit
+                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                                    : "bg-purple-500/10 text-purple-400 border border-purple-500/30"
+                                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                              }`}
+                            >
+                              {sat.isAboveHorizon ? (sat.isSunlit ? "☀️ SUNLIT" : "🌑 ECLIPSED") : (sat.maxPassElevationDeg ? `Peak: ${sat.maxPassElevationDeg}°` : "Pass in 24h")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Telemetry Grid */}
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 mb-2 font-mono">
+                          <div>
+                            <div className="text-slate-500">Elevation</div>
+                            <div className="font-bold text-emerald-300">{sat.elevationDeg.toFixed(1)}°</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500">Azimuth</div>
+                            <div className="font-bold text-emerald-300">{Math.round(sat.azimuthDeg)}°</div>
+                          </div>
+                          <div>
+                            <div className="text-slate-500">Sat Alt</div>
+                            <div className="font-bold text-amber-300">{Math.round(sat.satAltitudeKm)} km</div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTrackSatellite(sat);
+                          }}
+                          className={`w-full py-1.5 rounded-xl font-semibold transition flex items-center justify-center gap-1 text-[10px] cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
+                              : "bg-slate-900 border border-slate-800 text-emerald-300 hover:bg-emerald-600 hover:text-white"
+                          }`}
+                        >
+                          <span>{isSelected ? " SIGHT LOCKED" : "AIM ROBOT SIGHT & TRACK"}</span>
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-3.5 border-t border-slate-800/80 text-[10px] font-mono text-slate-400 flex items-center justify-between mt-3 shrink-0">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Scientific SGP4 Physics</span>
+                </div>
+                <button
+                  onClick={() => setShowManual(true)}
+                  className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 cursor-pointer"
+                >
+                  <BookOpen className="h-3 w-3" />
+                  <span>User Manual</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* FIXED FLOATING MANUAL BUTTON AT VERY RIGHTMOST BOTTOM CORNER OF SCREEN */}

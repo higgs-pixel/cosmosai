@@ -65,6 +65,8 @@ export interface ComputedSatelliteSkyState {
   passDetails?: SatellitePassDetails;
   passGraphPoints?: PassGraphPoint[];
   viewingRequirements?: ObserverViewingRequirements;
+  maxPassElevationDeg?: number;
+  nextPassTimeMs?: number | null;
 
   // PHYSICS-DRIVEN OPTICAL & ILLUMINATION FIELDS
   isSunlit: boolean;
@@ -374,24 +376,32 @@ export function computeSatelliteState(
     const isAboveHorizon = elevationDeg > 0;
     const isNakedEyeVisible = isAboveHorizon && isSunlit && isObserverDark && visualMagnitude <= 6.0;
 
-    // Check if satellite has any pass in the next 24 hours (86,400s) from observer location
-    let hasUpcomingPassIn24h = isAboveHorizon;
-    if (!hasUpcomingPassIn24h) {
-      const stepSecs = 300; // scan every 5 minutes over 24h
-      for (let t = 0; t <= 86400; t += stepSecs) {
-        const sampleDate = new Date(date.getTime() + t * 1000);
-        const pv = satellite.propagate(satrec, sampleDate);
-        if (pv && pv.position && typeof pv.position !== "boolean") {
-          const pEci = pv.position as { x: number; y: number; z: number };
-          const g = satellite.gstime(sampleDate);
-          const pEcf = satellite.eciToEcf(pEci, g);
-          const l = satellite.ecfToLookAngles(observerGd, pEcf);
-          if (l.elevation > 0) {
-            hasUpcomingPassIn24h = true;
-            break;
+    // Check if satellite has an observable pass in the next 24 hours (86,400s) from observer location
+    // A visible/observable pass requires an elevation cleanly clearing local ground obstacles/haze (>= 12° or currently above horizon)
+    let hasUpcomingPassIn24h = isAboveHorizon && elevationDeg >= 5;
+    let peakPassElevationDeg = Math.max(0, elevationDeg);
+    let nextPassTimeMs: number | null = isAboveHorizon ? date.getTime() : null;
+
+    const stepSecs = 180; // scan every 3 minutes over 24h
+    for (let t = 0; t <= 86400; t += stepSecs) {
+      const sampleDate = new Date(date.getTime() + t * 1000);
+      const pv = satellite.propagate(satrec, sampleDate);
+      if (pv && pv.position && typeof pv.position !== "boolean") {
+        const pEci = pv.position as { x: number; y: number; z: number };
+        const g = satellite.gstime(sampleDate);
+        const pEcf = satellite.eciToEcf(pEci, g);
+        const l = satellite.ecfToLookAngles(observerGd, pEcf);
+        const elDeg = (l.elevation * 180) / Math.PI;
+        if (elDeg > peakPassElevationDeg) {
+          peakPassElevationDeg = elDeg;
+          if (nextPassTimeMs === null && elDeg >= 10) {
+            nextPassTimeMs = sampleDate.getTime();
           }
         }
       }
+    }
+    if (isAboveHorizon || peakPassElevationDeg >= 12) {
+      hasUpcomingPassIn24h = true;
     }
 
     const passStatus: "Overhead" | "High Sky" | "Low Horizon" | "Below Horizon" =
@@ -577,6 +587,8 @@ export function computeSatelliteState(
       passDetails,
       passGraphPoints,
       viewingRequirements,
+      maxPassElevationDeg: Number(peakPassElevationDeg.toFixed(1)),
+      nextPassTimeMs,
 
       // PHYSICS-DRIVEN OPTICAL & ILLUMINATION FIELDS
       isSunlit,
