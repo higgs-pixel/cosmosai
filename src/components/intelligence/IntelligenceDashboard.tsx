@@ -563,106 +563,73 @@ export default function IntelligenceDashboard() {
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#00e5ff]/20 selection:text-white">
       
       {/* ─────────────────────────────────────────────────────────────────────────────
-          1. SLIM NASA-INSPIRED NAVIGATION BAR (Exact visual layout of Reference Header)
+          1. SLIM MINIMALIST NAVIGATION BAR
           ───────────────────────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-black/95 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full border-b border-zinc-850 bg-black/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 w-full items-center justify-between px-4 lg:px-8">
           
-          {/* Left Brand: NASA-Style Crisp Logo */}
+          {/* Left Brand: Clean Modern Minimalist Sans-Serif Logo */}
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="flex items-center gap-2.5 group transition"
+              className="flex items-center gap-3 group transition"
               title="Return to COSMOS Observatory"
             >
-              <div className="border border-white/20 px-2.5 py-1 text-sm font-black tracking-[0.25em] text-white hover:border-white transition">
-                NASA
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-bold tracking-[0.18em] text-zinc-100 uppercase">
-                  COSMOS
-                </span>
-                <span className="text-[8px] font-mono text-zinc-400 tracking-wider">
-                  ORBITAL OBSERVATORY
-                </span>
-              </div>
+              <span className="text-sm font-bold tracking-[0.25em] text-white uppercase group-hover:text-[#00e5ff] transition font-sans">
+                COSMOS
+              </span>
+              <span className="h-3.5 w-px bg-zinc-800" />
+              <span className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase font-medium font-sans">
+                Orbital Observatory
+              </span>
             </Link>
-
-            {/* Inline Editorial Search Input (as seen in reference header: "Search on all Nasa.gov") */}
-            <div className="relative hidden md:block w-64 lg:w-80">
-              <input
-                type="text"
-                placeholder="Search on all Cosmos satellites…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-8 rounded-none border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-200 placeholder-zinc-500 focus:border-zinc-500 focus:bg-black focus:outline-none transition font-sans"
-              />
-              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-500" />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-2 text-[10px] text-zinc-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
           </div>
 
-          {/* Center Navigation Links: NASA Small Uppercase Editorial Menu */}
-          <nav className="hidden xl:flex items-center gap-6 text-[11px] font-medium tracking-wider text-zinc-300">
+          {/* Center Navigation Links: Clean Modern Sans-Serif Menu */}
+          <nav className="hidden md:flex items-center gap-7 text-xs font-medium tracking-wider text-zinc-300 font-sans">
             <button
               onClick={() => {
                 const el = document.getElementById("fleet-catalog-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="flex items-center gap-1 hover:text-white transition uppercase"
+              className="flex items-center gap-1 hover:text-white transition uppercase text-[11px] tracking-widest text-zinc-300"
             >
-              Missions <ChevronDown className="h-3 w-3 opacity-60" />
-            </button>
-            <button
-              onClick={() => {
-                const el = document.getElementById("hero-visual-area");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="flex items-center gap-1 hover:text-white transition uppercase"
-            >
-              Orbit Visuals <ChevronDown className="h-3 w-3 opacity-60" />
+              Missions <ChevronDown className="h-3 w-3 opacity-50" />
             </button>
             <button
               onClick={() => {
                 const el = document.getElementById("telemetry-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="flex items-center gap-1 hover:text-white transition uppercase"
+              className="flex items-center gap-1 hover:text-white transition uppercase text-[11px] tracking-widest text-zinc-300"
             >
-              Realtime Telemetry <ChevronDown className="h-3 w-3 opacity-60" />
+              Realtime Telemetry <ChevronDown className="h-3 w-3 opacity-50" />
             </button>
             <button
               onClick={() => {
                 const el = document.getElementById("dossier-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="flex items-center gap-1 hover:text-white transition uppercase"
+              className="flex items-center gap-1 hover:text-white transition uppercase text-[11px] tracking-widest text-zinc-300"
             >
-              Technical Dossier <ChevronDown className="h-3 w-3 opacity-60" />
+              Technical Dossier <ChevronDown className="h-3 w-3 opacity-50" />
             </button>
             <button
               onClick={() => {
                 const el = document.getElementById("fleet-catalog-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="flex items-center gap-1 text-zinc-400 hover:text-white transition uppercase"
+              className="flex items-center gap-1 text-zinc-400 hover:text-white transition uppercase text-[11px] tracking-widest"
             >
               Fleet Inventory ({filteredSatellites.length})
             </button>
           </nav>
 
-          {/* Right Navigation Actions: Retaining existing navigation links */}
-          <div className="flex items-center gap-3">
+          {/* Right Navigation Actions */}
+          <div className="flex items-center gap-3 font-sans">
             <Link
               href="/"
-              className="inline-flex h-8 items-center gap-1.5 border border-zinc-800 px-3 text-[11px] font-medium tracking-wider uppercase text-zinc-300 hover:border-zinc-600 hover:text-white transition bg-zinc-950/80"
+              className="inline-flex h-8 items-center gap-1.5 border border-zinc-800 px-3 text-[11px] font-medium tracking-wider uppercase text-zinc-300 hover:border-zinc-600 hover:text-white transition bg-zinc-950/80 font-sans"
             >
               <ArrowLeft className="h-3 w-3" />
               <span className="hidden sm:inline">Observatory</span>
@@ -670,7 +637,7 @@ export default function IntelligenceDashboard() {
 
             <Link
               href="/track-my-sky"
-              className="inline-flex h-8 items-center gap-1.5 border border-[#00e5ff]/50 bg-[#00e5ff]/10 px-3 text-[11px] font-bold tracking-wider uppercase text-[#00e5ff] hover:bg-[#00e5ff]/20 hover:text-white transition shadow-[0_0_12px_rgba(0,229,255,0.12)]"
+              className="inline-flex h-8 items-center gap-1.5 border border-[#00e5ff]/50 bg-[#00e5ff]/10 px-3 text-[11px] font-semibold tracking-wider uppercase text-[#00e5ff] hover:bg-[#00e5ff]/20 hover:text-white transition shadow-[0_0_12px_rgba(0,229,255,0.12)] font-sans"
             >
               <Sparkles className="h-3 w-3" />
               <span>Track My Sky</span>
@@ -764,22 +731,22 @@ export default function IntelligenceDashboard() {
             EDITORIAL OVERLAY: Exact layout matching the Pluto reference image
             Outline category badge + bold headline box + subtitle link
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute left-6 lg:left-14 top-1/2 -translate-y-1/2 z-20 max-w-xl flex flex-col items-start pointer-events-auto">
+        <div className="absolute left-6 lg:left-14 top-1/2 -translate-y-1/2 z-20 max-w-xl flex flex-col items-start pointer-events-auto font-sans">
           
-          {/* Outline category box (like "Image of the day" in reference) */}
+          {/* Outline category box */}
           <div className="border border-white/30 bg-black/60 backdrop-blur-sm px-3 py-1.5 mb-3.5">
-            <span className="text-[10px] font-semibold tracking-[0.22em] text-zinc-300 uppercase">
+            <span className="text-[10px] font-semibold tracking-[0.25em] text-zinc-300 uppercase font-sans">
               {selectedSat ? `${selectedSat.orbitClass} Mission Focus` : "Live Orbit Propagation"}
             </span>
           </div>
 
-          {/* Large headline box (like "New Pluto images from NASA's..." in reference) */}
+          {/* Large headline box */}
           <div className="border border-white/20 bg-black/75 backdrop-blur-md p-5 lg:p-6 mb-4 shadow-2xl">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-snug">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-snug font-sans">
               {selectedSat ? (
                 <>
                   <span>{selectedSat.name}</span>
-                  <span className="text-zinc-400 font-light block text-lg md:text-xl mt-1">
+                  <span className="text-zinc-400 font-normal block text-base md:text-lg mt-1 tracking-wide">
                     NORAD ID {selectedSat.id} : {selectedSat.category.toUpperCase()}
                   </span>
                 </>
@@ -788,23 +755,23 @@ export default function IntelligenceDashboard() {
               )}
             </h1>
 
-            {/* Telemetry Snapshot in Editorial Monospace */}
+            {/* Telemetry Snapshot in Clean Minimal Sans */}
             {selectedTelemetry && (
-              <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-zinc-300">
+              <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 font-sans tracking-wide">
                 <div>
-                  <span className="text-zinc-400">ALT: </span>
+                  <span className="text-zinc-400 text-[11px]">ALT: </span>
                   <span className="text-[#00e5ff] font-semibold">{selectedTelemetry.alt.toFixed(1)} km</span>
                 </div>
                 <span className="text-zinc-600">|</span>
                 <div>
-                  <span className="text-zinc-400">VEL: </span>
+                  <span className="text-zinc-400 text-[11px]">VEL: </span>
                   <span className="text-white font-semibold">
                     {Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h
                   </span>
                 </div>
                 <span className="text-zinc-600">|</span>
                 <div>
-                  <span className="text-zinc-400">LAT/LON: </span>
+                  <span className="text-zinc-400 text-[11px]">COORDINATES: </span>
                   <span className="text-zinc-300">
                     {selectedTelemetry.lat.toFixed(2)}°, {selectedTelemetry.lon.toFixed(2)}°
                   </span>
@@ -813,14 +780,14 @@ export default function IntelligenceDashboard() {
             )}
           </div>
 
-          {/* Editorial Action Link with arrow (like "See these images →" in reference) */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Editorial Action Link with arrow */}
+          <div className="flex flex-wrap items-center gap-3 font-sans">
             <button
               onClick={() => {
                 const el = document.getElementById("dossier-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="inline-flex items-center gap-2 text-xs font-semibold tracking-wider text-zinc-200 hover:text-white group border-b border-transparent hover:border-white pb-0.5 transition"
+              className="inline-flex items-center gap-2 text-xs font-semibold tracking-wider text-zinc-200 hover:text-white group border-b border-transparent hover:border-white pb-0.5 transition font-sans"
             >
               Explore Mission Dossier <span className="group-hover:translate-x-1 transition-transform">→</span>
             </button>
@@ -830,7 +797,7 @@ export default function IntelligenceDashboard() {
                 const el = document.getElementById("telemetry-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-[#00e5ff] ml-3 transition"
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-[#00e5ff] ml-3 transition font-sans"
             >
               <Crosshair className="h-3 w-3" />
               Inspect Vector Data
@@ -840,15 +807,15 @@ export default function IntelligenceDashboard() {
         </div>
 
         {/* ─────────────────────────────────────────────────────────────────────
-            FLOATING NASA HUD: Viewport Modes, Camera Lock & Simulation Controls
+            FLOATING HUD: Viewport Modes, Camera Lock & Simulation Controls
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute right-4 lg:right-8 top-4 z-20 flex flex-col items-end gap-2.5">
+        <div className="absolute right-4 lg:right-8 top-4 z-20 flex flex-col items-end gap-2.5 font-sans">
           
           {/* Visualization Mode Selector */}
-          <div className="flex items-center border border-zinc-800 bg-black/80 backdrop-blur-md p-1">
+          <div className="flex items-center border border-zinc-800 bg-black/80 backdrop-blur-md p-1 font-sans">
             <button
               onClick={() => setViewMode("3d")}
-              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
                 viewMode === "3d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -856,7 +823,7 @@ export default function IntelligenceDashboard() {
             </button>
             <button
               onClick={() => setViewMode("2d")}
-              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
                 viewMode === "2d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -864,7 +831,7 @@ export default function IntelligenceDashboard() {
             </button>
             <button
               onClick={() => setViewMode("split")}
-              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
                 viewMode === "split" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -875,7 +842,7 @@ export default function IntelligenceDashboard() {
           {/* Camera Lock Action */}
           <button
             onClick={() => setLockCamera(!lockCamera)}
-            className={`flex items-center gap-1.5 border px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition backdrop-blur-md ${
+            className={`flex items-center gap-1.5 border px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition backdrop-blur-md font-sans ${
               lockCamera
                 ? "border-red-500 bg-red-500/10 text-red-400"
                 : "border-zinc-800 bg-black/80 text-zinc-300 hover:border-zinc-600 hover:text-white"
@@ -888,17 +855,16 @@ export default function IntelligenceDashboard() {
 
         {/* ─────────────────────────────────────────────────────────────────────
             FLOATING CLOCK & SPEED HUD (Bottom Right of Hero)
-            Preserving Clock Configuration, Timezone Options, Speed & Play/Pause
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute right-4 lg:right-8 bottom-6 z-20 flex flex-col items-end gap-2">
+        <div className="absolute right-4 lg:right-8 bottom-6 z-20 flex flex-col items-end gap-2 font-sans">
           
-          <div className="border border-zinc-800 bg-black/85 backdrop-blur-md p-3 max-w-sm w-full">
+          <div className="border border-zinc-800 bg-black/85 backdrop-blur-md p-3.5 max-w-sm w-full font-sans">
             <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-zinc-800/80">
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
+              <span className="flex items-center gap-1.5 text-[10px] text-zinc-400 uppercase tracking-widest font-medium">
                 <Clock className="h-3 w-3 text-[#00e5ff]" />
                 Clock Configuration
               </span>
-              <span className="text-[10px] font-mono font-bold text-[#00e5ff]">
+              <span className="text-[10px] font-bold text-[#00e5ff] tracking-wider">
                 {speed}x SPEED
               </span>
             </div>
@@ -908,7 +874,7 @@ export default function IntelligenceDashboard() {
               <select
                 value={selectedTz}
                 onChange={(e) => setSelectedTz(e.target.value)}
-                className="w-full h-7 border border-zinc-800 bg-zinc-900/80 px-2 text-[10px] font-mono text-zinc-200 focus:outline-none focus:border-zinc-500"
+                className="w-full h-7 border border-zinc-800 bg-zinc-900/80 px-2 text-[11px] text-zinc-200 focus:outline-none focus:border-zinc-500 font-sans"
               >
                 {TIMEZONE_OPTIONS.map((tz) => (
                   <option key={tz.id} value={tz.id}>
@@ -919,7 +885,7 @@ export default function IntelligenceDashboard() {
             </div>
 
             {/* Formatted Timestamp */}
-            <div className="text-[11px] font-mono font-semibold text-white bg-zinc-950 border border-zinc-900 px-2.5 py-1 text-center truncate">
+            <div className="text-xs font-semibold text-white bg-zinc-950 border border-zinc-900 px-2.5 py-1.5 text-center truncate tracking-wide font-sans">
               {formatClockTime(timeMs, selectedTz)}
             </div>
 
@@ -927,7 +893,7 @@ export default function IntelligenceDashboard() {
             <div className="flex items-center gap-2 mt-2">
               <button
                 onClick={togglePlay}
-                className="flex-1 flex h-7 items-center justify-center gap-1.5 border border-zinc-700 bg-zinc-900 text-[10px] font-mono uppercase tracking-wider text-white hover:bg-zinc-800 transition"
+                className="flex-1 flex h-7 items-center justify-center gap-1.5 border border-zinc-700 bg-zinc-900 text-[10px] uppercase font-semibold tracking-wider text-white hover:bg-zinc-800 transition font-sans"
               >
                 {isPaused ? <Play className="h-3 w-3 text-emerald-400" /> : <Pause className="h-3 w-3 text-amber-400" />}
                 {isPaused ? "Resume" : "Pause"}
@@ -951,9 +917,9 @@ export default function IntelligenceDashboard() {
                   <button
                     key={s}
                     onClick={() => setSpeed(s)}
-                    className={`h-7 px-1.5 border text-[9px] font-mono transition ${
+                    className={`h-7 px-2 border text-[10px] font-semibold transition font-sans ${
                       speed === s
-                        ? "border-[#00e5ff] bg-[#00e5ff]/20 text-[#00e5ff] font-bold"
+                        ? "border-[#00e5ff] bg-[#00e5ff]/20 text-[#00e5ff]"
                         : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -970,17 +936,16 @@ export default function IntelligenceDashboard() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          3. NASA EDITORIAL STORY STRIP (Matching Lower Story Thumbnail in Reference)
-          Quick-select prominent flagship missions + fleet metrics
+          3. EDITORIAL STORY STRIP
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section className="w-full border-b border-zinc-850 bg-zinc-950 py-3 px-4 lg:px-8">
+      <section className="w-full border-b border-zinc-850 bg-zinc-950 py-3 px-4 lg:px-8 font-sans">
         <div className="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           <div className="flex items-center gap-3">
-            <span className="border border-white/20 px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-400">
+            <span className="border border-white/20 px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-400 font-semibold">
               Flagship Missions
             </span>
-            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+            <span className="text-xs text-zinc-400 hidden sm:inline">
               Select key spacecraft to focus ephemeris:
             </span>
           </div>
@@ -992,14 +957,14 @@ export default function IntelligenceDashboard() {
                 <button
                   key={catSat.id}
                   onClick={() => handleTrackSatellite(catSat.id)}
-                  className={`flex items-center gap-2 border px-3 py-1.5 text-left transition whitespace-nowrap ${
+                  className={`flex items-center gap-2 border px-3 py-1.5 text-left transition whitespace-nowrap font-sans ${
                     isSelected
                       ? "border-white bg-white text-black font-semibold"
                       : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:text-white"
                   }`}
                 >
-                  <span className="text-[10px] font-mono">{catSat.name}</span>
-                  <span className={`text-[8px] font-mono ${isSelected ? "text-zinc-800" : "text-zinc-500"}`}>
+                  <span className="text-[11px] font-medium">{catSat.name}</span>
+                  <span className={`text-[9px] ${isSelected ? "text-zinc-800" : "text-zinc-500"}`}>
                     {catSat.date}
                   </span>
                 </button>
@@ -1014,36 +979,36 @@ export default function IntelligenceDashboard() {
           4. FLEET INVENTORY & OBSERVATION CATALOG SECTION
           Minimal editorial side navigation / grid with search and category filtering
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="fleet-catalog-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900">
+      <section id="fleet-catalog-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900 font-sans">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+            <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
               Section 01 // Fleet Telemetry Catalog
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white uppercase">
+            <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
               Space Machine Catalog &amp; Query Controls
             </h2>
           </div>
 
-          <div className="text-xs font-mono text-zinc-400">
+          <div className="text-xs text-zinc-400 font-sans tracking-wide">
             SHOWING <span className="text-white font-bold">{displayedSatellites.length}</span> OF{" "}
             <span className="text-white font-bold">{filteredSatellites.length}</span> SATELLITES
           </div>
         </div>
 
         {/* Catalog Filters Toolbar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border border-zinc-850 bg-zinc-950 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border border-zinc-850 bg-zinc-950 mb-6 font-sans">
           
           {/* Group Selector */}
           <div>
-            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+            <label className="block text-[9px] uppercase tracking-widest text-zinc-400 mb-1.5 font-semibold font-sans">
               Observation Fleet
             </label>
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
-              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 font-sans"
             >
               {GROUPS.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -1055,13 +1020,13 @@ export default function IntelligenceDashboard() {
 
           {/* Orbit Class Filter */}
           <div>
-            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+            <label className="block text-[9px] uppercase tracking-widest text-zinc-400 mb-1.5 font-semibold font-sans">
               Orbit Regime Filter
             </label>
             <select
               value={orbitClassFilter}
               onChange={(e) => setOrbitClassFilter(e.target.value as any)}
-              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 font-sans"
             >
               <option value="All">All Orbit Classes (LEO/MEO/GEO/HEO)</option>
               <option value="LEO">LEO — Low Earth Orbit (&lt; 2,000 km)</option>
@@ -1073,7 +1038,7 @@ export default function IntelligenceDashboard() {
 
           {/* Search Query Filter */}
           <div>
-            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+            <label className="block text-[9px] uppercase tracking-widest text-zinc-400 mb-1.5 font-semibold font-sans">
               Query Search Filter
             </label>
             <div className="relative">
@@ -1082,7 +1047,7 @@ export default function IntelligenceDashboard() {
                 placeholder="Search name or NORAD…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-8 border border-zinc-800 bg-black pl-7 pr-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+                className="w-full h-8 border border-zinc-800 bg-black pl-7 pr-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 font-sans"
               />
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
             </div>
@@ -1090,13 +1055,13 @@ export default function IntelligenceDashboard() {
 
           {/* Category Filter */}
           <div>
-            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+            <label className="block text-[9px] uppercase tracking-widest text-zinc-400 mb-1.5 font-semibold font-sans">
               Category Tag
             </label>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as any)}
-              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 font-sans"
             >
               <option value="All">All Categories</option>
               <option value="Active">Active Constellations &amp; Stations</option>
@@ -1109,14 +1074,14 @@ export default function IntelligenceDashboard() {
 
         </div>
 
-        {/* Space Machines Catalog Grid: Minimal NASA Grid Styling */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 max-h-[360px] overflow-y-auto p-1 border border-zinc-850 bg-black scrollbar-thin scrollbar-thumb-zinc-800">
+        {/* Space Machines Catalog Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 max-h-[360px] overflow-y-auto p-1 border border-zinc-850 bg-black scrollbar-thin scrollbar-thumb-zinc-800 font-sans">
           {loading ? (
-            <div className="col-span-full py-12 text-center font-mono text-xs text-zinc-500 uppercase tracking-widest">
+            <div className="col-span-full py-12 text-center text-xs text-zinc-500 uppercase tracking-widest font-sans">
               Fetching orbital elements from CelesTrak…
             </div>
           ) : displayedSatellites.length === 0 ? (
-            <div className="col-span-full py-12 text-center font-mono text-xs text-zinc-500 uppercase tracking-widest">
+            <div className="col-span-full py-12 text-center text-xs text-zinc-500 uppercase tracking-widest font-sans">
               No satellites match the specified query filters.
             </div>
           ) : (
@@ -1126,7 +1091,7 @@ export default function IntelligenceDashboard() {
                 <button
                   key={sat.id}
                   onClick={() => handleTrackSatellite(sat.id)}
-                  className={`flex flex-col justify-between p-3 text-left border transition ${
+                  className={`flex flex-col justify-between p-3 text-left border transition font-sans ${
                     isSelected
                       ? "border-white bg-zinc-900 text-white shadow-[0_0_15px_rgba(255,255,255,0.06)]"
                       : "border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:border-zinc-750 hover:text-zinc-200"
@@ -1134,9 +1099,9 @@ export default function IntelligenceDashboard() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-bold text-xs truncate text-white">{sat.name}</span>
-                    <span className="text-[9px] font-mono font-bold text-[#00e5ff]">{sat.orbitClass}</span>
+                    <span className="text-[10px] font-semibold text-[#00e5ff]">{sat.orbitClass}</span>
                   </div>
-                  <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500 mt-2">
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2 font-sans">
                     <span>NORAD {sat.id}</span>
                     <span className="truncate max-w-[90px]">{sat.category}</span>
                   </div>
@@ -1150,47 +1115,46 @@ export default function IntelligenceDashboard() {
 
       {/* ─────────────────────────────────────────────────────────────────────────────
           5. TELEMETRY & OBSERVATION COORDINATES (Section 02)
-          Editorial 4-Column Technical Data Architecture
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="telemetry-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900">
+      <section id="telemetry-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900 font-sans">
         
         <div className="mb-8">
-          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+          <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
             Section 02 // Live Kinematics
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white uppercase">
+          <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
             Orbital Parameters &amp; Inertial Coordinates
           </h2>
         </div>
 
         {!selectedSat ? (
-          <div className="p-8 border border-zinc-850 bg-zinc-950 text-center text-zinc-500 font-mono text-xs uppercase tracking-widest">
+          <div className="p-8 border border-zinc-850 bg-zinc-950 text-center text-zinc-500 font-sans text-xs uppercase tracking-widest">
             Select a satellite above to inspect live vector telemetry
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
             
             {/* Panel 1: Satellite Focus */}
             <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
               <div>
-                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-300 mb-3">
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold mb-3 font-sans">
                   Satellite Focus
                 </div>
-                <h3 className="text-base font-bold text-white truncate">{selectedSat.name}</h3>
+                <h3 className="text-base font-bold text-white truncate font-sans">{selectedSat.name}</h3>
                 
-                <div className="grid grid-cols-2 gap-y-2 mt-4 font-mono text-xs">
+                <div className="grid grid-cols-2 gap-y-2.5 mt-4 text-xs font-sans">
                   <div className="text-zinc-400">NORAD ID:</div>
-                  <div className="text-white font-bold text-right">{selectedSat.id}</div>
+                  <div className="text-white font-semibold text-right">{selectedSat.id}</div>
                   
                   <div className="text-zinc-400">GROUP:</div>
-                  <div className="text-zinc-200 text-right truncate">{selectedSat.category.toUpperCase()}</div>
+                  <div className="text-zinc-200 text-right truncate font-medium">{selectedSat.category.toUpperCase()}</div>
                   
                   <div className="text-zinc-400">REGIME:</div>
                   <div className="text-[#00e5ff] font-bold text-right">{selectedSat.orbitClass}</div>
                 </div>
               </div>
 
-              <div className="text-[9px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4">
+              <div className="text-[10px] text-zinc-400 border-t border-zinc-900 pt-3 mt-4 font-sans">
                 Epoch Date:<br />
                 <span className="text-zinc-300">{new Date(selectedSat.epochDate).toUTCString()}</span>
               </div>
@@ -1199,12 +1163,12 @@ export default function IntelligenceDashboard() {
             {/* Panel 2: Live Subpoint Position */}
             <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
               <div>
-                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-amber-400 mb-3">
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-amber-400 font-semibold mb-3 font-sans">
                   Live Subpoint Position
                 </div>
 
                 {selectedTelemetry ? (
-                  <div className="grid grid-cols-2 gap-y-2 font-mono text-xs">
+                  <div className="grid grid-cols-2 gap-y-2.5 text-xs font-sans">
                     <div className="text-zinc-400">LATITUDE:</div>
                     <div className="text-white font-semibold text-right">{selectedTelemetry.lat.toFixed(5)}°</div>
                     
@@ -1220,11 +1184,11 @@ export default function IntelligenceDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs font-mono text-zinc-400 italic py-4">Calculating vector telemetry…</div>
+                  <div className="text-xs text-zinc-400 italic py-4 font-sans">Calculating vector telemetry…</div>
                 )}
               </div>
 
-              <div className="text-[9px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4">
+              <div className="text-[10px] text-zinc-400 border-t border-zinc-900 pt-3 mt-4 font-sans">
                 TLE Epoch Age:{" "}
                 <span className={epochAgeDays > 3 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
                   {epochAgeDays.toFixed(2)} days
@@ -1236,27 +1200,27 @@ export default function IntelligenceDashboard() {
             {/* Panel 3: Inertial Frame (ECI) */}
             <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
               <div>
-                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-300 mb-3">
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold mb-3 font-sans">
                   Inertial Frame (ECI)
                 </div>
 
                 {selectedTelemetry ? (
-                  <div className="grid grid-cols-2 gap-y-2 font-mono text-xs">
+                  <div className="grid grid-cols-2 gap-y-2.5 text-xs font-sans">
                     <div className="text-zinc-400">ECI X:</div>
-                    <div className="text-white text-right">{selectedTelemetry.px.toFixed(2)} km</div>
+                    <div className="text-white text-right font-medium">{selectedTelemetry.px.toFixed(2)} km</div>
                     
                     <div className="text-zinc-400">ECI Y:</div>
-                    <div className="text-white text-right">{selectedTelemetry.py.toFixed(2)} km</div>
+                    <div className="text-white text-right font-medium">{selectedTelemetry.py.toFixed(2)} km</div>
                     
                     <div className="text-zinc-400">ECI Z:</div>
-                    <div className="text-white text-right">{selectedTelemetry.pz.toFixed(2)} km</div>
+                    <div className="text-white text-right font-medium">{selectedTelemetry.pz.toFixed(2)} km</div>
                   </div>
                 ) : (
-                  <div className="text-xs font-mono text-zinc-400 italic py-4">Calculating vectors…</div>
+                  <div className="text-xs text-zinc-400 italic py-4 font-sans">Calculating vectors…</div>
                 )}
               </div>
 
-              <div className="text-[8px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed">
+              <div className="text-[9px] text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed font-sans">
                 *ECI coordinates are referenced to True Equator of Date inertial frame.
               </div>
             </div>
@@ -1264,33 +1228,33 @@ export default function IntelligenceDashboard() {
             {/* Panel 4: Keplerian Orbital Elements */}
             <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
               <div>
-                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-[#00e5ff] mb-3">
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#00e5ff] font-semibold mb-3 font-sans">
                   Keplerian Elements
                 </div>
 
                 {orbitalElements ? (
-                  <div className="grid grid-cols-2 gap-y-1.5 font-mono text-xs">
+                  <div className="grid grid-cols-2 gap-y-2 text-xs font-sans">
                     <div className="text-zinc-400">INCLINATION:</div>
-                    <div className="text-white text-right">{orbitalElements.inclination.toFixed(4)}°</div>
+                    <div className="text-white text-right font-medium">{orbitalElements.inclination.toFixed(4)}°</div>
                     
                     <div className="text-zinc-400">ECCENTRICITY:</div>
-                    <div className="text-white text-right">{orbitalElements.eccentricity.toFixed(7)}</div>
+                    <div className="text-white text-right font-medium">{orbitalElements.eccentricity.toFixed(7)}</div>
                     
                     <div className="text-zinc-400">PERIOD:</div>
-                    <div className="text-white text-right">{orbitalElements.periodMin.toFixed(2)} min</div>
+                    <div className="text-white text-right font-medium">{orbitalElements.periodMin.toFixed(2)} min</div>
                     
                     <div className="text-zinc-400">APOGEE ALT:</div>
-                    <div className="text-white text-right">{orbitalElements.apogeeAlt.toFixed(0)} km</div>
+                    <div className="text-white text-right font-medium">{orbitalElements.apogeeAlt.toFixed(0)} km</div>
                     
                     <div className="text-zinc-400">PERIGEE ALT:</div>
-                    <div className="text-white text-right">{orbitalElements.perigeeAlt.toFixed(0)} km</div>
+                    <div className="text-white text-right font-medium">{orbitalElements.perigeeAlt.toFixed(0)} km</div>
                   </div>
                 ) : (
-                  <div className="text-xs font-mono text-zinc-400 italic py-4">Unavailable</div>
+                  <div className="text-xs text-zinc-400 italic py-4 font-sans">Unavailable</div>
                 )}
               </div>
 
-              <div className="text-[8px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed">
+              <div className="text-[9px] text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed font-sans">
                 *Derived from Mean Motion relative to WGS-84 spheroid.
               </div>
             </div>
