@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   MapPin, Compass, Navigation, Eye, Sparkles, Clock, Globe,
-  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon
+  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon, Crosshair
 } from "lucide-react";
 import * as satellite from "satellite.js";
 import { useOrbitalStore, SatelliteData } from "./store";
@@ -27,6 +27,7 @@ import { UpcomingPassesTimeline } from "@/components/track-my-sky/UpcomingPasses
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassButton } from "@/components/glass/GlassButton";
+import { SpaceTechCard } from "@/components/ui/SpaceTechCard";
 
 const Observer3DView = dynamic(() => import("./Observer3DView"), {
   ssr: false,
@@ -804,7 +805,13 @@ export default function TrackMySkyDashboard() {
 
           {/* Observer-Centered 3D Simulation Globe */}
           {(activeMapView === "all" || activeMapView === "3d") && (
-            <GlassPanel level={2} className="h-full p-5 flex flex-col justify-between">
+            <SpaceTechCard
+              moduleTag="VIEWPORT-3D // ORBITAL SPATIAL GLOBE"
+              statusText="SGP4 PROPAGATING"
+              statusColor="cyan"
+              tilt={false}
+              className="h-full p-5 flex flex-col justify-between"
+            >
               <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   <Globe className="h-4 w-4 text-cyan-400" />
@@ -831,12 +838,18 @@ export default function TrackMySkyDashboard() {
                   } : null}
                 />
               </div>
-            </GlassPanel>
+            </SpaceTechCard>
           )}
 
           {/* Observer-Centered 2D Live Leaflet Radar Map */}
           {(activeMapView === "all" || activeMapView === "2d") && (
-            <GlassPanel level={2} className="h-full p-5 flex flex-col justify-between">
+            <SpaceTechCard
+              moduleTag="VIEWPORT-2D // LEAFLET RADAR FOOTPRINT"
+              statusText="GROUND TRACK ONLINE"
+              statusColor="emerald"
+              tilt={false}
+              className="h-full p-5 flex flex-col justify-between"
+            >
               <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
                   <MapIcon className="h-4 w-4 text-emerald-400" />
@@ -862,14 +875,20 @@ export default function TrackMySkyDashboard() {
                   } : null}
                 />
               </div>
-            </GlassPanel>
+            </SpaceTechCard>
           )}
 
           {/* Star Gaze 3D Interactive Planetarium Sky Dome */}
           {activeMapView === "stargaze" && (
-            <GlassPanel level={2} className="col-span-full w-full p-5">
+            <SpaceTechCard
+              moduleTag="PLANETARIUM // 3D STAR GAZE DOME"
+              statusText="3D STARFIELD"
+              statusColor="purple"
+              tilt={false}
+              className="col-span-full w-full p-5"
+            >
               <StarGazeView observer={observer} />
-            </GlassPanel>
+            </SpaceTechCard>
           )}
         </div>
       </div>
@@ -904,11 +923,17 @@ export default function TrackMySkyDashboard() {
 
       {/* 7. Overhead Fleet Telemetry Matrix */}
       <div id="fleet-table-section" className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-10 pb-16">
-        <GlassPanel level={2} className="p-5 sm:p-6 space-y-4">
+        <SpaceTechCard
+          moduleTag="TACTICAL // ORBITAL FLEET COMMAND MATRIX"
+          statusText={`${filteredVisibleSats.length} TARGETS IN RANGE`}
+          statusColor="cyan"
+          tilt={false}
+          className="p-5 sm:p-6 space-y-4"
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-400">
-                <Activity className="h-4 w-4" />
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-400">
+                <Activity className="h-5 w-5" />
               </div>
               <div>
                 <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
@@ -924,7 +949,7 @@ export default function TrackMySkyDashboard() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* Search input */}
+              {/* Tactical Search input */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
@@ -932,7 +957,7 @@ export default function TrackMySkyDashboard() {
                   placeholder="SEARCH FLEET (NAME / NORAD)…"
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
-                  className="h-9 w-52 sm:w-64 pl-9 pr-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
+                  className="h-9 w-52 sm:w-64 pl-9 pr-3 rounded-xl bg-slate-950/90 border border-cyan-500/30 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
 
@@ -940,19 +965,19 @@ export default function TrackMySkyDashboard() {
               <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 p-1 rounded-xl">
                 <button
                   onClick={() => setTableFilter("all")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition ${tableFilter === "all" ? "bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)]" : "text-slate-400 hover:text-white"}`}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${tableFilter === "all" ? "bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
                 >
                   ALL ({visibilityResults.length})
                 </button>
                 <button
                   onClick={() => setTableFilter("visible")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${tableFilter === "visible" ? "bg-emerald-500 text-black shadow-[0_0_10px_rgba(160,229,255,0.3)]" : "text-slate-400 hover:text-white"}`}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer ${tableFilter === "visible" ? "bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
                 >
                   NAKED-EYE ({nakedEyeCount})
                 </button>
                 <button
                   onClick={() => setTableFilter("sunlit")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition ${tableFilter === "sunlit" ? "bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)]" : "text-slate-400 hover:text-white"}`}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${tableFilter === "sunlit" ? "bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
                 >
                   SUNLIT ({sunlitCount})
                 </button>
@@ -960,7 +985,7 @@ export default function TrackMySkyDashboard() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/60">
+          <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/80">
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase text-[10px] tracking-wider">
                 <tr>
@@ -972,7 +997,7 @@ export default function TrackMySkyDashboard() {
                   <th className="p-3.5">Est. Visual Mag</th>
                   <th className="p-3.5">Slant Range</th>
                   <th className="p-3.5">Illumination</th>
-                  <th className="p-3.5 text-right">Action</th>
+                  <th className="p-3.5 text-right">Target Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -982,10 +1007,10 @@ export default function TrackMySkyDashboard() {
                     <tr
                       key={`fleet-${sat.satId}`}
                       onClick={() => handleSelectSat(sat.satId)}
-                      className={`cursor-pointer transition-colors duration-150 hover:bg-cyan-500/[0.06] ${isSelected ? "bg-cyan-500/10 border-l-2 border-cyan-400 shadow-[inset_0_0_20px_rgba(0,229,255,0.06)]" : ""}`}
+                      className={`cursor-pointer transition-colors duration-150 hover:bg-cyan-500/[0.08] ${isSelected ? "bg-cyan-500/15 border-l-2 border-cyan-400 shadow-[inset_0_0_20px_rgba(0,229,255,0.08)]" : ""}`}
                     >
                       <td className="p-3.5 font-bold text-white flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${sat.isNakedEyeVisible ? "bg-emerald-400 shadow-[0_0_8px_#10b981]" : sat.isSunlit ? "bg-amber-400" : "bg-slate-500"}`} />
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${sat.isNakedEyeVisible ? "bg-emerald-400 shadow-[0_0_8px_#10b981]" : sat.isSunlit ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]" : "bg-slate-500"}`} />
                         <span className="truncate max-w-[180px] sm:max-w-none">{sat.satName}</span>
                       </td>
                       <td className="p-3.5 text-slate-400 font-mono">{sat.satId}</td>
@@ -994,12 +1019,32 @@ export default function TrackMySkyDashboard() {
                           {sat.statusLabel}
                         </GlassBadge>
                       </td>
-                      <td className="p-3.5 font-bold text-white">{sat.elevationDeg}°</td>
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-white">{sat.elevationDeg}°</span>
+                          <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden shrink-0 hidden sm:block">
+                            <div
+                              className={`h-full rounded-full ${sat.elevationDeg > 45 ? "bg-emerald-400" : "bg-cyan-400"}`}
+                              style={{ width: `${Math.min(100, Math.max(5, Math.round((sat.elevationDeg / 90) * 100)))}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
                       <td className="p-3.5 text-slate-300">{sat.azimuthDeg}°</td>
                       <td className="p-3.5 font-bold text-cyan-400">
                         {sat.estimatedMagnitude > 0 ? `+${sat.estimatedMagnitude}` : sat.estimatedMagnitude} mᵥ
                       </td>
-                      <td className="p-3.5 text-slate-300">{sat.slantRangeKm} km</td>
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-300">{sat.slantRangeKm} km</span>
+                          <div className="w-14 h-1.5 rounded-full bg-slate-800 overflow-hidden shrink-0 hidden sm:block">
+                            <div
+                              className="h-full bg-cyan-400 rounded-full"
+                              style={{ width: `${Math.min(100, Math.max(10, Math.round((1 - (sat.slantRangeKm - 300) / 2500) * 100)))}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
                       <td className="p-3.5 text-slate-400">{sat.isSunlit ? "Sunlit" : "Umbral Shadow"}</td>
                       <td className="p-3.5 text-right">
                         <button
@@ -1007,9 +1052,14 @@ export default function TrackMySkyDashboard() {
                             e.stopPropagation();
                             handleSelectSat(sat.satId);
                           }}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition ${isSelected ? "bg-cyan-500 text-black" : "bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-cyan-400"}`}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider flex items-center gap-1.5 transition ml-auto ${
+                            isSelected
+                              ? "bg-cyan-500 text-black shadow-[0_0_12px_rgba(0,229,255,0.4)] font-black"
+                              : "bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 border border-cyan-500/40"
+                          }`}
                         >
-                          {isSelected ? "TRACKING" : "TRACK"}
+                          <Crosshair className={`h-3 w-3 ${isSelected ? "animate-spin" : ""}`} />
+                          <span>{isSelected ? "LOCKED" : "AIM RETICLE"}</span>
                         </button>
                       </td>
                     </tr>
@@ -1018,7 +1068,7 @@ export default function TrackMySkyDashboard() {
               </tbody>
             </table>
           </div>
-        </GlassPanel>
+        </SpaceTechCard>
       </div>
 
       {/* 8. Mobile Companion Pairing Modal */}
