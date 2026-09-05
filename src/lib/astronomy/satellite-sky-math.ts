@@ -756,8 +756,8 @@ export function getAllSatelliteStates(
   const catalog = customCatalog && customCatalog.length > 0 ? customCatalog : DEFAULT_SATELLITE_CATALOG;
 
   let trajectoryCount = 0;
-  // Compute trajectory strictly for selected satellite, or default top pass if none selected
-  const MAX_TRAJECTORIES = 1;
+  // Compute trajectory for all visible satellites overhead (up to 30)
+  const MAX_TRAJECTORIES = 30;
 
   for (const sat of catalog) {
     const isSelected = selectedSatId != null && sat.id === selectedSatId;
@@ -774,8 +774,8 @@ export function getAllSatelliteStates(
     const fastCheck = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, false);
     if (!fastCheck) continue;
 
-    // For default view when no satellite is selected, compute full trajectory for top visible pass (e.g. ISS)
-    if (selectedSatId == null && fastCheck.isAboveHorizon && trajectoryCount < MAX_TRAJECTORIES) {
+    // For all visible satellites overhead, compute full trajectory arcs for the dome in pink
+    if (fastCheck.isAboveHorizon && trajectoryCount < MAX_TRAJECTORIES) {
       const detailed = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, true);
       if (detailed) {
         results.push(detailed);
