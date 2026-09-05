@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -252,6 +252,11 @@ export default function TrackMySkyDashboard() {
     }
   };
 
+  const observerRef = useRef(observer);
+  useEffect(() => {
+    observerRef.current = observer;
+  }, [observer]);
+
   const [gpsStatus, setGpsStatus] = useState<"locating" | "success" | "phone-paired">("success");
   const [customLat, setCustomLat] = useState(() => observer.lat.toFixed(6));
   const [customLon, setCustomLon] = useState(() => observer.lon.toFixed(6));
@@ -323,12 +328,14 @@ export default function TrackMySkyDashboard() {
     }
   }, [satellitesList, setStoreSatellitesList]);
 
-  // 1. Initialize SGP4 Web Worker on satellite list load
+  // 1. Initialize or update SGP4 Web Worker on satellite list load without terminating active worker
   useEffect(() => {
     if (satellitesList.length === 0) return;
 
     if (workerRef.current) {
-      workerRef.current.terminate();
+      // Worker already running: seamlessly update its catalog in the background without dropping frames
+      workerRef.current.postMessage({ type: "init", data: satellitesList });
+      return;
     }
 
     try {
@@ -477,7 +484,9 @@ export default function TrackMySkyDashboard() {
 
       if (isMounted) {
         const fullList = Array.from(satMap.values());
-        setSatellitesList(fullList);
+        startTransition(() => {
+          setSatellitesList(fullList);
+        });
         useOrbitalStore.getState().setSatellitesList(fullList);
         setLoadingSats(false);
       }
@@ -500,18 +509,26 @@ export default function TrackMySkyDashboard() {
         .then((data) => {
           if (data && data.success && data.coords) {
             const c = data.coords;
-            setObserver({
-              name: c.placeName || "Mobile Phone Companion GPS",
-              lat: c.lat,
-              lon: c.lon,
-              altMeters: c.alt || 180,
-              accuracyRadiusMeters: c.accuracy || 4,
-              source: "phone-gps",
-            });
-            setCustomLat(c.lat.toFixed(6));
-            setCustomLon(c.lon.toFixed(6));
-            setCustomAlt(String(c.alt || 180));
-            setGpsStatus("phone-paired");
+            const current = observerRef.current;
+            if (
+              Math.abs(current.lat - c.lat) > 0.0001 ||
+              Math.abs(current.lon - c.lon) > 0.0001 ||
+              Math.abs(current.altMeters - (c.alt || 180)) > 1 ||
+              current.source !== "phone-gps"
+            ) {
+              setObserver({
+                name: c.placeName || "Mobile Phone Companion GPS",
+                lat: c.lat,
+                lon: c.lon,
+                altMeters: c.alt || 180,
+                accuracyRadiusMeters: c.accuracy || 4,
+                source: "phone-gps",
+              });
+              setCustomLat(c.lat.toFixed(6));
+              setCustomLon(c.lon.toFixed(6));
+              setCustomAlt(String(c.alt || 180));
+              setGpsStatus("phone-paired");
+            }
           }
         })
         .catch(() => {});
@@ -724,14 +741,42 @@ export default function TrackMySkyDashboard() {
   // Upcoming Satellite Pass Predictions Engine (Recomputed every 15 minutes of simulation time)
   const passCalcBucket = useMemo(() => Math.floor(uiTimeMs / (15 * 60_000)), [uiTimeMs]);
 
-  const upcomingPasses = useMemo(() => {
-    if (loadingSats || candidateSatellites.length === 0) return [];
-    const hours = timeframeFilter === "1h" ? 1 : timeframeFilter === "6h" ? 6 : 24;
-    const passes = predictUpcomingPasses(candidateSatellites, observer, passCalcBucket * (15 * 60_000), hours);
-    if (onlyVisible) {
-      return passes.filter((p) => p.isVisibleToEye);
+  // Compute pass predictions in the background using requestIdleCallback so 3D simulation never stutters
+  const [upcomingPasses, setUpcomingPasses] = useState<SatellitePass[]>([]);
+
+  useEffect(() => {
+    if (loadingSats || candidateSatellites.length === 0) {
+      setUpcomingPasses([]);
+      return;
     }
-    return passes;
+
+    let cancelled = false;
+    const runPassPrediction = () => {
+      const hours = timeframeFilter === "1h" ? 1 : timeframeFilter === "6h" ? 6 : 24;
+      const passes = predictUpcomingPasses(candidateSatellites, observer, passCalcBucket * (15 * 60_000), hours);
+      if (!cancelled) {
+        startTransition(() => {
+          setUpcomingPasses(onlyVisible ? passes.filter((p) => p.isVisibleToEye) : passes);
+        });
+      }
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(
+        runPassPrediction,
+        { timeout: 150 }
+      );
+      return () => {
+        cancelled = true;
+        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+      };
+    } else {
+      const timer = setTimeout(runPassPrediction, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
   }, [candidateSatellites, observer, timeframeFilter, passCalcBucket, onlyVisible, loadingSats]);
 
   const nakedEyeCount = useMemo(() => visibilityResults.filter((s) => s.isNakedEyeVisible).length, [visibilityResults]);

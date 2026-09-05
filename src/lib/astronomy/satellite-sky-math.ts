@@ -382,26 +382,33 @@ export function computeSatelliteState(
     let peakPassElevationDeg = Math.max(0, elevationDeg);
     let nextPassTimeMs: number | null = isAboveHorizon ? date.getTime() : null;
 
-    const stepSecs = 180; // scan every 3 minutes over 24h
-    for (let t = 0; t <= 86400; t += stepSecs) {
-      const sampleDate = new Date(date.getTime() + t * 1000);
-      const pv = satellite.propagate(satrec, sampleDate);
-      if (pv && pv.position && typeof pv.position !== "boolean") {
-        const pEci = pv.position as { x: number; y: number; z: number };
-        const g = satellite.gstime(sampleDate);
-        const pEcf = satellite.eciToEcf(pEci, g);
-        const l = satellite.ecfToLookAngles(observerGd, pEcf);
-        const elDeg = (l.elevation * 180) / Math.PI;
-        if (elDeg > peakPassElevationDeg) {
-          peakPassElevationDeg = elDeg;
-          if (nextPassTimeMs === null && elDeg >= 10) {
-            nextPassTimeMs = sampleDate.getTime();
+    if (includeTrajectory) {
+      const stepSecs = 300; // scan every 5 minutes over 24h for selected satellite
+      for (let t = 0; t <= 86400; t += stepSecs) {
+        const sampleDate = new Date(date.getTime() + t * 1000);
+        const pv = satellite.propagate(satrec, sampleDate);
+        if (pv && pv.position && typeof pv.position !== "boolean") {
+          const pEci = pv.position as { x: number; y: number; z: number };
+          const g = satellite.gstime(sampleDate);
+          const pEcf = satellite.eciToEcf(pEci, g);
+          const l = satellite.ecfToLookAngles(observerGd, pEcf);
+          const elDeg = (l.elevation * 180) / Math.PI;
+          if (elDeg > peakPassElevationDeg) {
+            peakPassElevationDeg = elDeg;
+            if (nextPassTimeMs === null && elDeg >= 10) {
+              nextPassTimeMs = sampleDate.getTime();
+            }
           }
         }
       }
-    }
-    if (isAboveHorizon || peakPassElevationDeg >= 12) {
-      hasUpcomingPassIn24h = true;
+      if (isAboveHorizon || peakPassElevationDeg >= 12) {
+        hasUpcomingPassIn24h = true;
+      }
+    } else {
+      // In fast check mode, evaluate instantaneously without blocking main thread
+      const satInc = (satrec.inclo * 180) / Math.PI;
+      const latDiff = Math.abs(Math.abs(latDeg) - satInc);
+      hasUpcomingPassIn24h = isAboveHorizon || latDiff < 32;
     }
 
     const passStatus: "Overhead" | "High Sky" | "Low Horizon" | "Below Horizon" =
@@ -686,17 +693,18 @@ export function getAllSatelliteStates(
   const catalog = customCatalog && customCatalog.length > 0 ? customCatalog : DEFAULT_SATELLITE_CATALOG;
 
   for (const sat of catalog) {
-    const fastCheck = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, false);
-    if (!fastCheck) continue;
-
     const isSelected = selectedSatId != null && sat.id === selectedSatId;
-    const isAbove = fastCheck.isAboveHorizon;
 
-    if (isSelected || isAbove) {
+    if (isSelected) {
       const detailed = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, true);
-      if (detailed) results.push(detailed);
-      else results.push(fastCheck);
-    } else {
+      if (detailed) {
+        results.push(detailed);
+        continue;
+      }
+    }
+
+    const fastCheck = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, false);
+    if (fastCheck) {
       results.push(fastCheck);
     }
   }

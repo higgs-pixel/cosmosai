@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -2356,9 +2356,11 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       const liveSats = parseTleText(combinedText, "Active");
 
       if (liveSats.length >= 5) {
-        setSatCatalog(liveSats);
-        setLastRefreshedDate(new Date());
-        setTleStatusText(`CelesTrak Multi-Group Live API (${liveSats.length} Real TLEs)`);
+        startTransition(() => {
+          setSatCatalog(liveSats);
+          setLastRefreshedDate(new Date());
+          setTleStatusText(`CelesTrak Multi-Group Live API (${liveSats.length} Real TLEs)`);
+        });
         if (showManualFeedback) {
           showToast(`24h Passes: ${liveSats.length} Satellites Synchronized`);
         }
@@ -2389,7 +2391,9 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
-      setCurrentDate((prev) => new Date(prev.getTime() + 1000 * timeMultiplier));
+      startTransition(() => {
+        setCurrentDate((prev) => new Date(prev.getTime() + 1000 * timeMultiplier));
+      });
     }, 1000);
     return () => clearInterval(interval);
   }, [isPlaying, timeMultiplier]);
