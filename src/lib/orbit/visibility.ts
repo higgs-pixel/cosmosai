@@ -1,4 +1,4 @@
-import * as SunCalc from "suncalc";
+import { getPosition as getSunPosition } from "suncalc";
 import * as satellite from "satellite.js";
 
 export type TwilightPhase = "Daylight" | "Civil Twilight" | "Nautical Twilight" | "Astronomical Twilight / Deep Night";
@@ -49,8 +49,7 @@ export function getObserverTwilight(date: Date, lat: number, lon: number): Obser
 
   try {
     const d = date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
-    const getPos = SunCalc.getPosition || (SunCalc as any).default?.getPosition;
-    const sunPos = typeof getPos === "function" ? getPos(d, lat, lon) : null;
+    const sunPos = typeof getSunPosition === "function" ? getSunPosition(d, lat, lon) : null;
 
     if (sunPos && typeof sunPos.altitude === "number" && !isNaN(sunPos.altitude)) {
       const rawAlt = (sunPos.altitude * 180) / Math.PI;

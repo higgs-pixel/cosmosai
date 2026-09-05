@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, memo } from "react";
-import * as SunCalc from "suncalc";
+import { getPosition as getSunPosition, getMoonPosition } from "suncalc";
 
 
 import { SatelliteVisibilityResult, ObserverTwilightInfo } from "@/lib/orbit/visibility";
@@ -77,7 +77,7 @@ function SkyDomeChart({
   
   const sunPos = useMemo(() => {
     try {
-      const p = SunCalc.getPosition(date, observer.lat, observer.lon);
+      const p = getSunPosition(date, observer.lat, observer.lon);
       const altDeg = (p.altitude * 180) / Math.PI;
       const azDeg = ((p.azimuth * 180) / Math.PI + 180) % 360;
       return { altDeg, azDeg };
@@ -88,7 +88,7 @@ function SkyDomeChart({
 
   const moonPos = useMemo(() => {
     try {
-      const p = SunCalc.getMoonPosition(date, observer.lat, observer.lon);
+      const p = getMoonPosition(date, observer.lat, observer.lon);
       const altDeg = (p.altitude * 180) / Math.PI;
       const azDeg = ((p.azimuth * 180) / Math.PI + 180) % 360;
       return { altDeg, azDeg };
