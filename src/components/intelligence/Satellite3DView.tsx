@@ -977,7 +977,7 @@ function Satellite3DView({
       )}
 
       {/* Floating HUD Controls for Zoom & Reset */}
-      <div className="absolute right-3 bottom-3 z-20 flex flex-col items-center gap-1 bg-slate-950/85 border border-white/15 p-1.5 rounded-xl shadow-2xl backdrop-blur-md">
+      <div className="absolute right-3 bottom-6 z-20 flex flex-col items-center gap-1 bg-slate-950/85 border border-white/15 p-1.5 rounded-xl shadow-2xl backdrop-blur-md">
         <button
           onClick={handleZoomIn}
           title="Zoom In (+)"

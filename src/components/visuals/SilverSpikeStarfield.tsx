@@ -2,24 +2,22 @@
 
 import { useEffect, useRef } from "react";
 
-/** 
- * CosmosDriftField — minimal deep-space ambient starfield.
- * Very low density, ultra-dim, slow-drifting pure white pinpoints.
- * No spike shapes — just subtle round stars with a barely-visible halo glow,
- * independent twinkle phases, and gentle upward parallax drift.
+/**
+ * SilverSpikeStarfield — premium 4-spike ✦ star field.
+ * Low density, very low glow brightness.
+ * Stars slowly drift, independently twinkle, and wrap seamlessly.
  */
-
-interface Particle {
+interface Star {
   x: number;
   y: number;
-  r: number;         // base radius px
+  size: number;      // spike length px
   vx: number;
   vy: number;
   phase: number;
-  tSpeed: number;    // twinkle speed
-  peak: number;      // peak alpha
-  tRange: number;    // twinkle amplitude
-  halo: number;      // halo radius multiplier
+  tSpeed: number;
+  baseAlpha: number;
+  tRange: number;
+  rot: number;
 }
 
 export function SilverSpikeStarfield({
@@ -39,28 +37,44 @@ export function SilverSpikeStarfield({
 
     let animId: number;
     let W = 0, H = 0, dpr = 1;
+    let stars: Star[] = [];
 
-    let particles: Particle[] = [];
-
-    // Very low density — tiny count per screen area
-    const countPerMpx = density === "low" ? 10 : density === "high" ? 22 : 15;
+    // Counts per million pixels — kept very low
+    const cntPerMpx = density === "low" ? 6 : density === "high" ? 18 : 11;
 
     const init = (w: number, h: number) => {
-      const count = Math.max(18, Math.min(55, Math.round((w * h / 1_000_000) * countPerMpx)));
-      particles = Array.from({ length: count }, () => {
-        const r = 0.4 + Math.random() * 1.2; // very tiny: 0.4 – 1.6px
-        const peak = 0.06 + Math.random() * 0.18; // very dim: max alpha 0.06–0.24
+      const count = Math.max(12, Math.min(48, Math.round((w * h / 1_000_000) * cntPerMpx)));
+      stars = Array.from({ length: count }, () => {
+        // 3 size tiers: tiny 25%, mid 60%, bright 15%
+        const r = Math.random();
+        let size: number, baseAlpha: number, tRange: number;
+        if (r < 0.25) {
+          // tiny — barely visible
+          size = 4 + Math.random() * 3;
+          baseAlpha = 0.06 + Math.random() * 0.08;
+          tRange = 0.04;
+        } else if (r < 0.85) {
+          // mid
+          size = 7 + Math.random() * 6;
+          baseAlpha = 0.10 + Math.random() * 0.10;
+          tRange = 0.07;
+        } else {
+          // hero — slightly brighter, still dim
+          size = 13 + Math.random() * 6;
+          baseAlpha = 0.14 + Math.random() * 0.10;
+          tRange = 0.10;
+        }
         return {
           x: Math.random() * w,
           y: Math.random() * h,
-          r,
-          vx: (Math.random() - 0.5) * 0.045,
-          vy: -0.02 - Math.random() * 0.055, // slow upward drift
+          size,
+          vx: (Math.random() - 0.5) * 0.06,
+          vy: -0.02 - Math.random() * 0.05,
           phase: Math.random() * Math.PI * 2,
-          tSpeed: 0.006 + Math.random() * 0.014,
-          peak,
-          tRange: peak * 0.45, // twinkle is ±45% of peak alpha
-          halo: 3.5 + Math.random() * 3.5, // halo radius = r × halo
+          tSpeed: 0.008 + Math.random() * 0.016,
+          baseAlpha,
+          tRange,
+          rot: (Math.random() - 0.5) * 0.15, // subtle ±8° tilt
         };
       });
     };
@@ -84,49 +98,96 @@ export function SilverSpikeStarfield({
     const onVis = () => { paused = document.hidden; };
     document.addEventListener("visibilitychange", onVis);
 
+    /** Draw one ✦ 4-spike star */
+    const draw = (s: Star, alpha: number, scale: number) => {
+      const sz = s.size * scale;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+
+      // ── Soft halo glow ──────────────────────────────────────────
+      const haloR = sz * 1.6;
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, haloR);
+      halo.addColorStop(0, `rgba(255,255,255,${alpha * 0.55})`);
+      halo.addColorStop(0.4, `rgba(224,232,242,${alpha * 0.18})`);
+      halo.addColorStop(1, "rgba(200,215,235,0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, haloR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── Vertical spike ──────────────────────────────────────────
+      const nw = Math.max(0.5, sz * 0.075);
+      const vg = ctx.createLinearGradient(0, -sz, 0, sz);
+      vg.addColorStop(0, "rgba(210,225,240,0)");
+      vg.addColorStop(0.35, `rgba(235,242,252,${alpha * 0.5})`);
+      vg.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.9})`);
+      vg.addColorStop(0.65, `rgba(235,242,252,${alpha * 0.5})`);
+      vg.addColorStop(1, "rgba(210,225,240,0)");
+      ctx.fillStyle = vg;
+      ctx.beginPath();
+      ctx.moveTo(0, -sz); ctx.lineTo(nw, 0); ctx.lineTo(0, sz); ctx.lineTo(-nw, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // ── Horizontal spike ─────────────────────────────────────────
+      const hg = ctx.createLinearGradient(-sz, 0, sz, 0);
+      hg.addColorStop(0, "rgba(210,225,240,0)");
+      hg.addColorStop(0.35, `rgba(235,242,252,${alpha * 0.5})`);
+      hg.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.9})`);
+      hg.addColorStop(0.65, `rgba(235,242,252,${alpha * 0.5})`);
+      hg.addColorStop(1, "rgba(210,225,240,0)");
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.moveTo(-sz, 0); ctx.lineTo(0, nw); ctx.lineTo(sz, 0); ctx.lineTo(0, -nw);
+      ctx.closePath();
+      ctx.fill();
+
+      // ── Diamond core ─────────────────────────────────────────────
+      const cr = sz * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(0, -cr);
+      ctx.quadraticCurveTo(0, 0, cr, 0);
+      ctx.quadraticCurveTo(0, 0, 0, cr);
+      ctx.quadraticCurveTo(0, 0, -cr, 0);
+      ctx.quadraticCurveTo(0, 0, 0, -cr);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(248,252,255,${alpha * 0.88})`;
+      ctx.fill();
+
+      // ── Central pinpoint ─────────────────────────────────────────
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha * 1.2)})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(0.4, sz * 0.12), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
     const loop = () => {
       if (!paused) {
         ctx.clearRect(0, 0, W, H);
+        for (const s of stars) {
+          s.x += s.vx;
+          s.y += s.vy;
+          s.phase += s.tSpeed;
 
-        for (let i = 0; i < particles.length; i++) {
-          const p = particles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-          p.phase += p.tSpeed;
+          const margin = s.size * 2;
+          if (s.y < -margin) s.y = H + margin;
+          if (s.y > H + margin) s.y = -margin;
+          if (s.x < -margin) s.x = W + margin;
+          if (s.x > W + margin) s.x = -margin;
 
-          // Seamless wrap
-          const margin = p.r * p.halo + 2;
-          if (p.y < -margin) p.y = H + margin;
-          if (p.y > H + margin) p.y = -margin;
-          if (p.x < -margin) p.x = W + margin;
-          if (p.x > W + margin) p.x = -margin;
-
-          const alpha = Math.max(0.02, p.peak + Math.sin(p.phase) * p.tRange);
-
-          // Soft halo
-          const haloR = p.r * p.halo;
-          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, haloR);
-          g.addColorStop(0, `rgba(255,255,255,${alpha})`);
-          g.addColorStop(0.35, `rgba(230,236,245,${alpha * 0.35})`);
-          g.addColorStop(1, "rgba(200,212,228,0)");
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, haloR, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Sharp pinpoint core
-          ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha * 1.5)})`;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, Math.max(0.35, p.r * 0.45), 0, Math.PI * 2);
-          ctx.fill();
+          const sinV = Math.sin(s.phase);
+          const alpha = Math.max(0.03, s.baseAlpha + sinV * s.tRange);
+          const scale = 0.9 + (sinV + 1) * 0.07; // subtle size pulse
+          draw(s, alpha, scale);
         }
       }
-
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
-
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);

@@ -780,7 +780,7 @@ export default function IntelligenceDashboard() {
             EDITORIAL OVERLAY: Exact layout matching the Pluto reference image
             Outline category badge + bold headline box + subtitle link
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute left-6 lg:left-14 bottom-16 z-20 max-w-xl flex flex-col items-start pointer-events-auto font-sans">
+        <div className="absolute left-6 lg:left-14 bottom-32 z-20 max-w-xl flex flex-col items-start pointer-events-auto font-sans">
           
           {/* Outline category box */}
           <div className="border border-white/30 bg-black/60 backdrop-blur-sm px-3 py-1.5 mb-3.5">
@@ -922,7 +922,7 @@ export default function IntelligenceDashboard() {
         {/* ─────────────────────────────────────────────────────────────────────
             FLOATING CLOCK & SPEED HUD (Bottom Right of Hero - Shifted Left for Zoom Controls)
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute right-16 lg:right-20 bottom-4 z-20 flex flex-col items-end gap-2 font-sans">
+        <div className="absolute right-4 lg:right-8 bottom-28 z-20 flex flex-col items-end gap-2 font-sans">
           
           <div className="border border-zinc-800 bg-black/85 backdrop-blur-md p-3.5 max-w-sm w-full font-sans">
             <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-zinc-800/80">
