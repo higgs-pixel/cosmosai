@@ -349,7 +349,7 @@ function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }
 
 export default function Observer3DView({ observer, selectedPass, simPoint, timeMs }: Observer3DViewProps) {
   return (
-    <div className="h-full w-full bg-[#03040a] relative flex items-center justify-center isolate z-0">
+    <div className="h-full w-full min-h-[460px] bg-[#03040a] relative flex items-center justify-center isolate z-0">
       {/* Top-Left Corner HUD Satellite Tracking Badge (Matching Orbit Page) */}
       {simPoint && (
         <div className="absolute left-4 top-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
@@ -384,6 +384,7 @@ export default function Observer3DView({ observer, selectedPass, simPoint, timeM
       )}
 
       <Canvas
+        className="w-full h-full min-h-[460px]"
         camera={{ position: [0, 10, 18], fov: 45 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {

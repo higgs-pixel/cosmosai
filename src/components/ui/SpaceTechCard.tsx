@@ -77,7 +77,7 @@ export const SpaceTechCard = forwardRef<HTMLDivElement, SpaceTechCardProps>(
     return (
       <div
         style={{ perspective: tilt ? 1200 : undefined }}
-        className="w-full"
+        className="w-full h-full flex flex-col"
       >
         <motion.div
           ref={(node) => {
@@ -98,6 +98,7 @@ export const SpaceTechCard = forwardRef<HTMLDivElement, SpaceTechCardProps>(
             bg-[#050914]/85 backdrop-blur-2xl
             border border-cyan-500/20
             transition-shadow duration-300
+            w-full h-full flex flex-col justify-between
             ${glow || isHovered ? "shadow-[0_0_35px_rgba(0,229,255,0.14)] border-cyan-500/40" : "shadow-[0_12px_32px_rgba(0,0,0,0.5)]"}
             ${className}
           `}

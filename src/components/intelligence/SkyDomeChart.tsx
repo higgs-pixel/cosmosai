@@ -136,27 +136,27 @@ function SkyDomeChart({
           </GlassBadge>
         </div>
 
-        {/* Compact HUD Toolbar */}
+        {/* Consolidated Compact HUD Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          {/* Label Declutter Mode Selector */}
-          <div className="flex items-center gap-1 bg-slate-900/80 border border-slate-700/80 p-0.5 rounded-lg">
-            <span className="text-[9px] font-mono text-slate-400 px-1 font-bold">LABELS:</span>
-            {(["smart", "selected", "all"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setLabelDensity(mode)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase transition ${
-                  labelDensity === mode
-                    ? "bg-cyan-400 text-black shadow-sm font-black"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-
           <div className="flex items-center gap-2">
+            {/* Label Declutter Mode Selector */}
+            <div className="flex items-center gap-0.5 bg-slate-900/90 border border-slate-700/80 p-0.5 rounded-lg">
+              <span className="text-[8px] font-mono text-slate-400 px-1 font-bold">LABELS:</span>
+              {(["smart", "selected", "all"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setLabelDensity(mode)}
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition ${
+                    labelDensity === mode
+                      ? "bg-cyan-400 text-black shadow-sm font-black"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+
             {/* Quick Satellite Selector Dropdown */}
             <select
               value={selectedSatId || ""}
@@ -164,51 +164,44 @@ function SkyDomeChart({
                 const val = parseInt(e.target.value, 10);
                 if (!isNaN(val)) onSelectSat(val);
               }}
-              className="h-7 rounded-lg border border-slate-700/80 bg-slate-900/90 px-2 text-[11px] font-mono font-semibold text-white focus:outline-none focus:border-cyan-400 max-w-[170px]"
+              className="h-6 rounded-md border border-slate-700/80 bg-slate-900/90 px-1.5 text-[10px] font-mono font-semibold text-white focus:outline-none focus:border-cyan-400 max-w-[150px]"
             >
-              <option value="">Select Target on Dome...</option>
+              <option value="">Select Target...</option>
               {renderSats.slice(0, 30).map((s) => (
                 <option key={`opt-${s.satId}`} value={s.satId}>
                   {s.satName} ({s.elevationDeg > 0 ? `${s.elevationDeg}°` : "Appr."})
                 </option>
               ))}
             </select>
-
-            {/* Toggle Approaching Satellites */}
-            <button
-              onClick={() => setShowApproaching(!showApproaching)}
-              className={`h-7 px-2 rounded-lg border text-[11px] font-mono font-bold transition flex items-center gap-1 ${
-                showApproaching
-                  ? "bg-cyan-500/20 border-cyan-400/50 text-cyan-300"
-                  : "bg-slate-900/80 border-slate-700/80 text-slate-400"
-              }`}
-            >
-              <Target className="h-3 w-3" />
-              <span>{showApproaching ? "All Sats" : "Overhead"}</span>
-            </button>
           </div>
-        </div>
 
-        {/* Target Counts Summary */}
-        <div className="flex items-center justify-between text-[10px] font-mono">
-          <div className="flex items-center gap-1.5">
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1">
+          {/* Counts & Overheads */}
+          <div className="flex items-center gap-1.5 font-mono text-[9px]">
+            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1">
               <Eye className="h-2.5 w-2.5" />
               {nakedEyeCount} Naked-Eye
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
               {sunlitCount} Sunlit
             </span>
+            <button
+              onClick={() => setShowApproaching(!showApproaching)}
+              className={`px-1.5 py-0.5 rounded-full border font-bold transition flex items-center gap-0.5 ${
+                showApproaching
+                  ? "bg-cyan-500/20 border-cyan-400/50 text-cyan-300"
+                  : "bg-slate-900 border-slate-700 text-slate-400"
+              }`}
+            >
+              <Target className="h-2.5 w-2.5" />
+              <span>{showApproaching ? "All" : "Overhead"}</span>
+            </button>
           </div>
-          <span className="text-slate-400">
-            Rendered: <strong className="text-white">{renderSats.length}</strong>
-          </span>
         </div>
       </div>
 
       {/* Responsive SVG Polar Plot Chart Container */}
-      <div className="flex-1 min-h-[360px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2">
-        <div className="relative w-full h-full max-h-[420px] aspect-square flex items-center justify-center select-none">
+      <div className="flex-1 min-h-[440px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2">
+        <div className="relative w-full h-full max-h-[410px] aspect-square flex items-center justify-center select-none">
           <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
           {/* Background Radial Gradient */}
           <defs>

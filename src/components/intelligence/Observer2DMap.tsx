@@ -60,12 +60,14 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
 
     setMap(mapInstance);
 
-    const t1 = setTimeout(() => mapInstance.invalidateSize(), 100);
-    const t2 = setTimeout(() => mapInstance.invalidateSize(), 500);
+    const t1 = setTimeout(() => mapInstance.invalidateSize(), 50);
+    const t2 = setTimeout(() => mapInstance.invalidateSize(), 200);
+    const t3 = setTimeout(() => mapInstance.invalidateSize(), 600);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       try {
         mapInstance.remove();
       } catch {
@@ -285,7 +287,7 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
   }, [map, simPoint, selectedPass, timeMs, observer]);
 
   return (
-    <div className="h-full w-full relative z-0">
+    <div className="h-full w-full min-h-[460px] relative z-0">
       {/* Top-Left Corner HUD Satellite Tracking Badge (Matching Orbit Page) */}
       {simPoint && (
         <div className="absolute left-4 top-4 z-[1000] flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
@@ -319,7 +321,7 @@ export default function Observer2DMap({ observer, selectedPass, simPoint, timeMs
         </div>
       )}
 
-      <div ref={mapContainerRef} className="h-full w-full bg-[#0d1117] rounded-xl overflow-hidden shadow-inner" />
+      <div ref={mapContainerRef} className="h-full w-full min-h-[460px] bg-[#0d1117] rounded-xl overflow-hidden shadow-inner" />
     </div>
   );
 }

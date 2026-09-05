@@ -789,10 +789,10 @@ export default function TrackMySkyDashboard() {
         </GlassPanel>
 
         {/* Viewports Grid */}
-        <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3" : "max-w-5xl mx-auto"} gap-6 w-full`}>
+        <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3" : "max-w-5xl mx-auto"} gap-6 w-full items-stretch`}>
           {/* Polar Sky Dome SVG Chart */}
           {(activeMapView === "all" || activeMapView === "polar") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
               <SkyDomeChart
                 visibleSats={visibilityResults}
                 allEvaluatedSats={allEvaluatedSats}
@@ -807,7 +807,7 @@ export default function TrackMySkyDashboard() {
 
           {/* Observer-Centered 3D Simulation Globe */}
           {(activeMapView === "all" || activeMapView === "3d") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
               <SpaceTechCard
                 moduleTag="VIEWPORT-3D // ORBITAL SPATIAL GLOBE"
                 statusText="SGP4 PROPAGATING"
@@ -825,7 +825,7 @@ export default function TrackMySkyDashboard() {
                   </GlassBadge>
                 </div>
 
-                <div className="flex-1 h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
+                <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
                   <Observer3DView
                     observer={observer}
                     selectedPass={selectedPass}
@@ -847,7 +847,7 @@ export default function TrackMySkyDashboard() {
 
           {/* Observer-Centered 2D Live Leaflet Radar Map */}
           {(activeMapView === "all" || activeMapView === "2d") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[580px]" : "h-[640px]"}`}>
+            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
               <SpaceTechCard
                 moduleTag="VIEWPORT-2D // LEAFLET RADAR FOOTPRINT"
                 statusText="GROUND TRACK ONLINE"
@@ -865,7 +865,7 @@ export default function TrackMySkyDashboard() {
                   </GlassBadge>
                 </div>
 
-                <div className="flex-1 h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
+                <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
                   <Observer2DMap
                     observer={observer}
                     selectedPass={selectedPass}
