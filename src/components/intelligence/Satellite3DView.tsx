@@ -770,6 +770,7 @@ function EarthScene({
   onTrackSatellite,
   onHoverChange,
   observer,
+  showOnlySelected = false,
 }: {
   satellites: SatelliteData[];
   selectedSatId: number | null;
@@ -779,6 +780,7 @@ function EarthScene({
   onTrackSatellite?: (id: number) => void;
   onHoverChange: (sat: SatelliteData | null) => void;
   observer?: { lat: number; lon: number; name?: string };
+  showOnlySelected?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const worldPosRef = useRef<THREE.Vector3 | null>(null);
@@ -823,14 +825,16 @@ function EarthScene({
           />
         )}
 
-        {/* Background constellation satellites */}
-        <SatellitesInstancedMesh
-          satellites={satellites}
-          latestPositions={latestPositions}
-          selectedId={effectiveId}
-          onHoverChange={onHoverChange}
-          onTrackSatellite={onTrackSatellite}
-        />
+        {/* Background constellation satellites (hidden when showOnlySelected is active) */}
+        {!showOnlySelected && (
+          <SatellitesInstancedMesh
+            satellites={satellites}
+            latestPositions={latestPositions}
+            selectedId={effectiveId}
+            onHoverChange={onHoverChange}
+            onTrackSatellite={onTrackSatellite}
+          />
+        )}
 
         {/* Show orbit of selected satellite alone (defaults to ISS 25544, or single selected satellite) */}
         <SelectedOrbitTrack
@@ -877,6 +881,7 @@ export interface Satellite3DViewProps {
   lockCamera?: boolean;
   onTrackSatellite?: (id: number) => void;
   observer?: { lat: number; lon: number; name?: string };
+  showOnlySelected?: boolean;
 }
 
 function Satellite3DView({
@@ -886,6 +891,7 @@ function Satellite3DView({
   lockCamera = false,
   onTrackSatellite,
   observer,
+  showOnlySelected = false,
 }: Satellite3DViewProps) {
   const storeSelectedId = useOrbitalStore((s) => s.selectedSatelliteId);
   const activeSelectedId = selectedSatId ?? storeSelectedId ?? 25544;
@@ -1034,6 +1040,7 @@ function Satellite3DView({
           onTrackSatellite={onTrackSatellite}
           onHoverChange={setHoveredSat}
           observer={observer}
+          showOnlySelected={showOnlySelected}
         />
       </Canvas>
     </div>

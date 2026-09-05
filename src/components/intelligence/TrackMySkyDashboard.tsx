@@ -20,7 +20,6 @@ import { ObserverCoords, SatellitePass, predictUpcomingPasses } from "./PassPred
 import SkyDomeChart from "./SkyDomeChart";
 import SkyPassAnalytics from "./SkyPassAnalytics";
 import SkyGlossaryModal from "./SkyGlossaryModal";
-import SatelliteInfoPanel from "./SatelliteInfoPanel";
 import { TrackMySkyNav } from "@/components/track-my-sky/TrackMySkyNav";
 import { TrackMySkyHero } from "@/components/track-my-sky/TrackMySkyHero";
 import { ObservatoryCommandConsole } from "@/components/track-my-sky/ObservatoryCommandConsole";
@@ -918,12 +917,12 @@ export default function TrackMySkyDashboard() {
               </div>
             </div>
 
-            {/* Jump to Dossier Action Link */}
+            {/* Jump to Viewports Action Link */}
             <button
-              onClick={() => scrollToSection("dossier-section")}
+              onClick={() => scrollToSection("viewports-section")}
               className="inline-flex items-center gap-2 text-xs uppercase font-bold tracking-widest text-zinc-300 hover:text-white border-b border-zinc-700 hover:border-white pb-1 transition cursor-pointer"
             >
-              <span>Explore Complete Aerospace Engineering Dossier</span>
+              <span>Track in 3D &amp; 2D Viewports</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -1227,6 +1226,7 @@ export default function TrackMySkyDashboard() {
                     latestPositions={latestPositionsRef}
                     lockCamera={false}
                     observer={observer}
+                    showOnlySelected={true}
                     onTrackSatellite={(id) => {
                       handleSelectSat(id);
                     }}
@@ -1461,36 +1461,7 @@ export default function TrackMySkyDashboard() {
         </div>
       </section>
 
-      {/* ─────────────────────────────────────────────────────────────────────────────
-          9. MISSION INTELLIGENCE & TECHNICAL DOSSIER (Section 07)
-          Comprehensive scientific dossier with full spacecraft specifications, mass, power, discoveries
-          ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="dossier-section" className="mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8 py-16">
-        <div className="mb-10">
-          <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
-            Section 07 // Scientific Dossier &amp; Specifications
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans">
-            Mission Intelligence, Specifications &amp; Discoveries
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
-            Comprehensive aerospace engineering specifications, payload instrument profiles, and scientific milestones.
-          </p>
-        </div>
 
-        {selectedRawSat ? (
-          <SatelliteInfoPanel
-            noradId={selectedRawSat.id}
-            satName={selectedRawSat.name}
-            category={selectedRawSat.category}
-            orbitalElements={orbitalElements || undefined}
-          />
-        ) : (
-          <div className="p-12 border border-zinc-850 bg-zinc-950 text-center text-zinc-500 font-sans text-xs uppercase tracking-widest">
-            Select a satellite from the catalog above to view its technical dossier
-          </div>
-        )}
-      </section>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
           10. MOBILE COMPANION PAIRING MODAL

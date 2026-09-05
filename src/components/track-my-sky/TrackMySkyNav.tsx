@@ -51,7 +51,6 @@ export function TrackMySkyNav({
     { id: "passes-section", label: "Pass Predictor" },
     { id: "analytics-section", label: "Astrometry" },
     { id: "fleet-table-section", label: "Fleet Catalog" },
-    { id: "dossier-section", label: "Technical Dossier" },
   ];
 
   return (

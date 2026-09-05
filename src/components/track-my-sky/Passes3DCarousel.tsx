@@ -1,22 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
   Clock,
-  Compass,
-  Target,
-  Eye,
-  TrendingUp,
-  Activity,
-  Layers,
   Crosshair,
+  TrendingUp,
+  Compass,
 } from "lucide-react";
 import { SatellitePass } from "@/components/intelligence/PassPredictor";
-import { GlassBadge } from "@/components/glass/GlassBadge";
 
 interface Passes3DCarouselProps {
   passes: SatellitePass[];
@@ -35,494 +30,216 @@ function getRelativeTimeStr(targetTimeMs: number): string {
   return remMins > 0 ? `IN ${diffHours}h ${remMins}m` : `IN ${diffHours}h`;
 }
 
-// Interactive 3D Holographic Pass Card with Mouse Tilt Physics (RAF + DOM Direct for 60fps)
-const Pass3DCard = memo(function Pass3DCard({
-  pass,
-  isSelected,
-  isActiveCenter,
-  onSelect,
-}: {
-  pass: SatellitePass;
-  isSelected: boolean;
-  isActiveCenter: boolean;
-  onSelect: () => void;
-}) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const glareRef = useRef<HTMLDivElement>(null);
-  const rafIdRef = useRef<number | null>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current || !isActiveCenter) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const rotateY = (x - 0.5) * 16;
-    const rotateX = (0.5 - y) * 16;
-    const glareX = x * 100;
-    const glareY = y * 100;
-
-    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-    rafIdRef.current = requestAnimationFrame(() => {
-      if (cardRef.current) {
-        cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-      }
-      if (glareRef.current) {
-        glareRef.current.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(0,229,255,0.25), transparent 60%)`;
-      }
-    });
-  };
-
-  const handleMouseLeave = () => {
-    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-    if (cardRef.current) {
-      cardRef.current.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg)";
-    }
-    if (glareRef.current) {
-      glareRef.current.style.background = "none";
-    }
-  };
-
-  const relativeTime = getRelativeTimeStr(pass.startTimeMs);
-  const isNow = relativeTime === "ACTIVE NOW";
-
-  return (
-    <div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={onSelect}
-      style={{
-        transformStyle: "preserve-3d",
-        transform: "perspective(1000px) rotateX(0deg) rotateY(0deg)",
-        transition: "transform 0.1s ease-out, border-color 0.2s, box-shadow 0.2s",
-        willChange: "transform",
-      }}
-      className={`
-        relative w-[340px] sm:w-[380px] h-[380px] rounded-3xl p-5
-        bg-[#050914]/90 backdrop-blur-2xl
-        border cursor-pointer select-none flex flex-col justify-between
-        ${
-          isSelected
-            ? "border-cyan-400 shadow-[0_0_40px_rgba(0,229,255,0.3)] ring-1 ring-cyan-400"
-            : isActiveCenter
-            ? "border-cyan-500/40 shadow-[0_0_30px_rgba(0,229,255,0.15)] hover:border-cyan-400"
-            : "border-white/10 opacity-70 hover:opacity-95"
-        }
-      `}
-    >
-      {/* Dynamic Specular Glare Reflection */}
-      <div
-        ref={glareRef}
-        className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300"
-        style={{ background: "none" }}
-      />
-
-      {/* Laser-etched HUD corner brackets */}
-      <div className="absolute top-3 left-3 pointer-events-none">
-        <span className="block w-2.5 h-[1.5px] bg-cyan-400/80" />
-        <span className="block w-[1.5px] h-2.5 -mt-[1.5px] bg-cyan-400/80" />
-      </div>
-      <div className="absolute top-3 right-3 pointer-events-none flex flex-col items-end">
-        <span className="block w-2.5 h-[1.5px] bg-cyan-400/80" />
-        <span className="block w-[1.5px] h-2.5 -mt-[1.5px] bg-cyan-400/80" />
-      </div>
-      <div className="absolute bottom-3 left-3 pointer-events-none flex flex-col justify-end">
-        <span className="block w-[1.5px] h-2.5 bg-cyan-400/80" />
-        <span className="block w-2.5 h-[1.5px] bg-cyan-400/80" />
-      </div>
-      <div className="absolute bottom-3 right-3 pointer-events-none flex flex-col items-end justify-end">
-        <span className="block w-[1.5px] h-2.5 bg-cyan-400/80" />
-        <span className="block w-2.5 h-[1.5px] bg-cyan-400/80" />
-      </div>
-
-      {/* Card Header */}
-      <div className="relative z-10 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 border border-cyan-400/40 text-cyan-400 uppercase tracking-widest">
-              NORAD {pass.noradId}
-            </span>
-            {pass.isVisibleToEye && (
-              <GlassBadge tone="emerald" dot pulse>
-                NAKED-EYE
-              </GlassBadge>
-            )}
-          </div>
-
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase flex items-center gap-1.5 ${
-              isNow
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 animate-pulse"
-                : "bg-white/[0.06] text-slate-300 border border-white/10"
-            }`}
-          >
-            <Clock className="h-3 w-3 text-cyan-400" />
-            {relativeTime}
-          </span>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2 truncate">
-            {pass.satName}
-          </h3>
-          <p className="text-[11px] font-mono text-slate-400">
-            Pass Window: {new Date(pass.startTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — {new Date(pass.endTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </p>
-        </div>
-      </div>
-
-      {/* Middle Holographic Trajectory Dial & Elevation Sparkline */}
-      <div className="relative z-10 my-2 bg-slate-950/70 border border-white/[0.08] rounded-2xl p-3 flex items-center justify-between gap-3">
-        {/* Left: Elevation Peak Gauge */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
-            {/* SVG circular progress for peak elevation */}
-            <svg viewBox="0 0 48 48" className="w-full h-full -rotate-90">
-              <circle
-                cx="24"
-                cy="24"
-                r="19"
-                fill="none"
-                stroke="#1e293b"
-                strokeWidth="3"
-              />
-              <circle
-                cx="24"
-                cy="24"
-                r="19"
-                fill="none"
-                stroke="#00e5ff"
-                strokeWidth="3"
-                strokeDasharray={`${(pass.maxElevationDeg / 90) * 119.3} 119.3`}
-                strokeLinecap="round"
-                className="transition-all duration-700"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-xs font-mono font-black text-white">{pass.maxElevationDeg}°</span>
-              <span className="text-[7px] font-mono text-cyan-400 uppercase tracking-tighter">PEAK</span>
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">DURATION</div>
-            <div className="text-sm font-mono font-bold text-white">
-              {Math.round(pass.durationSec / 60)} MIN
-            </div>
-            <div className="text-[10px] font-mono text-cyan-400">
-              {pass.durationSec}s Total Pass
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Estimated Visual Magnitude Pill */}
-        <div className="text-right space-y-0.5">
-          <div className="text-[10px] font-mono text-slate-400 uppercase flex items-center justify-end gap-1">
-            <TrendingUp className="h-3 w-3 text-emerald-400" />
-            EST MAG
-          </div>
-          <div className="text-sm font-mono font-bold text-emerald-400">
-            {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ
-          </div>
-          <div className="text-[10px] font-mono text-slate-400">
-            {pass.peakVmag < 2 ? "Bright Target" : "Faint Optical"}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Telemetry Matrix & Aim Trigger */}
-      <div className="relative z-10 space-y-2">
-        <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-white/[0.03] border border-white/[0.06] p-2 rounded-xl text-slate-300">
-          <div>
-            <span className="text-slate-400 text-[10px]">AOS AZ: </span>
-            <span className="font-bold text-white">{pass.riseAzimuthDeg}°</span>
-          </div>
-          <div className="text-right">
-            <span className="text-slate-400 text-[10px]">LOS AZ: </span>
-            <span className="font-bold text-white">{pass.setAzimuthDeg}°</span>
-          </div>
-        </div>
-
-        {/* 1-Click Track Button with Target Reticle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect();
-          }}
-          className={`
-            w-full h-10 rounded-xl font-mono text-xs font-bold tracking-wider uppercase
-            flex items-center justify-center gap-2 transition-all duration-200
-            ${
-              isSelected
-                ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(0,229,255,0.4)]"
-                : "bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400"
-            }
-          `}
-        >
-          <Crosshair className={`h-4 w-4 ${isSelected ? "animate-spin" : ""}`} />
-          <span>{isSelected ? "TARGET LOCKED" : "AIM RETICLE & LOCK"}</span>
-        </button>
-      </div>
-    </div>
-  );
-});
-
 export function Passes3DCarousel({
   passes,
   selectedPass,
   onSelectPass,
   onSelectSatId,
 }: Passes3DCarouselProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Sync activeIndex if selectedPass changes from outside
-  useEffect(() => {
-    if (selectedPass && passes.length > 0) {
-      const idx = passes.findIndex(
-        (p) => p.noradId === selectedPass.noradId && p.startTimeMs === selectedPass.startTimeMs
-      );
-      if (idx !== -1) {
-        setActiveIndex(idx);
-      }
-    }
-  }, [selectedPass, passes]);
-
-  const handleNext = useCallback(() => {
-    if (passes.length === 0) return;
-    setActiveIndex((prev) => (prev + 1) % passes.length);
-  }, [passes.length]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handlePrev = useCallback(() => {
-    if (passes.length === 0) return;
-    setActiveIndex((prev) => (prev - 1 + passes.length) % passes.length);
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : Math.max(0, passes.length - 1)));
   }, [passes.length]);
 
-  // Touch & Pointer Drag Swipe Gesture Handling
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const pointerStartX = useRef<number | null>(null);
-  const pointerStartY = useRef<number | null>(null);
-  const hasDraggedRef = useRef(false);
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev < passes.length - 1 ? prev + 1 : 0));
+  }, [passes.length]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    hasDraggedRef.current = false;
-  };
+  if (passes.length === 0) return null;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const diffX = touchStartX.current - e.touches[0].clientX;
-    const diffY = touchStartY.current - e.touches[0].clientY;
-    if (Math.abs(diffX) > 10) {
-      hasDraggedRef.current = true;
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    const diffX = touchStartX.current - touchEndX;
-    const diffY = touchStartY.current - touchEndY;
-
-    const SWIPE_THRESHOLD = 35;
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
-      if (diffX > 0) {
-        handleNext();
-      } else {
-        handlePrev();
-      }
-    }
-    touchStartX.current = null;
-    touchStartY.current = null;
-    setTimeout(() => {
-      hasDraggedRef.current = false;
-    }, 50);
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    // Skip if clicking a navigation button or action button
-    if ((e.target as HTMLElement).closest("button")) return;
-    pointerStartX.current = e.clientX;
-    pointerStartY.current = e.clientY;
-    hasDraggedRef.current = false;
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (pointerStartX.current === null) return;
-    const diffX = pointerStartX.current - e.clientX;
-    if (Math.abs(diffX) > 10) {
-      hasDraggedRef.current = true;
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (pointerStartX.current === null) return;
-    const diffX = pointerStartX.current - e.clientX;
-    const diffY = (pointerStartY.current || 0) - e.clientY;
-
-    const DRAG_THRESHOLD = 40;
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > DRAG_THRESHOLD) {
-      if (diffX > 0) {
-        handleNext();
-      } else {
-        handlePrev();
-      }
-    }
-    pointerStartX.current = null;
-    pointerStartY.current = null;
-    setTimeout(() => {
-      hasDraggedRef.current = false;
-    }, 50);
-  };
-
-  // Keyboard navigation (ArrowLeft, ArrowRight)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") handlePrev();
-      if (e.key === "ArrowRight") handleNext();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrev]);
-
-  if (passes.length === 0) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center text-center font-mono space-y-3">
-        <Activity className="h-8 w-8 text-cyan-400/60 animate-pulse" />
-        <div className="text-sm text-slate-300 uppercase tracking-widest font-bold">
-          NO SATELLITE PASSES PREDICTED IN TIMEFRAME
-        </div>
-        <p className="text-xs text-slate-500 max-w-md">
-          Try expanding your timeframe filter to 24 hours or unchecking "Naked-Eye Visible Only" to view all orbital passes.
-        </p>
-      </div>
-    );
+  // Show up to 3 cards in view, centered on currentIndex
+  const visibleCards = [];
+  const total = passes.length;
+  for (let offset = -1; offset <= 1; offset++) {
+    let idx = currentIndex + offset;
+    if (idx < 0) idx = total - 1;
+    if (idx >= total) idx = 0;
+    visibleCards.push({ pass: passes[idx], index: idx, offset });
   }
 
-  // Active pass at index
-  const currentPass = passes[activeIndex] || passes[0];
-
   return (
-    <div
-      className="relative w-full overflow-hidden select-none py-6 touch-pan-y"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-    >
-      {/* Top Carousel Status Readout */}
-      <div className="flex items-center justify-between px-4 mb-4 text-xs font-mono">
-        <div className="flex items-center gap-2 text-cyan-400">
-          <Crosshair className="h-3.5 w-3.5 animate-spin" />
-          <span className="font-bold tracking-wider uppercase">
-            TARGET {activeIndex + 1} OF {passes.length}
+    <div className="relative w-full py-8 overflow-hidden font-sans select-none">
+      {/* Background Liquid Glass Ambient Refraction */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+        <div className="w-[680px] h-[320px] bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/15 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header & Controls Bar */}
+      <div className="flex items-center justify-between mb-6 px-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#00e5ff]">
+            Naked-Eye Passes ({passes.length})
+          </span>
+          <span className="text-zinc-700">&bull;</span>
+          <span className="text-xs text-zinc-400 font-sans">
+            Pass <strong className="text-white font-semibold">{currentIndex + 1}</strong> of {passes.length}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-          <span>SWIPE OR USE</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">←</kbd>
-          <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">→</kbd>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrev}
+            className="w-8 h-8 rounded-full border border-white/20 bg-white/[0.05] hover:bg-white/[0.15] hover:border-cyan-400/50 backdrop-blur-2xl text-zinc-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
+            title="Previous Pass"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleNext}
+            className="w-8 h-8 rounded-full border border-white/20 bg-white/[0.05] hover:bg-white/[0.15] hover:border-cyan-400/50 backdrop-blur-2xl text-zinc-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
+            title="Next Pass"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* 3D Spatial Carousel Stage */}
+      {/* 3D Liquid Glass Space-Tech Carousel */}
       <div
-        className="relative w-full h-[420px] flex items-center justify-center cursor-grab active:cursor-grabbing"
-        style={{ perspective: 1200 }}
+        ref={containerRef}
+        className="relative flex items-center justify-center min-h-[390px] w-full"
       >
-        <div
-          className="relative w-full max-w-4xl h-full flex items-center justify-center"
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          {passes.map((pass, idx) => {
-            const offset = idx - activeIndex;
-            // Only render cards within distance of 2 to maintain smooth 60fps
-            if (Math.abs(offset) > 2) return null;
-
+        <AnimatePresence initial={false} mode="popLayout">
+          {visibleCards.map(({ pass, index, offset }) => {
             const isCenter = offset === 0;
-            const translateX = offset * 260;
-            const translateZ = -Math.abs(offset) * 160;
-            const rotateY = offset * -18;
-            const scale = isCenter ? 1 : 0.88;
-            const opacity = isCenter ? 1 : Math.abs(offset) === 1 ? 0.65 : 0.25;
-            const zIndex = 30 - Math.abs(offset) * 10;
-
             const isSelected =
               selectedPass?.noradId === pass.noradId &&
               selectedPass?.startTimeMs === pass.startTimeMs;
+            const relativeTime = getRelativeTimeStr(pass.startTimeMs);
 
             return (
               <motion.div
-                key={`3d-pass-${pass.noradId}-${pass.startTimeMs}`}
+                key={`liquid-card-${pass.noradId}-${pass.startTimeMs}`}
+                initial={{ opacity: 0, scale: 0.85, x: offset * 320 }}
                 animate={{
-                  x: translateX,
-                  z: translateZ,
-                  rotateY,
-                  scale,
-                  opacity,
+                  opacity: isCenter ? 1 : 0.45,
+                  scale: isCenter ? 1 : 0.88,
+                  x: offset * 350,
+                  zIndex: isCenter ? 30 : 10,
                 }}
-                transition={{
-                  duration: 0.28,
-                  ease: [0.25, 1, 0.5, 1],
+                exit={{ opacity: 0, scale: 0.8, x: offset * 320 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => {
+                  if (!isCenter) {
+                    setCurrentIndex(index);
+                  }
+                  onSelectPass(pass);
+                  onSelectSatId(pass.noradId);
                 }}
-                style={{
-                  position: "absolute",
-                  zIndex,
-                  transformStyle: "preserve-3d",
-                  willChange: "transform, opacity",
-                }}
+                className={`
+                  absolute w-[330px] sm:w-[370px] h-[375px] p-6 rounded-2xl cursor-pointer
+                  flex flex-col justify-between transition-all duration-300
+                  backdrop-blur-3xl relative overflow-hidden group
+                  ${
+                    isCenter
+                      ? isSelected
+                        ? "bg-gradient-to-b from-white/[0.12] via-white/[0.04] to-transparent border border-cyan-400/80 shadow-[0_20px_50px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                        : "bg-gradient-to-b from-white/[0.08] via-white/[0.03] to-transparent border border-white/25 hover:border-cyan-400/60 shadow-[0_20px_45px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.25)]"
+                      : "bg-white/[0.02] border border-white/10 pointer-events-auto filter blur-[0.5px]"
+                  }
+                `}
               >
-                <Pass3DCard
-                  pass={pass}
-                  isSelected={isSelected}
-                  isActiveCenter={isCenter}
-                  onSelect={() => {
-                    if (hasDraggedRef.current) return;
-                    setActiveIndex(idx);
+                {/* Specular Liquid Edge Highlight */}
+                <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent pointer-events-none" />
+
+                {/* Top Glass Badge & Status */}
+                <div className="space-y-3 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold tracking-wider text-cyan-300 border border-cyan-400/40 bg-cyan-950/40 backdrop-blur-md px-2.5 py-0.5 rounded-full">
+                      NORAD {pass.noradId}
+                    </span>
+
+                    <span
+                      className={`text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                        pass.isVisibleToEye
+                          ? "border-emerald-400/40 text-emerald-300 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                          : "border-white/15 text-zinc-400 bg-white/[0.03]"
+                      }`}
+                    >
+                      {pass.isVisibleToEye && <Sparkles className="h-3 w-3 text-emerald-400" />}
+                      <span>{pass.isVisibleToEye ? "Naked-Eye Pass" : "Above Horizon"}</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight truncate font-sans">
+                      {pass.satName}
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 font-sans mt-0.5">
+                      <Clock className="h-3.5 w-3.5 text-zinc-500" />
+                      <span className="font-semibold text-zinc-200">{relativeTime}</span>
+                      <span className="text-zinc-600">&bull;</span>
+                      <span>Duration {Math.round(pass.durationSec / 60)}m</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Space-Tech Liquid Metrics Grid */}
+                <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl border border-white/15 bg-black/40 backdrop-blur-2xl text-xs font-sans relative z-10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                  <div>
+                    <span className="text-[10px] uppercase text-zinc-500 font-medium block">Peak Elevation</span>
+                    <span className="text-base font-bold text-white font-sans">{pass.maxElevationDeg}°</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-zinc-500 font-medium block">Visual Mag</span>
+                    <span className="text-base font-bold text-emerald-400 font-sans">
+                      {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-zinc-500 font-medium block">AOS (Rise)</span>
+                    <span className="text-zinc-300 font-sans font-medium text-xs">
+                      {new Date(pass.startTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-zinc-500 font-medium block">LOS (Set)</span>
+                    <span className="text-zinc-300 font-sans font-medium text-xs">
+                      {new Date(pass.endTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Trajectory Footprint */}
+                <div className="text-[10px] text-zinc-400 font-sans flex items-center justify-between border-t border-white/10 pt-2 relative z-10">
+                  <span className="uppercase text-zinc-500 font-medium">Trajectory:</span>
+                  <span className="text-zinc-200 font-medium">
+                    Az {pass.riseAzimuthDeg}° &rarr; {pass.setAzimuthDeg}°
+                  </span>
+                </div>
+
+                {/* Liquid Glass Interactive Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onSelectPass(pass);
                     onSelectSatId(pass.noradId);
                   }}
-                />
+                  className={`w-full h-9 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer relative z-10 ${
+                    isSelected
+                      ? "bg-white text-black font-black shadow-[0_0_24px_rgba(255,255,255,0.5)]"
+                      : "bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/20 hover:border-cyan-400/60"
+                  }`}
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                  <span>{isSelected ? "Tracking In Viewports" : "Track Satellite Pass"}</span>
+                </button>
               </motion.div>
             );
           })}
-        </div>
-
-        {/* Tactile Left Navigation Arrow */}
-        <button
-          onClick={handlePrev}
-          aria-label="Previous Satellite Pass"
-          className="absolute left-2 sm:left-6 z-40 w-11 h-11 rounded-2xl bg-black/60 hover:bg-cyan-500 text-white hover:text-black border border-cyan-500/30 flex items-center justify-center transition-all duration-200 backdrop-blur-xl shadow-[0_0_20px_rgba(0,0,0,0.5)] active:scale-95"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-
-        {/* Tactile Right Navigation Arrow */}
-        <button
-          onClick={handleNext}
-          aria-label="Next Satellite Pass"
-          className="absolute right-2 sm:right-6 z-40 w-11 h-11 rounded-2xl bg-black/60 hover:bg-cyan-500 text-white hover:text-black border border-cyan-500/30 flex items-center justify-center transition-all duration-200 backdrop-blur-xl shadow-[0_0_20px_rgba(0,0,0,0.5)] active:scale-95"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+        </AnimatePresence>
       </div>
 
-      {/* Carousel Position Indicator Pills */}
-      <div className="flex items-center justify-center gap-1.5 pt-4">
-        {passes.slice(0, 16).map((_, i) => (
+      {/* Pagination Dots */}
+      <div className="flex items-center justify-center gap-1.5 pt-6">
+        {passes.slice(0, Math.min(passes.length, 12)).map((_, idx) => (
           <button
-            key={`dot-${i}`}
-            onClick={() => setActiveIndex(i)}
-            aria-label={`Jump to pass ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === activeIndex
-                ? "w-8 bg-cyan-400 shadow-[0_0_10px_#00e5ff]"
-                : "w-2 bg-white/20 hover:bg-white/40"
+            key={`dot-${idx}`}
+            onClick={() => setCurrentIndex(idx)}
+            className={`h-1.5 rounded-full transition-all cursor-pointer ${
+              currentIndex === idx ? "w-6 bg-[#00e5ff]" : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
             }`}
           />
         ))}
@@ -531,4 +248,4 @@ export function Passes3DCarousel({
   );
 }
 
-export default Passes3DCarousel;
+export default memo(Passes3DCarousel);

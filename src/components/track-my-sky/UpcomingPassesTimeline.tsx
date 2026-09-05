@@ -162,7 +162,7 @@ export function UpcomingPassesTimeline({
                   <div className="space-y-3">
                     {/* Header Row: Timing & Status Tag */}
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-[#00e5ff] font-semibold">
+                      <span className="text-[10px] font-sans uppercase tracking-widest text-[#00e5ff] font-semibold">
                         {relativeTime}
                       </span>
                       <span
@@ -181,7 +181,7 @@ export function UpcomingPassesTimeline({
                       <h3 className="text-base font-bold text-white tracking-tight truncate font-sans">
                         {pass.satName}
                       </h3>
-                      <span className="text-[10px] font-mono text-zinc-500">NORAD {pass.noradId}</span>
+                      <span className="text-[10px] font-sans text-zinc-500">NORAD {pass.noradId}</span>
                     </div>
 
                     {/* Astrometry Metrics Grid */}
@@ -198,19 +198,19 @@ export function UpcomingPassesTimeline({
                       </div>
                       <div>
                         <div className="text-[10px] uppercase text-zinc-500">AOS (Rise)</div>
-                        <div className="text-zinc-300 font-mono text-xs">
+                        <div className="text-zinc-300 font-sans text-xs">
                           {new Date(pass.startTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </div>
                       <div>
                         <div className="text-[10px] uppercase text-zinc-500">Duration</div>
-                        <div className="text-zinc-300 font-mono text-xs">
+                        <div className="text-zinc-300 font-sans text-xs">
                           {Math.round(pass.durationSec / 60)} min
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-[10px] text-zinc-400 font-mono">
+                    <div className="text-[10px] text-zinc-400 font-sans">
                       Trajectory: Az {pass.riseAzimuthDeg}° &rarr; {pass.setAzimuthDeg}°
                     </div>
                   </div>
