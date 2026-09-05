@@ -49,35 +49,69 @@ function EarthMesh({ texturePath }: { texturePath: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Orbit track — in ECEF local space
 // ─────────────────────────────────────────────────────────────────────────────
-function SelectedOrbitTrack() {
-  const selectedSatrec = useOrbitalStore((s) => s.selectedSatrec);
+function SelectedOrbitTrack({
+  satellites,
+  selectedSatId,
+}: {
+  satellites: SatelliteData[];
+  selectedSatId: number | null;
+}) {
   const timeMs = useOrbitalStore((s) => s.timeMs);
 
+  // Default to ISS (25544) if no satellite is selected
+  const targetSat = useMemo(() => {
+    const id = selectedSatId ?? 25544;
+    return (
+      satellites.find((s) => s.id === id) ||
+      satellites.find((s) => s.id === 25544) ||
+      satellites[0] ||
+      null
+    );
+  }, [satellites, selectedSatId]);
+
+  const satrec = useMemo(() => {
+    if (!targetSat) return null;
+    try {
+      const sr = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
+      if (sr && !sr.error) return sr;
+    } catch {
+      /* fallback */
+    }
+    return null;
+  }, [targetSat]);
+
   const points = useMemo(() => {
-    if (!selectedSatrec) return [];
+    if (!satrec) return [];
     const pts: THREE.Vector3[] = [];
-    const periodMin = (2 * Math.PI) / selectedSatrec.no;
-    const steps = 120;
+    const meanMotion = satrec.no || 0.06;
+    const periodMin = (2 * Math.PI) / meanMotion;
+    const steps = 180;
+    const now = new Date(timeMs);
+    const gmstNow = satellite.gstime(now);
 
     for (let i = 0; i <= steps; i++) {
       const propTime = new Date(timeMs + (i / steps) * periodMin * 60_000);
-      const posAndVel = satellite.propagate(selectedSatrec, propTime);
+      const posAndVel = satellite.propagate(satrec, propTime);
       const pos = posAndVel?.position;
       if (!pos || typeof pos === "boolean" || isNaN(pos.x)) continue;
 
-      const gmstT = satellite.gstime(propTime);
-      const gd = satellite.eciToGeodetic(pos, gmstT);
+      const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmstNow);
       const lat = satellite.degreesLat(gd.latitude);
       let lon = satellite.degreesLong(gd.longitude);
       if (lon > 180) lon -= 360;
-      const r = EARTH_RADIUS_3D * (1 + gd.height / EARTH_RADIUS_KM);
-      pts.push(latLonToVector3(lat, lon, r));
+      if (lon < -180) lon += 360;
+      const altKm = gd.height || 420;
+      const r = EARTH_RADIUS_3D * (1 + altKm / EARTH_RADIUS_KM);
+      const v = latLonToVector3(lat, lon, r);
+      if (!isNaN(v.x) && !isNaN(v.y) && !isNaN(v.z)) {
+        pts.push(v);
+      }
     }
     return pts;
-  }, [selectedSatrec, timeMs]);
+  }, [satrec, timeMs]);
 
   if (points.length < 2) return null;
-  return <Line points={points} color="#00ff88" lineWidth={2.0} opacity={0.9} transparent />;
+  return <Line points={points} color="#00ff88" lineWidth={2.4} opacity={0.95} transparent />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -511,6 +545,7 @@ function SatellitesInstancedMesh({
 // ─────────────────────────────────────────────────────────────────────────────
 function EarthScene({
   satellites,
+  selectedSatId,
   latestPositions,
   lockCamera,
   controlsRef,
@@ -519,6 +554,7 @@ function EarthScene({
   observer,
 }: {
   satellites: SatelliteData[];
+  selectedSatId: number | null;
   latestPositions?: React.RefObject<Float32Array | null>;
   lockCamera: boolean;
   controlsRef: React.RefObject<any>;
@@ -527,22 +563,61 @@ function EarthScene({
   observer?: { lat: number; lon: number; name?: string };
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const selectedId = useOrbitalStore((s) => s.selectedSatelliteId);
+  const effectiveId = selectedSatId ?? 25544;
 
   const [selectedEcef, setSelectedEcef] = useState<THREE.Vector3 | null>(null);
   const [selectedWorld, setSelectedWorld] = useState<THREE.Vector3 | null>(null);
+
+  const targetSat = useMemo(() => {
+    return (
+      satellites.find((s) => s.id === effectiveId) ||
+      satellites.find((s) => s.id === 25544) ||
+      satellites[0] ||
+      null
+    );
+  }, [satellites, effectiveId]);
+
+  const targetSatrec = useMemo(() => {
+    if (!targetSat) return null;
+    try {
+      const sr = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
+      if (sr && !sr.error) return sr;
+    } catch {
+      /* skip */
+    }
+    return null;
+  }, [targetSat]);
 
   useFrame(() => {
     const group = groupRef.current;
     if (!group) return;
 
     const timeMs = useOrbitalStore.getState().timeMs;
-    const gmst = satellite.gstime(new Date(timeMs));
+    const now = new Date(timeMs);
+    const gmst = satellite.gstime(now);
     updateEarthOrientation(group, gmst);
     group.updateMatrixWorld(true);
 
-    if (selectedEcef) {
-      const w = selectedEcef.clone();
+    let currentEcef = selectedEcef;
+
+    // Instant SGP4 propagation for target satellite so 3D model, line, and beacon always sync
+    if (targetSatrec) {
+      const pv = satellite.propagate(targetSatrec, now);
+      const pos = pv?.position;
+      if (pos && typeof pos !== "boolean" && !isNaN(pos.x)) {
+        const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmst);
+        const lat = satellite.degreesLat(gd.latitude);
+        let lon = satellite.degreesLong(gd.longitude);
+        if (lon > 180) lon -= 360;
+        if (lon < -180) lon += 360;
+        const altKm = gd.height || 420;
+        const r = EARTH_RADIUS_3D * (1 + altKm / EARTH_RADIUS_KM);
+        currentEcef = latLonToVector3(lat, lon, r);
+      }
+    }
+
+    if (currentEcef) {
+      const w = currentEcef.clone();
       group.localToWorld(w);
       setSelectedWorld(w);
     } else {
@@ -572,13 +647,18 @@ function EarthScene({
         <SatellitesInstancedMesh
           satellites={satellites}
           latestPositions={latestPositions}
-          selectedId={selectedId}
+          selectedId={effectiveId}
           onEcefPosUpdate={setSelectedEcef}
           onHoverChange={onHoverChange}
           onTrackSatellite={onTrackSatellite}
         />
 
-        <SelectedOrbitTrack />
+        {/* Show orbit of selected satellite alone (defaults to ISS 25544, or single selected satellite) */}
+        <SelectedOrbitTrack
+          satellites={satellites}
+          selectedSatId={effectiveId}
+        />
+
         <SelectedSubpointConnector ecefPos={selectedEcef} />
 
         {selectedEcef && (
@@ -611,6 +691,7 @@ function EarthScene({
 // ─────────────────────────────────────────────────────────────────────────────
 export interface Satellite3DViewProps {
   satellites: SatelliteData[];
+  selectedSatId?: number | null;
   latestPositions?: React.RefObject<Float32Array | null>;
   lockCamera?: boolean;
   onTrackSatellite?: (id: number) => void;
@@ -619,19 +700,21 @@ export interface Satellite3DViewProps {
 
 export default function Satellite3DView({
   satellites,
+  selectedSatId,
   latestPositions,
   lockCamera = false,
   onTrackSatellite,
   observer,
 }: Satellite3DViewProps) {
-  const selectedId = useOrbitalStore((s) => s.selectedSatelliteId);
+  const storeSelectedId = useOrbitalStore((s) => s.selectedSatelliteId);
+  const activeSelectedId = selectedSatId ?? storeSelectedId ?? 25544;
   const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
   const controlsRef = useRef<any>(null);
 
-  const selectedSatName = useMemo(
-    () => satellites.find((s) => s.id === selectedId)?.name ?? "",
-    [satellites, selectedId]
-  );
+  const selectedSatName = useMemo(() => {
+    const sat = satellites.find((s) => s.id === activeSelectedId);
+    return sat?.name || (activeSelectedId === 25544 ? "ISS (ZARYA)" : `SAT-${activeSelectedId}`);
+  }, [satellites, activeSelectedId]);
 
   const handleZoomIn = () => {
     if (controlsRef.current) {
@@ -738,6 +821,7 @@ export default function Satellite3DView({
 
         <EarthScene
           satellites={satellites}
+          selectedSatId={activeSelectedId}
           latestPositions={latestPositions}
           lockCamera={lockCamera}
           controlsRef={controlsRef}

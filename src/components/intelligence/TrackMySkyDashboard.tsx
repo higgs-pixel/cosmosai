@@ -888,6 +888,7 @@ export default function TrackMySkyDashboard() {
                 <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
                   <Satellite3DView
                     satellites={satellitesList}
+                    selectedSatId={selectedSatId}
                     latestPositions={latestPositionsRef}
                     lockCamera={false}
                     observer={observer}
