@@ -715,24 +715,6 @@ function ObserverGroundStation({
         <meshBasicMaterial color={targetSat ? "#f59e0b" : "#10b981"} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Floating Field of View & Orientation Badge */}
-      <Html center position={[0, 9.5, 0]} className="pointer-events-none select-none">
-        <div className={`px-3.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-2xl border backdrop-blur-md whitespace-nowrap transition ${
-          mobileOrientation
-            ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]"
-            : targetSat
-            ? "bg-cyan-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.6)]"
-            : "bg-slate-950/95 border-cyan-500/60 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.35)]"
-        }`}>
-          <span>
-            {mobileOrientation
-              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • ⚡ BLUE SIGHT: ±10° GOLDEN RECTANGLE`
-              : targetSat
-              ? `🎯 SIGHT LOCKED: ${targetSat.name} • ⚡ BLUE SIGHT: ±10° GOLDEN RECTANGLE`
-              : "⚡ BOT BLUE LINE OF SIGHT • 🌟 GOLDEN RECTANGLE: +10° UP / -10° DOWN"}
-          </span>
-        </div>
-      </Html>
     </group>
   );
 }
