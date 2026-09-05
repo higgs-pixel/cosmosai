@@ -610,11 +610,8 @@ function ObserverGroundStation({
           targetQuat.z = -targetQuat.z;
           targetQuat.w = -targetQuat.w;
         }
-        const angleDiff = currentQuat.current.angleTo(targetQuat);
-        if (angleDiff > 0.004) {
-          const dampFactor = 1 - Math.exp(-6.0 * Math.min(delta, 0.1));
-          currentQuat.current.slerp(targetQuat, dampFactor);
-        }
+        const dampFactor = 1 - Math.exp(-8.5 * Math.min(delta, 0.1));
+        currentQuat.current.slerp(targetQuat, dampFactor);
       }
       domeRef.current.quaternion.copy(currentQuat.current);
     } else {
@@ -2231,14 +2228,16 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   // Telemetry Polling Loop & BroadcastChannel from Mobile to Desktop
   useEffect(() => {
     let isSubscribed = true;
+    let lastBroadcastMsgTime = 0;
 
-    // 1. Instant local BroadcastChannel tab sync listener
+    // 1. Instant local BroadcastChannel tab sync listener (for same-machine multi-tab testing)
     let channel: BroadcastChannel | null = null;
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       channel = new BroadcastChannel("stargaze_compass_channel");
       channel.onmessage = (event) => {
         if (!isSubscribed) return;
         if (event.data && event.data.type === "COMPASS_TELEMETRY" && event.data.sessionId === sessionId) {
+          lastBroadcastMsgTime = Date.now();
           setMobileOrientation({
             heading: event.data.heading,
             pitch: event.data.pitch,
@@ -2255,15 +2254,18 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       };
     }
 
-    // 2. HTTP Polling Fallback (adaptive, throttled to prevent main-thread lag)
+    // 2. Continuous Real-Time HTTP Polling (for real smartphones over Wi-Fi / Internet)
     let isPollingBusy = false;
     const interval = setInterval(async () => {
-      // If broadcast channel is actively receiving orientation packets, skip network polling
-      if (channel && wasMobileSyncedRef.current) return;
+      // Only skip HTTP if BroadcastChannel actively received a local tab message in the last 800ms
+      if (Date.now() - lastBroadcastMsgTime < 800) return;
       if (isPollingBusy) return;
       isPollingBusy = true;
       try {
-        const res = await fetch(`/api/stargaze/compass-sync?session=${sessionId}`);
+        const res = await fetch(`/api/stargaze/compass-sync?session=${sessionId}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { Pragma: "no-cache" },
+        });
         if (!res.ok) return;
         const data = await res.json();
 
@@ -2280,7 +2282,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             setShowQrPanel(false);
             showToast("📱 Mobile Phone Connected Successfully!");
           }
-        } else if (isSubscribed && !data.connected && !channel) {
+        } else if (isSubscribed && !data.connected && Date.now() - lastBroadcastMsgTime > 6000) {
           wasMobileSyncedRef.current = false;
           setIsMobileSynced(false);
           setMobileOrientation(null);
@@ -2290,7 +2292,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       } finally {
         isPollingBusy = false;
       }
-    }, 150);
+    }, 80);
 
     return () => {
       isSubscribed = false;

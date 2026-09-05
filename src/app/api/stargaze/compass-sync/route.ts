@@ -54,6 +54,9 @@ export async function POST(req: Request) {
   }
 }
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const requestedSessionId = searchParams.get("session") || "stargaze-sync";
@@ -61,12 +64,30 @@ export async function GET(req: Request) {
   const session = compassSessions.get(requestedSessionId);
 
   if (!session) {
-    return NextResponse.json({ connected: false });
+    return NextResponse.json(
+      { connected: false },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   }
 
   const isFresh = Date.now() - session.timestamp < 10000; // Fresh within 10s
-  return NextResponse.json({
-    connected: isFresh,
-    data: session,
-  });
+  return NextResponse.json(
+    {
+      connected: isFresh,
+      data: session,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    }
+  );
 }
