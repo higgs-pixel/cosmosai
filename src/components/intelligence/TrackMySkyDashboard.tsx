@@ -291,7 +291,11 @@ export default function TrackMySkyDashboard() {
   }, []);
 
   // Orbital Store Simulation hooks
-  const timeMs = useOrbitalStore((s) => s.timeMs);
+  // Throttled UI Clock State: Updates at ~4Hz (250ms) during active simulation, or immediately on pause/scrub.
+  // This eliminates 60Hz React DOM re-renders across the page, keeping all viewports buttery smooth!
+  const [uiTimeMs, setUiTimeMs] = useState(() => useOrbitalStore.getState().timeMs);
+  const lastUiTickRef = useRef(performance.now());
+
   const isPaused = useOrbitalStore((s) => s.isPaused);
   const speed = useOrbitalStore((s) => s.speed);
   const setTimeMs = useOrbitalStore((s) => s.setTimeMs);
@@ -378,6 +382,7 @@ export default function TrackMySkyDashboard() {
   const handleLiveSync = useCallback(() => {
     const now = Date.now();
     setTimeMs(now);
+    setUiTimeMs(now);
     setSpeed(1);
     setIsPaused(false);
     setSliderBaseTime(now);
@@ -401,12 +406,26 @@ export default function TrackMySkyDashboard() {
       if (delta > 0 && delta < 1000) {
         tick(delta);
       }
+
+      // Throttle React state re-renders to ~4Hz (250ms) so 2D Radar, Polar Dome, and UI don't thrash the CPU
+      if (now - lastUiTickRef.current >= 250) {
+        lastUiTickRef.current = now;
+        setUiTimeMs(useOrbitalStore.getState().timeMs);
+      }
+
       frameId = requestAnimationFrame(loop);
     };
 
     frameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frameId);
   }, [tick, isPaused]);
+
+  // Immediately sync UI clock when pausing or seeking
+  useEffect(() => {
+    if (isPaused) {
+      setUiTimeMs(useOrbitalStore.getState().timeMs);
+    }
+  }, [isPaused]);
 
   // Satellite Group Selection for Track My Sky
   const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
@@ -610,21 +629,7 @@ export default function TrackMySkyDashboard() {
   // Real-Time Astronomical Visibility Computation Pass
   // Evaluates 3-Condition Naked-Eye Visibility Test for all satellites
   // ───────────────────────────────────────────────────────────────────────────
-  // Decoupled Evaluation Clock for heavy table & pass calculations:
-  // Throttled to ~600ms of real clock time during high-speed simulations (1x, 2x, 5x, 10x, 60x...)
-  // This prevents running 500 SGP4 visibility calculations 60 times/sec on the main JS thread
-  const [evalTimeMs, setEvalTimeMs] = useState(timeMs);
-  const lastEvalRealTimeRef = useRef(performance.now());
-
-  useEffect(() => {
-    const now = performance.now();
-    if (isPaused || now - lastEvalRealTimeRef.current > 600) {
-      lastEvalRealTimeRef.current = now;
-      setEvalTimeMs(timeMs);
-    }
-  }, [timeMs, isPaused]);
-
-  const date = useMemo(() => new Date(evalTimeMs), [evalTimeMs]);
+  const date = useMemo(() => new Date(uiTimeMs), [uiTimeMs]);
 
   const twilight = useMemo(() => {
     return getObserverTwilight(date, observer.lat, observer.lon);
@@ -717,7 +722,7 @@ export default function TrackMySkyDashboard() {
   }, [visibilityResults, allEvaluatedSats, candidateSatellites, satellitesList, selectedSatId, observer, date]);
 
   // Upcoming Satellite Pass Predictions Engine (Recomputed every 15 minutes of simulation time)
-  const passCalcBucket = useMemo(() => Math.floor(evalTimeMs / (15 * 60_000)), [evalTimeMs]);
+  const passCalcBucket = useMemo(() => Math.floor(uiTimeMs / (15 * 60_000)), [uiTimeMs]);
 
   const upcomingPasses = useMemo(() => {
     if (loadingSats || candidateSatellites.length === 0) return [];
@@ -739,7 +744,7 @@ export default function TrackMySkyDashboard() {
       {/* 1. Spatial Liquid Glass Navigation Bar */}
       <TrackMySkyNav
         observer={observer}
-        formattedTime={formatClockTime(timeMs, selectedTz)}
+        formattedTime={formatClockTime(uiTimeMs, selectedTz)}
         onOpenPairModal={() => setShowPairModal(true)}
         onOpenManual={() => {
           const el = document.getElementById("glossary-modal-btn");
@@ -802,10 +807,13 @@ export default function TrackMySkyDashboard() {
           timezoneOptions={TIMEZONE_OPTIONS}
           totalSats={satellitesList.length}
           loadingSats={loadingSats}
-          formattedClock={formatClockTime(timeMs, selectedTz)}
-          timeMs={timeMs}
+          formattedClock={formatClockTime(uiTimeMs, selectedTz)}
+          timeMs={uiTimeMs}
           sliderBaseTime={sliderBaseTime}
-          onTimeScrubberChange={(val) => setTimeMs(val)}
+          onTimeScrubberChange={(val) => {
+            setTimeMs(val);
+            setUiTimeMs(val);
+          }}
           twilight={twilight}
           aboveHorizonCount={visibilityResults.length}
           nakedEyeCount={nakedEyeCount}
@@ -872,7 +880,7 @@ export default function TrackMySkyDashboard() {
                 allEvaluatedSats={allEvaluatedSats}
                 twilight={twilight}
                 observer={{ ...observer, name: observer.name || "Observer Site" }}
-                timeMs={timeMs}
+                timeMs={uiTimeMs}
                 selectedSatId={selectedSatId}
                 onSelectSat={(id) => handleSelectSat(id)}
               />
@@ -939,7 +947,7 @@ export default function TrackMySkyDashboard() {
                   <Observer2DMap
                     observer={observer}
                     selectedPass={selectedPass}
-                    timeMs={timeMs}
+                    timeMs={uiTimeMs}
                     simPoint={selectedSat ? {
                       lat: selectedSat.satLat,
                       lon: selectedSat.satLon,
@@ -992,7 +1000,7 @@ export default function TrackMySkyDashboard() {
           selectedSat={selectedSat}
           visibleSats={visibilityResults}
           observer={observer}
-          timeMs={timeMs}
+          timeMs={uiTimeMs}
           selectedPass={selectedPass}
         />
       </div>

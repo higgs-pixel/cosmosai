@@ -3,7 +3,7 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Line, useTexture, Html } from "@react-three/drei";
+import { OrbitControls, Stars, Line, useTexture } from "@react-three/drei";
 import * as satellite from "satellite.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useOrbitalStore, SatelliteData } from "./store";
@@ -242,13 +242,6 @@ function TrackedSatelliteCurrentLocation({
     return new THREE.Line(geom, mat);
   }, []);
 
-  const [telemetry, setTelemetry] = useState<{ altKm: number; velKms: number; name: string }>({
-    altKm: 420,
-    velKms: 7.66,
-    name: "ISS (ZARYA)",
-  });
-  const lastTelemetryUpdateRef = useRef(0);
-
   const effectiveId = selectedSatId ?? 25544;
 
   const targetSat = useMemo(() => {
@@ -283,7 +276,6 @@ function TrackedSatelliteCurrentLocation({
 
     const pv = satellite.propagate(satrec, now);
     const pos = pv?.position;
-    const vel = pv?.velocity;
 
     if (!pos || typeof pos === "boolean" || isNaN(pos.x)) return;
 
@@ -340,21 +332,6 @@ function TrackedSatelliteCurrentLocation({
       satGroupRef.current.parent.localToWorld(worldPos);
       worldPosRef.current = worldPos;
     }
-
-    // 6. Throttled telemetry badge update (every 400ms real time)
-    const nowReal = performance.now();
-    if (nowReal - lastTelemetryUpdateRef.current > 400) {
-      lastTelemetryUpdateRef.current = nowReal;
-      let velVal = 7.66;
-      if (vel && typeof vel !== "boolean" && !isNaN(vel.x)) {
-        velVal = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
-      }
-      setTelemetry({
-        altKm: Math.round(altKm),
-        velKms: Number(velVal.toFixed(2)),
-        name: targetSat?.name || (effectiveId === 25544 ? "ISS (ZARYA)" : `SAT-${effectiveId}`),
-      });
-    }
   });
 
   return (
@@ -407,29 +384,6 @@ function TrackedSatelliteCurrentLocation({
             <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.65} />
           </mesh>
         </group>
-
-        {/* Spatial 3D Floating Liquid Glass Telemetry Badge */}
-        <Html
-          position={[0, 0.48, 0]}
-          center
-          distanceFactor={15}
-          zIndexRange={[100, 0]}
-          className="pointer-events-none select-none"
-        >
-          <div className="flex flex-col items-center gap-0.5 whitespace-nowrap">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/90 border border-[#00ff88]/80 shadow-[0_0_15px_rgba(0,255,136,0.4)] backdrop-blur-md">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-ping" />
-              <span className="font-mono text-[10px] font-bold text-white tracking-wider uppercase">
-                {telemetry.name}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900/85 border border-white/10 text-[9px] font-mono text-[#00e5ff]">
-              <span>ALT: {telemetry.altKm} KM</span>
-              <span className="text-white/30">|</span>
-              <span>VEL: {telemetry.velKms} KM/S</span>
-            </div>
-          </div>
-        </Html>
       </group>
     </group>
   );
@@ -848,6 +802,43 @@ export default function Satellite3DView({
     return sat?.name || (activeSelectedId === 25544 ? "ISS (ZARYA)" : `SAT-${activeSelectedId}`);
   }, [satellites, activeSelectedId]);
 
+  const selectedSatrec = useMemo(() => {
+    const sat = satellites.find((s) => s.id === activeSelectedId);
+    if (!sat) return null;
+    try {
+      const sr = satellite.twoline2satrec(sat.line1, sat.line2);
+      if (sr && !sr.error) return sr;
+    } catch {
+      /* skip */
+    }
+    return null;
+  }, [satellites, activeSelectedId]);
+
+  // Subscribe to 1-second simulation time bucket for corner telemetry
+  const timeSecBucket = useOrbitalStore((s) => Math.floor(s.timeMs / 1000));
+  const selectedTelemetry = useMemo(() => {
+    if (!selectedSatrec) return { altKm: 420, velKms: 7.66 };
+    try {
+      const now = new Date(timeSecBucket * 1000);
+      const pv = satellite.propagate(selectedSatrec, now);
+      const pos = pv?.position;
+      const vel = pv?.velocity;
+      if (pos && typeof pos !== "boolean" && !isNaN(pos.x)) {
+        const gmst = satellite.gstime(now);
+        const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmst);
+        const altKm = Math.round(gd.height || 420);
+        let velKms = 7.66;
+        if (vel && typeof vel !== "boolean" && !isNaN(vel.x)) {
+          velKms = Number(Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z).toFixed(2));
+        }
+        return { altKm, velKms };
+      }
+    } catch {
+      /* fallback */
+    }
+    return { altKm: 420, velKms: 7.66 };
+  }, [selectedSatrec, timeSecBucket]);
+
   const handleZoomIn = () => {
     if (controlsRef.current) {
       controlsRef.current.dollyIn(1.28);
@@ -870,16 +861,31 @@ export default function Satellite3DView({
 
   return (
     <div className="h-full w-full bg-[#03040a] relative isolate select-none">
-      {/* Top-Left Corner HUD Satellite Tracking Overlay */}
+      {/* Top-Left Corner HUD Satellite Tracking & Telemetry Card */}
       {selectedSatName && (
-        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 bg-slate-950/90 border border-[#00ff88]/80 px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(0,255,136,0.4)] pointer-events-none select-none">
-          <span className="flex h-2 w-2 rounded-full bg-[#00ff88] animate-ping" />
-          <span className="font-mono text-[9px] font-bold text-[#00ff88] uppercase tracking-widest">
-            Tracking:
-          </span>
-          <span className="font-mono text-[10px] font-bold text-white tracking-wide">
+        <div className="absolute left-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/90 backdrop-blur-md border border-[#00ff88]/80 px-3 py-2 rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)] pointer-events-none select-none max-w-[240px]">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1">
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-2 w-2 rounded-full bg-[#00ff88] animate-ping" />
+              <span className="font-mono text-[9px] font-bold text-[#00ff88] uppercase tracking-widest">
+                TRACKING
+              </span>
+            </div>
+            <span className="font-mono text-[8px] text-slate-400">ID #{activeSelectedId}</span>
+          </div>
+
+          <div className="font-mono text-[11px] font-bold text-white tracking-wide truncate">
             {selectedSatName}
-          </span>
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-[9px] text-[#00e5ff] pt-0.5">
+            <span className="bg-cyan-950/70 border border-cyan-500/30 px-1.5 py-0.5 rounded">
+              ALT: {selectedTelemetry.altKm} KM
+            </span>
+            <span className="bg-emerald-950/70 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[#00ff88]">
+              VEL: {selectedTelemetry.velKms} KM/S
+            </span>
+          </div>
         </div>
       )}
 
