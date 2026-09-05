@@ -33,6 +33,7 @@ import {
   QrCode,
   Link2,
   CheckCircle2,
+  Navigation,
 } from "lucide-react";
 import { QRCodeSVG } from "@/lib/qr-generator";
 import { ObserverCoords } from "./PassPredictor";
@@ -535,55 +536,34 @@ function ObserverGroundStation({
   satellites,
   onSelectSat,
   mobileOrientation,
+  isAimLocked = false,
+  isGuideActive = false,
+  onAligned,
 }: {
   targetSat: ComputedSatelliteSkyState | null;
   satellites: ComputedSatelliteSkyState[];
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
   mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
+  isAimLocked?: boolean;
+  isGuideActive?: boolean;
+  onAligned?: () => void;
 }) {
   const domeRef = useRef<THREE.Group>(null);
+  const guideDomeRef = useRef<THREE.Group>(null);
   const currentQuat = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const guideQuat = useRef<THREE.Quaternion>(new THREE.Quaternion());
   const isInitialized = useRef<boolean>(false);
+  const isGuideInitialized = useRef<boolean>(false);
+  const lastAlignedTrigger = useRef<number>(0);
 
   useFrame(({ clock }, delta) => {
-    const t = clock.getElapsedTime();
     if (!domeRef.current) return;
 
-    // Frame-rate independent exponential damping for liquid-smooth continuous motion
-    // At 60fps (delta ≈ 0.016s), dampFactor ≈ 0.12, continuously interpolating between data updates
-    const dampFactor = 1 - Math.exp(-7.5 * Math.min(delta, 0.1));
+    // Condition: When aiming at satellite, bot sight locks onto the satellite directly!
+    // Even when phone is synced, tracking the satellite takes precedence when aim is locked.
+    const shouldTrackSatellite = Boolean(targetSat && (isAimLocked || !mobileOrientation));
 
-    if (mobileOrientation) {
-      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH MAPPING — ZERO ROLL)
-      // Roll is locked to 0 so the telescope dome & golden rectangle stay horizon-level
-      // and NEVER tumble/spin sideways like a rolling ball!
-      const azRad = (mobileOrientation.heading * Math.PI) / 180;
-      const elRad = (mobileOrientation.pitch * Math.PI) / 180;
-
-      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
-      const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
-
-      if (!isInitialized.current) {
-        currentQuat.current.copy(targetQuat);
-        isInitialized.current = true;
-      } else {
-        // Antipodal check: always take shortest spherical geodesic arc to prevent 360° ball flipping
-        if (currentQuat.current.dot(targetQuat) < 0) {
-          targetQuat.x = -targetQuat.x;
-          targetQuat.y = -targetQuat.y;
-          targetQuat.z = -targetQuat.z;
-          targetQuat.w = -targetQuat.w;
-        }
-
-        // Noise deadband: suppress micro-jitter (< 0.25°) to eliminate shaking
-        const angleDiff = currentQuat.current.angleTo(targetQuat);
-        if (angleDiff > 0.004) {
-          const dampFactor = 1 - Math.exp(-6.0 * Math.min(delta, 0.1));
-          currentQuat.current.slerp(targetQuat, dampFactor);
-        }
-      }
-      domeRef.current.quaternion.copy(currentQuat.current);
-    } else if (targetSat) {
+    if (shouldTrackSatellite && targetSat) {
       // SCIENTIFICALLY PRECISE SATELLITE TRACKING VECTOR ALIGNMENT
       const stationPos = new THREE.Vector3(0, 2.4, 0);
       const targetPos = targetSat.vec3.clone();
@@ -608,12 +588,37 @@ function ObserverGroundStation({
           targetQuat.z = -targetQuat.z;
           targetQuat.w = -targetQuat.w;
         }
-        const dampFactor = 1 - Math.exp(-5.0 * Math.min(delta, 0.1));
+        const dampFactor = 1 - Math.exp(-6.5 * Math.min(delta, 0.1));
         currentQuat.current.slerp(targetQuat, dampFactor);
       }
       domeRef.current.quaternion.copy(currentQuat.current);
+    } else if (mobileOrientation) {
+      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH MAPPING — ZERO ROLL)
+      const azRad = (mobileOrientation.heading * Math.PI) / 180;
+      const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+
+      if (!isInitialized.current) {
+        currentQuat.current.copy(targetQuat);
+        isInitialized.current = true;
+      } else {
+        if (currentQuat.current.dot(targetQuat) < 0) {
+          targetQuat.x = -targetQuat.x;
+          targetQuat.y = -targetQuat.y;
+          targetQuat.z = -targetQuat.z;
+          targetQuat.w = -targetQuat.w;
+        }
+        const angleDiff = currentQuat.current.angleTo(targetQuat);
+        if (angleDiff > 0.004) {
+          const dampFactor = 1 - Math.exp(-6.0 * Math.min(delta, 0.1));
+          currentQuat.current.slerp(targetQuat, dampFactor);
+        }
+      }
+      domeRef.current.quaternion.copy(currentQuat.current);
     } else {
-      // DEFAULT NORTH SIGHT ALIGNMENT (Solid, stable North at 0° azimuth, 15° elevation pitch — ZERO WOBBLE)
+      // DEFAULT NORTH SIGHT ALIGNMENT
       const azRad = 0;
       const elRad = (15 * Math.PI) / 180;
 
@@ -635,9 +640,42 @@ function ObserverGroundStation({
       }
       domeRef.current.quaternion.copy(currentQuat.current);
     }
+
+    // ── MOBILE COMPASS GUIDE LINE OF SIGHT (GUIDES USER PHONE TOWARDS FIXED SATELLITE TRACKING SIGHT) ──
+    if (isGuideActive && mobileOrientation && targetSat && guideDomeRef.current) {
+      const azRad = (mobileOrientation.heading * Math.PI) / 180;
+      const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+
+      const guideEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
+      const targetGuideQuat = new THREE.Quaternion().setFromEuler(guideEuler);
+
+      if (!isGuideInitialized.current) {
+        guideQuat.current.copy(targetGuideQuat);
+        isGuideInitialized.current = true;
+      } else {
+        if (guideQuat.current.dot(targetGuideQuat) < 0) {
+          targetGuideQuat.x = -targetGuideQuat.x;
+          targetGuideQuat.y = -targetGuideQuat.y;
+          targetGuideQuat.z = -targetGuideQuat.z;
+          targetGuideQuat.w = -targetGuideQuat.w;
+        }
+        const dampFactor = 1 - Math.exp(-7.0 * Math.min(delta, 0.1));
+        guideQuat.current.slerp(targetGuideQuat, dampFactor);
+      }
+      guideDomeRef.current.quaternion.copy(guideQuat.current);
+
+      // Check alignment between the satellite tracking sight (currentQuat) and phone guide sight (guideQuat)
+      const angleDeltaDeg = (currentQuat.current.angleTo(guideQuat.current) * 180) / Math.PI;
+      if (angleDeltaDeg <= 3.8 && Date.now() - lastAlignedTrigger.current > 2500) {
+        lastAlignedTrigger.current = Date.now();
+        if (onAligned) {
+          onAligned();
+        }
+      }
+    }
   });
 
-  const sightColor = mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981";
+  const sightColor = targetSat ? "#f59e0b" : mobileOrientation ? "#06b6d4" : "#10b981";
 
   return (
     <group position={[0, 0, 0]}>
@@ -647,7 +685,7 @@ function ObserverGroundStation({
         <meshStandardMaterial color="#0b1329" roughness={0.2} metalness={0.8} />
       </mesh>
 
-      {/* Rotating Dome Head & Aperture */}
+      {/* Rotating Dome Head & Primary Line of Sight (Tracks Satellite or Compass) */}
       <group ref={domeRef} position={[0, 2.4, 0]}>
         <mesh position={[0, 1.5, 0]}>
           <sphereGeometry args={[4.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -669,7 +707,7 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.9} />
         </mesh>
 
-        {/* ⚡ BLUE LINE OF SIGHT FROM THE BOT (PRIMARY COLLIMATED SIGHT AXIS) */}
+        {/* ⚡ PRIMARY BLUE LINE OF SIGHT FROM THE BOT (COLLIMATED AXIS) */}
         <Line
           points={[new THREE.Vector3(0, 2.2, 3.8), new THREE.Vector3(0, 2.2, 260)]}
           color="#00f0ff"
@@ -688,18 +726,56 @@ function ObserverGroundStation({
         {/* 1. GOLDEN RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT) */}
         <HumanPrimaryGazeField
           radius={236}
-          opacity={mobileOrientation ? 0.40 : 0.34}
+          opacity={targetSat ? 0.42 : 0.34}
         />
 
         {/* 2. HUMAN EYE PERIPHERAL BINOCULAR FIELD (210°H × 140°V ENVELOPE) */}
         <HumanBinocularSightField
           color={sightColor}
-          opacity={mobileOrientation ? 0.22 : targetSat ? 0.25 : 0.14}
+          opacity={targetSat ? 0.28 : 0.16}
         />
       </group>
 
-      {/* Direct Line of Sight Beam to Tracked Satellite (GOLDEN YELLOW) */}
-      {targetSat && !mobileOrientation && (
+      {/* 🧭 NEWLY CREATED MOBILE COMPASS GUIDE LINE OF SIGHT (GUIDES PHONE TOWARDS TRACKING SATELLITE) */}
+      {isGuideActive && mobileOrientation && targetSat && (
+        <group ref={guideDomeRef} position={[0, 2.4, 0]}>
+          {/* Distinct Guide Beam: Vibrant Magenta & Electric Cyan Sight Line */}
+          <Line
+            points={[new THREE.Vector3(0, 2.2, 3.8), new THREE.Vector3(0, 2.2, 260)]}
+            color="#ec4899"
+            lineWidth={4.8}
+            transparent
+            opacity={0.95}
+          />
+          <Line
+            points={[new THREE.Vector3(0, 2.2, 3.8), new THREE.Vector3(0, 2.2, 260)]}
+            color="#06b6d4"
+            lineWidth={2.0}
+            transparent
+            opacity={0.92}
+          />
+
+          {/* Guide Targeting Concentric Rings */}
+          <mesh position={[0, 2.2, 170]}>
+            <ringGeometry args={[6, 8, 32]} />
+            <meshBasicMaterial color="#ec4899" transparent opacity={0.85} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 2.2, 170]}>
+            <ringGeometry args={[12, 14, 32]} />
+            <meshBasicMaterial color="#06b6d4" transparent opacity={0.65} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Mobile Compass Sight Marker Badge */}
+          <Html position={[0, 4.2, 80]} center className="pointer-events-none select-none">
+            <div className="px-2.5 py-1 rounded-full bg-pink-950/95 border border-pink-500/80 text-pink-300 font-mono text-[10px] font-black shadow-[0_0_15px_rgba(236,72,153,0.7)] backdrop-blur-md whitespace-nowrap animate-pulse flex items-center gap-1">
+              <span>📱 PHONE COMPASS GUIDE SIGHT</span>
+            </div>
+          </Html>
+        </group>
+      )}
+
+      {/* Direct Line of Sight Beam to Tracked Satellite (GOLDEN AMBER) */}
+      {targetSat && (
         <Line
           points={[new THREE.Vector3(0, 2.4, 0), targetSat.vec3]}
           color="#f59e0b"
@@ -714,7 +790,6 @@ function ObserverGroundStation({
         <ringGeometry args={[5.8, 18, 64]} />
         <meshBasicMaterial color={targetSat ? "#f59e0b" : "#10b981"} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
-
     </group>
   );
 }
@@ -965,13 +1040,19 @@ function Clean3DSkyDome({
   satellites,
   onSelectSat,
   mobileOrientation,
+  isAimLocked = false,
+  isGuideActive = false,
+  onAligned,
 }: {
   showGround: boolean;
   showGrid: boolean;
   targetSat: ComputedSatelliteSkyState | null;
   satellites: ComputedSatelliteSkyState[];
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
-  mobileOrientation?: { heading: number; pitch: number } | null;
+  mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
+  isAimLocked?: boolean;
+  isGuideActive?: boolean;
+  onAligned?: () => void;
 }) {
   const cardinals = useMemo(() => {
     const r = SKY_RADIUS * 0.96;
@@ -1052,6 +1133,9 @@ function Clean3DSkyDome({
         satellites={satellites}
         onSelectSat={onSelectSat}
         mobileOrientation={mobileOrientation}
+        isAimLocked={isAimLocked}
+        isGuideActive={isGuideActive}
+        onAligned={onAligned}
       />
 
 
@@ -1899,6 +1983,9 @@ function SatelliteTrackerCelestialScene({
   is180DomeView,
   mobileOrientation,
   mobileSightMode = "track",
+  isAimLocked = false,
+  isGuideActive = false,
+  onAligned,
 }: {
   observer: ObserverCoords;
   currentDate: Date;
@@ -1914,6 +2001,9 @@ function SatelliteTrackerCelestialScene({
   is180DomeView: boolean;
   mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
   mobileSightMode?: "ar" | "track";
+  isAimLocked?: boolean;
+  isGuideActive?: boolean;
+  onAligned?: () => void;
 }) {
   const smoothedTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 40, 200));
   const isTargetInit = useRef<boolean>(false);
@@ -1947,8 +2037,8 @@ function SatelliteTrackerCelestialScene({
         // FIRST-PERSON AR SKY VIEWER MODE: Smooth fluid orientation
         camera.position.set(0, 10, 0);
         camera.lookAt(smoothedTarget.current);
-      } else if (controlsRef.current) {
-        // OBSERVATORY TRACK MODE: Orbit controls target smoothly glides to sight vector
+      } else if (controlsRef.current && (!isAimLocked || !selectedSat)) {
+        // OBSERVATORY TRACK MODE: Orbit controls target smoothly glides to sight vector (when not aim-locked to satellite)
         controlsRef.current.target.lerp(smoothedTarget.current, damp);
         controlsRef.current.update();
       }
@@ -1990,6 +2080,9 @@ function SatelliteTrackerCelestialScene({
         satellites={satellites}
         onSelectSat={onSelectSat}
         mobileOrientation={mobileOrientation}
+        isAimLocked={isAimLocked}
+        isGuideActive={isGuideActive}
+        onAligned={onAligned}
       />
 
       {/* OrbitControls: Free 180° rotation when is180DomeView is true, fixed observer lock when false */}
@@ -2321,9 +2414,62 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     [allSatellites]
   );
 
+  // Satellite Aim Lock & Phone Compass Alignment Guide states
+  const [isAimLocked, setIsAimLocked] = useState<boolean>(false);
+  const [isGuideActive, setIsGuideActive] = useState<boolean>(false);
+
+  // Auto-handoff callback: When newly created guide line aligns with satellite tracking line
+  const handleAligned = useCallback(() => {
+    setIsGuideActive(false);
+    setIsAimLocked(false);
+    showToast("🎯 SIGHT ALIGNED! Mobile compass now tracking satellite directly");
+  }, []);
+
+  // Live Compass Alignment Guidance Telemetry
+  const guidanceData = useMemo(() => {
+    if (!detailedSelectedSat || !mobileOrientation) return null;
+    const satAz = detailedSelectedSat.azimuthDeg;
+    const satEl = detailedSelectedSat.elevationDeg;
+    const phoneHeading = mobileOrientation.heading;
+    const phonePitch = mobileOrientation.pitch;
+
+    let deltaAz = ((satAz - phoneHeading + 540) % 360) - 180; // >0 turn right, <0 turn left
+    let deltaEl = satEl - phonePitch; // >0 tilt up, <0 tilt down
+    const deltaTotal = Math.sqrt(deltaAz * deltaAz + deltaEl * deltaEl);
+    const alignmentPct = Math.max(0, Math.min(100, Math.round(100 - (deltaTotal / 45) * 100)));
+
+    let turnInstruction = "";
+    if (Math.abs(deltaAz) > 3) {
+      turnInstruction += deltaAz > 0 ? `👉 Turn Right ${Math.round(deltaAz)}°` : `👈 Turn Left ${Math.round(Math.abs(deltaAz))}°`;
+    }
+    if (Math.abs(deltaEl) > 3) {
+      if (turnInstruction) turnInstruction += " • ";
+      turnInstruction += deltaEl > 0 ? `👆 Tilt Up ${Math.round(deltaEl)}°` : `👇 Tilt Down ${Math.round(Math.abs(deltaEl))}°`;
+    }
+    if (!turnInstruction) {
+      turnInstruction = "🎯 PERFECT ALIGNMENT (≤3.8°)!";
+    }
+
+    return {
+      satAz,
+      satEl,
+      phoneHeading,
+      phonePitch,
+      deltaAz,
+      deltaEl,
+      deltaTotal,
+      alignmentPct,
+      turnInstruction,
+    };
+  }, [detailedSelectedSat, mobileOrientation]);
+
   // Telescope Track Satellite
   const handleTrackSatellite = (sat: ComputedSatelliteSkyState) => {
     setSelectedSat(sat);
+    setIsAimLocked(true);
+    if (isMobileSynced) {
+      setIsGuideActive(true);
+    }
     setIsTelemetryPanelOpen(false); // Automatically compress 24h pass telemetry panel back into animated icon!
     showToast(`Precision Lock: ${sat.name}`);
     if (controlsRef.current) {
@@ -2360,6 +2506,9 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             is180DomeView={is180DomeView}
             mobileOrientation={mobileOrientation}
             mobileSightMode={mobileSightMode}
+            isAimLocked={isAimLocked}
+            isGuideActive={isGuideActive}
+            onAligned={handleAligned}
           />
         </Canvas>
 
@@ -2495,35 +2644,50 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               {/* Divider */}
               <div className="w-px h-5 bg-slate-800 shrink-0 mx-0.5" />
 
-              {/* COMPRESSED ANIMATED 24-HOUR PASS TELEMETRY ICON (PLACED AT RIGHT UPPER CORNER IN DISPLAY WINDOW) */}
+              {/* FLOATING SATELLITE SPACE STATION ICON (UPPER RIGHT CORNER — TOUCH TO OPEN 24H PASS TELEMETRY PANEL) */}
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                animate={{
+                  y: [0, -4, 0],
+                }}
+                transition={{
+                  duration: 3.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
                 onClick={() => setIsTelemetryPanelOpen((prev) => !prev)}
-                className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 border shadow-lg cursor-pointer select-none ${
+                className={`relative flex items-center gap-2 px-2.5 py-1 rounded-xl text-xs font-semibold transition border shadow-xl cursor-pointer select-none group ${
                   isTelemetryPanelOpen
-                    ? "bg-emerald-500 border-emerald-400 text-slate-950 font-bold shadow-[0_0_20px_rgba(16,185,129,0.5)]"
-                    : "bg-slate-900/90 border-emerald-500/50 text-emerald-300 hover:border-emerald-400 hover:bg-slate-800/90 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+                    ? "bg-emerald-500/20 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.5)]"
+                    : "bg-slate-900/90 border-cyan-500/50 hover:border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
                 }`}
-                title={isTelemetryPanelOpen ? "Compress 24-Hour Pass Telemetry Panel" : "Open 24-Hour Sky Pass Telemetry Panel"}
+                title={isTelemetryPanelOpen ? "Compress 24-Hour Pass Telemetry Panel" : "Open 24-Hour Satellite Pass Telemetry Panel"}
               >
-                {/* Pulsing Radar Wave */}
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                </span>
-                <Radio className={`h-3.5 w-3.5 ${isTelemetryPanelOpen ? "text-slate-950" : "text-emerald-400 animate-pulse"}`} />
-                <span className="font-mono font-extrabold tracking-wide hidden sm:inline">
-                  24h PASS ({visible24hCount})
-                </span>
-                <span className="font-mono font-extrabold sm:hidden">
-                  {visible24hCount}
-                </span>
+                <div className="relative w-7 h-7 flex items-center justify-center shrink-0">
+                  <img
+                    src="/images/floating-satellite-station.png"
+                    alt="24h Satellite Pass Telemetry Icon"
+                    className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(6,182,212,0.8)] group-hover:rotate-6 transition-transform"
+                  />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
+                  </span>
+                </div>
+                <div className="flex flex-col text-left leading-tight">
+                  <span className="font-mono font-extrabold tracking-wider text-[11px] text-white">
+                    24h PASS
+                  </span>
+                  <span className="font-mono text-[9px] text-cyan-400 font-bold">
+                    {visible24hCount} Visible
+                  </span>
+                </div>
               </motion.button>
             </div>
           </div>
 
-          {/* ROW 2: HUD TELEMETRY (LEFT) & SCENE OPTION BAR (RIGHT) */}
+          {/* ROW 2: HUD TELEMETRY (LEFT), FLOATING GUIDE TAB (CENTER) & SCENE OPTION BAR (RIGHT) */}
           <div className="flex items-center justify-between gap-2 pointer-events-auto select-none">
             {/* Left: Telemetry HUD (Bearing & Live Simulation Clock) */}
             <div className="flex items-center gap-2 shrink-0">
@@ -2543,6 +2707,37 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
                 <span className="hidden md:inline text-amber-400/70 font-normal">({currentDate.toLocaleDateString()})</span>
               </div>
             </div>
+
+            {/* Center / Row 2: FLOATING "GUIDE" OPTION TAB */}
+            {detailedSelectedSat && (
+              <motion.button
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => {
+                  if (!isMobileSynced) {
+                    setShowQrPanel(true);
+                    showToast("📱 Connect mobile phone to activate Guide Sight");
+                  } else {
+                    setIsGuideActive((prev) => !prev);
+                    showToast(isGuideActive ? "🧭 Guide Sight Deactivated" : "🧭 Guide Sight Active: Follow pink beam to satellite");
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border shadow-xl cursor-pointer ${
+                  isGuideActive
+                    ? "bg-pink-600 border-pink-400 text-white shadow-[0_0_20px_rgba(236,72,153,0.6)] animate-pulse"
+                    : "bg-slate-950/90 border-pink-500/60 text-pink-300 hover:bg-pink-950/60"
+                }`}
+                title="Floating Compass Alignment Guide: Creates a new line of sight driven by phone compass to guide phone into alignment with satellite tracking sight"
+              >
+                <Navigation className={`h-3.5 w-3.5 ${isGuideActive ? "rotate-45 text-white" : "text-pink-400"}`} />
+                <span className="font-mono tracking-wider">GUIDE</span>
+                {guidanceData && isGuideActive && (
+                  <span className="px-1.5 py-0.2 rounded-md bg-black/40 text-[10px] font-mono font-bold text-pink-200">
+                    {guidanceData.deltaTotal.toFixed(0)}°
+                  </span>
+                )}
+              </motion.button>
+            )}
 
             {/* Right: SCENE OPTION BAR — PERMANENTLY ANCHORED, NEVER WRAPS OR GOES DOWN */}
             <div className="flex items-center gap-1 bg-slate-950/90 border border-slate-800/80 p-1 rounded-xl backdrop-blur-2xl shadow-xl shrink-0 ml-auto">
@@ -2632,6 +2827,76 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             </div>
           )}
         </div>
+
+        {/* FLOATING COMPASS SIGHT ALIGNMENT GUIDANCE HUD OVERLAY */}
+        {isGuideActive && detailedSelectedSat && (
+          <div className="absolute top-28 left-1/2 -translate-x-1/2 z-40 w-[340px] sm:w-[440px] bg-slate-950/95 border-2 border-pink-500/80 rounded-2xl shadow-[0_0_40px_rgba(236,72,153,0.45)] backdrop-blur-2xl p-3.5 font-sans pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+              <div className="flex items-center gap-2">
+                <Navigation className="h-4 w-4 text-pink-400 animate-spin-slow" />
+                <span className="font-black text-xs text-white uppercase tracking-wider">
+                  COMPASS SIGHT ALIGNMENT GUIDE
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-500/40 truncate max-w-[120px]">
+                  {detailedSelectedSat.name}
+                </span>
+                <button
+                  onClick={() => setIsGuideActive(false)}
+                  className="text-slate-400 hover:text-white text-xs font-bold px-1"
+                  title="Close Guide"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {mobileOrientation ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs font-mono bg-pink-950/40 p-2 rounded-xl border border-pink-500/30">
+                  <span className="text-slate-300 font-semibold text-[11px]">Move Phone:</span>
+                  <span className="text-pink-300 font-black tracking-wide text-xs animate-pulse">
+                    {guidanceData?.turnInstruction}
+                  </span>
+                </div>
+
+                {/* Alignment percentage progress bar */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-300">
+                    <span>Alignment Progress</span>
+                    <span className="text-cyan-300 font-bold">{guidanceData?.alignmentPct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                    <div
+                      className="bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 h-full transition-all duration-150"
+                      style={{ width: `${guidanceData?.alignmentPct || 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-0.5">
+                  <span>Angular Delta: <strong className="text-pink-300">{guidanceData?.deltaTotal.toFixed(1)}°</strong></span>
+                  <span className="text-emerald-400 font-bold">Target Zone: ≤ 3.8°</span>
+                </div>
+
+                <div className="text-[10px] text-slate-400 leading-snug border-t border-slate-800/80 pt-1.5">
+                  Follow the pink guide sight line. Once your phone compass aligns with the satellite sight (&le; 3.8°), the guide beam disappears and live tracking begins.
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-300 text-center py-2 flex flex-col items-center gap-2">
+                <span className="text-[11px]">Connect your phone via QR sync to show live mobile compass guide sight</span>
+                <button
+                  onClick={() => setShowQrPanel(true)}
+                  className="px-3 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                >
+                  Open Phone QR Sync
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Toast Popup */}
         {toastMessage && (
@@ -2919,13 +3184,15 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               <button
                 onClick={() => {
                   setSelectedSat(null);
+                  setIsAimLocked(false);
+                  setIsGuideActive(false);
                   if (controlsRef.current) {
                     controlsRef.current.target.set(0, is180DomeView ? 60 : 25, 0);
                     controlsRef.current.update();
                   }
                   showToast("🔭 Tracking Undone: Reset to Neutral Sight");
                 }}
-                className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center transition shadow-md cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center transition shadow-md cursor-pointer font-bold"
                 title="Close satellite details and undo tracking"
               >
                 ✕
@@ -2981,10 +3248,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
             <button
               onClick={() => handleTrackSatellite(detailedSelectedSat)}
-              className="w-full py-2.5 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs transition flex items-center justify-center gap-1.5 shadow-lg"
+              className={`w-full py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-lg cursor-pointer ${
+                isAimLocked
+                  ? "bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-[0_0_20px_rgba(245,158,11,0.5)]"
+                  : "bg-emerald-500 hover:bg-emerald-400 text-slate-950"
+              }`}
             >
               <Target className="h-4 w-4" />
-              <span>AIM ROBOT SIGHT & TRACK CAMERA</span>
+              <span>{isAimLocked ? "⚡ AIM ROBOT SIGHT ACTIVE (LOCKED)" : "AIM ROBOT SIGHT & TRACK CAMERA"}</span>
             </button>
           </div>
         )}
