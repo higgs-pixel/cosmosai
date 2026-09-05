@@ -310,6 +310,7 @@ export default function TrackMySkyDashboard() {
   const setStoreSatellitesList = useOrbitalStore((s) => s.setSatellitesList);
   const workerRef = useRef<Worker | null>(null);
   const latestPositionsRef = useRef<Float32Array | null>(null);
+  const isWorkerBusyRef = useRef(false);
 
   // Sync satellitesList into orbital store for 3D trajectory calculation
   useEffect(() => {
@@ -332,6 +333,7 @@ export default function TrackMySkyDashboard() {
       worker.postMessage({ type: "init", data: satellitesList });
 
       worker.onmessage = (e) => {
+        isWorkerBusyRef.current = false;
         const { type, buffer } = e.data;
         if (type === "positions") {
           latestPositionsRef.current = buffer;
@@ -351,8 +353,9 @@ export default function TrackMySkyDashboard() {
   useEffect(() => {
     let frameId: number;
     const loop = () => {
-      if (workerRef.current && satellitesList.length > 0) {
+      if (workerRef.current && satellitesList.length > 0 && !isWorkerBusyRef.current) {
         const currentTime = useOrbitalStore.getState().timeMs;
+        isWorkerBusyRef.current = true;
         workerRef.current.postMessage({
           type: "propagate",
           timeMs: currentTime,
@@ -385,24 +388,25 @@ export default function TrackMySkyDashboard() {
     handleLiveSync();
   }, [handleLiveSync]);
 
-  // Throttled Clock Loop (Eliminates 120Hz React re-rendering lag)
+  // Continuous 60fps clock tick loop for silky smooth orbit simulation at any speed (1x, 2x, 5x, 10x, 60x...)
   useEffect(() => {
     if (isPaused) return;
 
-    const intervalMs = speed > 1 ? 100 : 500;
     let lastTime = performance.now();
+    let frameId: number;
 
-    const timer = setInterval(() => {
-      const now = performance.now();
+    const loop = (now: number) => {
       const delta = now - lastTime;
       lastTime = now;
-      if (delta > 0 && delta < 10000) {
+      if (delta > 0 && delta < 1000) {
         tick(delta);
       }
-    }, intervalMs);
+      frameId = requestAnimationFrame(loop);
+    };
 
-    return () => clearInterval(timer);
-  }, [tick, isPaused, speed]);
+    frameId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frameId);
+  }, [tick, isPaused]);
 
   // Satellite Group Selection for Track My Sky
   const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
@@ -603,16 +607,24 @@ export default function TrackMySkyDashboard() {
   };
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Real-Time Astronomical Visibility Computation Pass (Every Frame/Tick)
+  // Real-Time Astronomical Visibility Computation Pass
   // Evaluates 3-Condition Naked-Eye Visibility Test for all satellites
   // ───────────────────────────────────────────────────────────────────────────
-  // Performance Bucket 1: 2-Second Time Bucket for SGP4 satellite position evaluations
-  const timeSecBucket = useMemo(() => Math.floor(timeMs / 2000), [timeMs]);
+  // Decoupled Evaluation Clock for heavy table & pass calculations:
+  // Throttled to ~600ms of real clock time during high-speed simulations (1x, 2x, 5x, 10x, 60x...)
+  // This prevents running 500 SGP4 visibility calculations 60 times/sec on the main JS thread
+  const [evalTimeMs, setEvalTimeMs] = useState(timeMs);
+  const lastEvalRealTimeRef = useRef(performance.now());
 
-  // Performance Bucket 2: 60-Second Time Bucket for pass predictions
-  const passCalcBucket = useMemo(() => Math.floor(timeMs / 60000), [timeMs]);
+  useEffect(() => {
+    const now = performance.now();
+    if (isPaused || now - lastEvalRealTimeRef.current > 600) {
+      lastEvalRealTimeRef.current = now;
+      setEvalTimeMs(timeMs);
+    }
+  }, [timeMs, isPaused]);
 
-  const date = useMemo(() => new Date(timeSecBucket * 2000), [timeSecBucket]);
+  const date = useMemo(() => new Date(evalTimeMs), [evalTimeMs]);
 
   const twilight = useMemo(() => {
     return getObserverTwilight(date, observer.lat, observer.lon);
@@ -654,7 +666,7 @@ export default function TrackMySkyDashboard() {
     }
 
     return results.sort((a, b) => b.elevationDeg - a.elevationDeg);
-  }, [satrecCatalog, observer, timeSecBucket]);
+  }, [satrecCatalog, observer, date]);
 
   const visibilityResults = useMemo(() => {
     return allEvaluatedSats.filter((s) => s.isAboveHorizon).sort((a, b) => {
@@ -704,11 +716,13 @@ export default function TrackMySkyDashboard() {
     return visibilityResults[0] || allEvaluatedSats[0] || (candidateSatellites[0] ? evaluateSatelliteVisibility(candidateSatellites[0], observer, date) : null);
   }, [visibilityResults, allEvaluatedSats, candidateSatellites, satellitesList, selectedSatId, observer, date]);
 
-  // Upcoming Satellite Pass Predictions Engine (Recomputed once every 60 seconds)
+  // Upcoming Satellite Pass Predictions Engine (Recomputed every 15 minutes of simulation time)
+  const passCalcBucket = useMemo(() => Math.floor(evalTimeMs / (15 * 60_000)), [evalTimeMs]);
+
   const upcomingPasses = useMemo(() => {
     if (loadingSats || candidateSatellites.length === 0) return [];
     const hours = timeframeFilter === "1h" ? 1 : timeframeFilter === "6h" ? 6 : 24;
-    const passes = predictUpcomingPasses(candidateSatellites, observer, passCalcBucket * 60000, hours);
+    const passes = predictUpcomingPasses(candidateSatellites, observer, passCalcBucket * (15 * 60_000), hours);
     if (onlyVisible) {
       return passes.filter((p) => p.isVisibleToEye);
     }

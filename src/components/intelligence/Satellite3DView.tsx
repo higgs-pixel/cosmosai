@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Line, useTexture, Html } from "@react-three/drei";
 import * as satellite from "satellite.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useOrbitalStore, SatelliteData } from "./store";
 
 const EARTH_RADIUS_3D = 4.0;
@@ -56,18 +57,20 @@ function SelectedOrbitTrack({
   satellites: SatelliteData[];
   selectedSatId: number | null;
 }) {
-  const timeMs = useOrbitalStore((s) => s.timeMs);
+  // Coarsen orbit track recalculation bucket to every 4 seconds of simulation time
+  // This eliminates 10,800 redundant SGP4 loops/sec while keeping orbit shape crystal clear
+  const orbitTimeBucket = useOrbitalStore((s) => Math.floor(s.timeMs / 4000));
+  const effectiveId = selectedSatId ?? 25544;
 
   // Default to ISS (25544) if no satellite is selected
   const targetSat = useMemo(() => {
-    const id = selectedSatId ?? 25544;
     return (
-      satellites.find((s) => s.id === id) ||
+      satellites.find((s) => s.id === effectiveId) ||
       satellites.find((s) => s.id === 25544) ||
       satellites[0] ||
       null
     );
-  }, [satellites, selectedSatId]);
+  }, [satellites, effectiveId]);
 
   const satrec = useMemo(() => {
     if (!targetSat) return null;
@@ -85,12 +88,13 @@ function SelectedOrbitTrack({
     const pts: THREE.Vector3[] = [];
     const meanMotion = satrec.no || 0.06;
     const periodMin = (2 * Math.PI) / meanMotion;
-    const steps = 180;
-    const now = new Date(timeMs);
+    const steps = 120;
+    const baseTime = orbitTimeBucket * 4000;
+    const now = new Date(baseTime);
     const gmstNow = satellite.gstime(now);
 
     for (let i = 0; i <= steps; i++) {
-      const propTime = new Date(timeMs + (i / steps) * periodMin * 60_000);
+      const propTime = new Date(baseTime + (i / steps) * periodMin * 60_000);
       const posAndVel = satellite.propagate(satrec, propTime);
       const pos = posAndVel?.position;
       if (!pos || typeof pos === "boolean" || isNaN(pos.x)) continue;
@@ -108,62 +112,50 @@ function SelectedOrbitTrack({
       }
     }
     return pts;
-  }, [satrec, timeMs]);
+  }, [satrec, orbitTimeBucket]);
 
   if (points.length < 2) return null;
-  return <Line points={points} color="#00ff88" lineWidth={2.4} opacity={0.95} transparent />;
+  return <Line points={points} color="#00ff88" lineWidth={2.2} opacity={0.9} transparent />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Subpoint connector line
+// CameraController — Smooth GPU-direct tracking without React re-renders
 // ─────────────────────────────────────────────────────────────────────────────
-function SelectedSubpointConnector({ ecefPos }: { ecefPos: THREE.Vector3 | null }) {
-  if (!ecefPos) return null;
-  const surface = ecefPos.clone().normalize().multiplyScalar(EARTH_RADIUS_3D);
-  return (
-    <group>
-      <Line points={[ecefPos, surface]} color="#ffcc00" lineWidth={1} dashed dashSize={0.2} gapSize={0.1} />
-      <mesh position={surface}>
-        <sphereGeometry args={[0.08, 16, 16]} />
-        <meshBasicMaterial color="#ffcc00" />
-      </mesh>
-    </group>
-  );
-}
-
 function CameraController({
-  worldPos,
+  worldPosRef,
   lockCamera,
   controlsRef,
+  selectedId,
 }: {
-  worldPos: THREE.Vector3 | null;
+  worldPosRef: React.MutableRefObject<THREE.Vector3 | null>;
   lockCamera: boolean;
   controlsRef: React.RefObject<any>;
+  selectedId: number | null;
 }) {
   const { camera } = useThree();
   const prevIdRef = useRef<string | null>(null);
-  const selectedId = useOrbitalStore((s) => s.selectedSatelliteId);
-
-  useEffect(() => {
-    if (!worldPos || !selectedId) return;
-    if (String(selectedId) === prevIdRef.current) return;
-    prevIdRef.current = String(selectedId);
-    const dir = worldPos.clone().normalize();
-    const camPos = worldPos.clone().add(dir.multiplyScalar(3.0));
-    camera.position.lerp(camPos, 0.8);
-    controlsRef.current?.target.lerp(worldPos, 0.8);
-  }, [selectedId, worldPos, camera, controlsRef]);
 
   useFrame(() => {
-    if (!controlsRef.current || !worldPos || !lockCamera) return;
-    controlsRef.current.target.lerp(worldPos, 0.1);
-    controlsRef.current.update();
+    const worldPos = worldPosRef.current;
+    if (!worldPos) return;
+
+    if (selectedId && String(selectedId) !== prevIdRef.current) {
+      prevIdRef.current = String(selectedId);
+      const dir = worldPos.clone().normalize();
+      const camPos = worldPos.clone().add(dir.multiplyScalar(3.0));
+      camera.position.lerp(camPos, 0.2);
+      controlsRef.current?.target.lerp(worldPos, 0.4);
+      controlsRef.current?.update();
+    }
+
+    if (lockCamera && controlsRef.current) {
+      controlsRef.current.target.lerp(worldPos, 0.1);
+      controlsRef.current.update();
+    }
   });
 
   return null;
 }
-
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sleek 3D Satellite Geometry Generator (Merged Bus, Dual Solar Wings & Dish)
@@ -228,30 +220,216 @@ function create3DSatelliteGeometry(): THREE.BufferGeometry {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Selected 3D Satellite Animated Model
+// TrackedSatelliteCurrentLocation — Prominent 3D Spacecraft, Reticle & Connector
 // ─────────────────────────────────────────────────────────────────────────────
-function Selected3DSatelliteModel({ position }: { position: THREE.Vector3 }) {
+function TrackedSatelliteCurrentLocation({
+  satellites,
+  selectedSatId,
+  worldPosRef,
+}: {
+  satellites: SatelliteData[];
+  selectedSatId: number | null;
+  worldPosRef: React.MutableRefObject<THREE.Vector3 | null>;
+}) {
+  const { camera } = useThree();
+  const satGroupRef = useRef<THREE.Group>(null);
   const modelRef = useRef<THREE.Group>(null);
+  const reticleRef = useRef<THREE.Group>(null);
+  const subpointRef = useRef<THREE.Group>(null);
+  const connectorLine = useMemo(() => {
+    const geom = new THREE.BufferGeometry();
+    const mat = new THREE.LineBasicMaterial({ color: "#00ff88", transparent: true, opacity: 0.75 });
+    return new THREE.Line(geom, mat);
+  }, []);
+
+  const [telemetry, setTelemetry] = useState<{ altKm: number; velKms: number; name: string }>({
+    altKm: 420,
+    velKms: 7.66,
+    name: "ISS (ZARYA)",
+  });
+  const lastTelemetryUpdateRef = useRef(0);
+
+  const effectiveId = selectedSatId ?? 25544;
+
+  const targetSat = useMemo(() => {
+    return (
+      satellites.find((s) => s.id === effectiveId) ||
+      satellites.find((s) => s.id === 25544) ||
+      satellites[0] ||
+      null
+    );
+  }, [satellites, effectiveId]);
+
+  const satrec = useMemo(() => {
+    if (!targetSat) return null;
+    try {
+      const sr = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
+      if (sr && !sr.error) return sr;
+    } catch {
+      /* skip */
+    }
+    return null;
+  }, [targetSat]);
+
   const sat3DGeometry = useMemo(() => create3DSatelliteGeometry(), []);
+  const linePositions = useMemo(() => new Float32Array(6), []);
 
   useFrame(({ clock }) => {
+    if (!satrec || !satGroupRef.current) return;
+
+    const timeMs = useOrbitalStore.getState().timeMs;
+    const now = new Date(timeMs);
+    const gmst = satellite.gstime(now);
+
+    const pv = satellite.propagate(satrec, now);
+    const pos = pv?.position;
+    const vel = pv?.velocity;
+
+    if (!pos || typeof pos === "boolean" || isNaN(pos.x)) return;
+
+    const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmst);
+    const lat = satellite.degreesLat(gd.latitude);
+    let lon = satellite.degreesLong(gd.longitude);
+    if (lon > 180) lon -= 360;
+    if (lon < -180) lon += 360;
+
+    const altKm = gd.height || 420;
+    const r = EARTH_RADIUS_3D * (1 + altKm / EARTH_RADIUS_KM);
+    const ecefPos = latLonToVector3(lat, lon, r);
+    const surfacePos = ecefPos.clone().normalize().multiplyScalar(EARTH_RADIUS_3D + 0.02);
+
+    // 1. Position satellite spacecraft model directly on GPU
+    satGroupRef.current.position.copy(ecefPos);
+
     if (modelRef.current) {
-      modelRef.current.rotation.y = clock.getElapsedTime() * 1.5;
+      modelRef.current.rotation.y = clock.getElapsedTime() * 1.0;
+    }
+
+    // 2. Holographic targeting reticle always faces camera
+    if (reticleRef.current) {
+      const pulse = 1.0 + 0.12 * Math.sin(clock.getElapsedTime() * 4.0);
+      reticleRef.current.scale.set(pulse, pulse, pulse);
+      reticleRef.current.quaternion.copy(camera.quaternion);
+    }
+
+    // 3. Ground subpoint marker on Earth's surface directly beneath the satellite
+    if (subpointRef.current) {
+      subpointRef.current.position.copy(surfacePos);
+      subpointRef.current.lookAt(ecefPos);
+    }
+
+    // 4. Update vertical subpoint connector line
+    linePositions[0] = ecefPos.x;
+    linePositions[1] = ecefPos.y;
+    linePositions[2] = ecefPos.z;
+    linePositions[3] = surfacePos.x;
+    linePositions[4] = surfacePos.y;
+    linePositions[5] = surfacePos.z;
+
+    const geom = connectorLine.geometry;
+    const attr = geom.getAttribute("position");
+    if (attr) {
+      attr.needsUpdate = true;
+    } else {
+      geom.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
+    }
+
+    // 5. Update world coordinate reference for smooth camera locking
+    if (satGroupRef.current.parent) {
+      const worldPos = ecefPos.clone();
+      satGroupRef.current.parent.localToWorld(worldPos);
+      worldPosRef.current = worldPos;
+    }
+
+    // 6. Throttled telemetry badge update (every 400ms real time)
+    const nowReal = performance.now();
+    if (nowReal - lastTelemetryUpdateRef.current > 400) {
+      lastTelemetryUpdateRef.current = nowReal;
+      let velVal = 7.66;
+      if (vel && typeof vel !== "boolean" && !isNaN(vel.x)) {
+        velVal = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+      }
+      setTelemetry({
+        altKm: Math.round(altKm),
+        velKms: Number(velVal.toFixed(2)),
+        name: targetSat?.name || (effectiveId === 25544 ? "ISS (ZARYA)" : `SAT-${effectiveId}`),
+      });
     }
   });
 
   return (
-    <group position={position}>
-      <group ref={modelRef} scale={[0.75, 0.75, 0.75]}>
-        <mesh geometry={sat3DGeometry}>
-          <meshStandardMaterial
-            color="#dc0ec4"
-            emissive="#dc0ec4"
-            emissiveIntensity={0.6}
-            roughness={0.2}
-            metalness={0.8}
-          />
+    <group>
+      {/* Dynamic Subpoint Connector Line to Earth Surface */}
+      <primitive object={connectorLine} />
+
+      {/* Ground Subpoint Footprint Marker on Earth's Surface */}
+      <group ref={subpointRef}>
+        <mesh>
+          <sphereGeometry args={[0.07, 16, 16]} />
+          <meshBasicMaterial color="#00ff88" />
         </mesh>
+        <mesh rotation-x={Math.PI / 2}>
+          <ringGeometry args={[0.10, 0.17, 24]} />
+          <meshBasicMaterial color="#00ff88" side={THREE.DoubleSide} transparent opacity={0.65} />
+        </mesh>
+      </group>
+
+      {/* Satellite Main Body & Holographic Reticle */}
+      <group ref={satGroupRef}>
+        {/* Sleek Spacecraft 3D Model with High-Contrast Finish */}
+        <group ref={modelRef} scale={[1.35, 1.35, 1.35]}>
+          <mesh geometry={sat3DGeometry}>
+            <meshStandardMaterial
+              color="#00ff88"
+              emissive="#00e5ff"
+              emissiveIntensity={0.8}
+              roughness={0.2}
+              metalness={0.85}
+            />
+          </mesh>
+          {/* Glowing Center Core Beacon */}
+          <mesh>
+            <sphereGeometry args={[0.08, 16, 16]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+        </group>
+
+        {/* Pulsing Locator Reticle Rings */}
+        <group ref={reticleRef}>
+          {/* Outer Holographic Reticle Ring */}
+          <mesh>
+            <ringGeometry args={[0.34, 0.38, 32]} />
+            <meshBasicMaterial color="#00ff88" side={THREE.DoubleSide} transparent opacity={0.85} />
+          </mesh>
+          {/* Inner Cyan Radar Accent Ring */}
+          <mesh>
+            <ringGeometry args={[0.22, 0.25, 24]} />
+            <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.65} />
+          </mesh>
+        </group>
+
+        {/* Spatial 3D Floating Liquid Glass Telemetry Badge */}
+        <Html
+          position={[0, 0.48, 0]}
+          center
+          distanceFactor={15}
+          zIndexRange={[100, 0]}
+          className="pointer-events-none select-none"
+        >
+          <div className="flex flex-col items-center gap-0.5 whitespace-nowrap">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-950/90 border border-[#00ff88]/80 shadow-[0_0_15px_rgba(0,255,136,0.4)] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-ping" />
+              <span className="font-mono text-[10px] font-bold text-white tracking-wider uppercase">
+                {telemetry.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900/85 border border-white/10 text-[9px] font-mono text-[#00e5ff]">
+              <span>ALT: {telemetry.altKm} KM</span>
+              <span className="text-white/30">|</span>
+              <span>VEL: {telemetry.velKms} KM/S</span>
+            </div>
+          </div>
+        </Html>
       </group>
     </group>
   );
@@ -271,7 +449,7 @@ function SatellitesInstancedMesh({
   satellites: SatelliteData[];
   latestPositions?: React.RefObject<Float32Array | null>;
   selectedId: number | null;
-  onEcefPosUpdate: (pos: THREE.Vector3 | null) => void;
+  onEcefPosUpdate?: (pos: THREE.Vector3 | null) => void;
   onHoverChange: (sat: SatelliteData | null) => void;
   onTrackSatellite?: (id: number) => void;
 }) {
@@ -382,7 +560,7 @@ function SatellitesInstancedMesh({
 
       mesh.instanceMatrix.needsUpdate = true;
       if (hitMesh) hitMesh.instanceMatrix.needsUpdate = true;
-      onEcefPosUpdate(selectedEcef);
+      onEcefPosUpdate?.(selectedEcef);
       return;
     }
 
@@ -445,7 +623,7 @@ function SatellitesInstancedMesh({
 
     mesh.instanceMatrix.needsUpdate = true;
     if (hitMesh) hitMesh.instanceMatrix.needsUpdate = true;
-    onEcefPosUpdate(selectedEcef);
+    onEcefPosUpdate?.(selectedEcef);
   });
 
   if (satellites.length === 0) return null;
@@ -563,30 +741,8 @@ function EarthScene({
   observer?: { lat: number; lon: number; name?: string };
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const worldPosRef = useRef<THREE.Vector3 | null>(null);
   const effectiveId = selectedSatId ?? 25544;
-
-  const [selectedEcef, setSelectedEcef] = useState<THREE.Vector3 | null>(null);
-  const [selectedWorld, setSelectedWorld] = useState<THREE.Vector3 | null>(null);
-
-  const targetSat = useMemo(() => {
-    return (
-      satellites.find((s) => s.id === effectiveId) ||
-      satellites.find((s) => s.id === 25544) ||
-      satellites[0] ||
-      null
-    );
-  }, [satellites, effectiveId]);
-
-  const targetSatrec = useMemo(() => {
-    if (!targetSat) return null;
-    try {
-      const sr = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
-      if (sr && !sr.error) return sr;
-    } catch {
-      /* skip */
-    }
-    return null;
-  }, [targetSat]);
 
   useFrame(() => {
     const group = groupRef.current;
@@ -597,32 +753,6 @@ function EarthScene({
     const gmst = satellite.gstime(now);
     updateEarthOrientation(group, gmst);
     group.updateMatrixWorld(true);
-
-    let currentEcef = selectedEcef;
-
-    // Instant SGP4 propagation for target satellite so 3D model, line, and beacon always sync
-    if (targetSatrec) {
-      const pv = satellite.propagate(targetSatrec, now);
-      const pos = pv?.position;
-      if (pos && typeof pos !== "boolean" && !isNaN(pos.x)) {
-        const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmst);
-        const lat = satellite.degreesLat(gd.latitude);
-        let lon = satellite.degreesLong(gd.longitude);
-        if (lon > 180) lon -= 360;
-        if (lon < -180) lon += 360;
-        const altKm = gd.height || 420;
-        const r = EARTH_RADIUS_3D * (1 + altKm / EARTH_RADIUS_KM);
-        currentEcef = latLonToVector3(lat, lon, r);
-      }
-    }
-
-    if (currentEcef) {
-      const w = currentEcef.clone();
-      group.localToWorld(w);
-      setSelectedWorld(w);
-    } else {
-      setSelectedWorld(null);
-    }
   });
 
   return (
@@ -644,11 +774,11 @@ function EarthScene({
           </group>
         )}
 
+        {/* Background constellation satellites */}
         <SatellitesInstancedMesh
           satellites={satellites}
           latestPositions={latestPositions}
           selectedId={effectiveId}
-          onEcefPosUpdate={setSelectedEcef}
           onHoverChange={onHoverChange}
           onTrackSatellite={onTrackSatellite}
         />
@@ -659,17 +789,19 @@ function EarthScene({
           selectedSatId={effectiveId}
         />
 
-        <SelectedSubpointConnector ecefPos={selectedEcef} />
-
-        {selectedEcef && (
-          <Selected3DSatelliteModel position={selectedEcef} />
-        )}
+        {/* Real-time 3D Spacecraft Model, Locator Reticle, Connector Line & Subpoint */}
+        <TrackedSatelliteCurrentLocation
+          satellites={satellites}
+          selectedSatId={effectiveId}
+          worldPosRef={worldPosRef}
+        />
       </group>
 
       <CameraController
-        worldPos={selectedWorld}
+        worldPosRef={worldPosRef}
         lockCamera={lockCamera}
         controlsRef={controlsRef}
+        selectedId={effectiveId}
       />
 
       <OrbitControls

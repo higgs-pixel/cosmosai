@@ -17,7 +17,7 @@ self.onmessage = function(e) {
       }
     }).filter(Boolean);
   } else if (msg.type === 'propagate') {
-    var timeMs = msg.data.timeMs;
+    var timeMs = (msg.data && msg.data.timeMs) || msg.timeMs || Date.now();
     var date = new Date(timeMs);
     var gmst = satellite.gstime(date);
 
