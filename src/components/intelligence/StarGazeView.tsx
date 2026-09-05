@@ -893,7 +893,7 @@ export function getSatelliteCategoryStyle(category?: string, name?: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REALISTIC 3D GLOBE SATELLITE MODEL NODE WITH MULTI-COLOR CATEGORY ACCENTS
+// REALISTIC 3D CELESTIAL BEACON & MODEL NODE WITH MULTI-COLOR CATEGORY ACCENTS
 // ─────────────────────────────────────────────────────────────────────────────
 function Live3DSatelliteNode({
   sat,
@@ -911,6 +911,7 @@ function Live3DSatelliteNode({
   const rootGroupRef = useRef<THREE.Group>(null);
   const nodeRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Mesh>(null);
+  const outerRingRef = useRef<THREE.Mesh>(null);
 
   const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
   const color = isSelected ? "#ffe600" : catStyle.colorHex;
@@ -926,59 +927,82 @@ function Live3DSatelliteNode({
     if (isSelected) {
       const t = clock.getElapsedTime();
       if (glowRef.current) glowRef.current.rotation.z = t * 0.8;
+      if (outerRingRef.current) outerRingRef.current.rotation.z = -t * 0.5;
       if (nodeRef.current) nodeRef.current.rotation.y = t * 0.4;
     }
   });
 
-  // Performance: Only render heavy Drei HTML DOM projection for selected satellite or top 16 brightest overhead
-  const shouldRenderLabel = isSelected || (showLabels && rank != null && rank < 16);
+  // Performance: Render Drei HTML label for selected satellite or top 20 visible overhead when labels are toggled
+  const shouldRenderLabel = isSelected || (showLabels && rank != null && rank < 20);
 
   return (
     <group ref={rootGroupRef} position={sat.vec3.toArray()} onClick={() => onSelectSat(sat)}>
-      {/* Outer Pulsing Lock Target Ring */}
+      {/* 1. LUMINOUS CELESTIAL BEACON (Prominently visible celestial point matching 2D radar) */}
+      <mesh>
+        <sphereGeometry args={[isSelected ? 4.8 : 3.4, 16, 16]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+
+      {/* 2. GLOWING HALO DISC (Translucent aura making satellite sparkle in the night sky) */}
+      <mesh>
+        <ringGeometry args={[isSelected ? 7.0 : 3.8, isSelected ? 11.5 : 5.8, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={isSelected ? 0.65 : 0.3} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* 3. OUTER PULSING HUD TARGET RETICLE (When satellite is actively selected/tracked) */}
       {isSelected && (
-        <mesh ref={glowRef}>
-          <ringGeometry args={[3.2, 4.8, 32]} />
-          <meshBasicMaterial color="#ffe600" transparent opacity={0.85} side={THREE.DoubleSide} />
-        </mesh>
+        <>
+          <mesh ref={glowRef}>
+            <ringGeometry args={[11, 13.2, 32]} />
+            <meshBasicMaterial color="#ffe600" transparent opacity={0.85} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh ref={outerRingRef}>
+            <ringGeometry args={[15.5, 16.5, 32]} />
+            <meshBasicMaterial color="#00f0ff" transparent opacity={0.5} side={THREE.DoubleSide} />
+          </mesh>
+        </>
       )}
 
-      {/* 3D GLOBE SATELLITE MODEL */}
-      <group ref={nodeRef} scale={isSelected ? 1.4 : 1.0}>
-        {/* Central Chassis */}
+      {/* 4. REALISTIC 3D SPACECRAFT MODEL */}
+      <group ref={nodeRef} scale={isSelected ? 2.4 : 1.2}>
+        {/* Central Chassis Bus */}
         <mesh>
           <boxGeometry args={[1.5, 1.2, 1.2]} />
-          <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} emissive={color} emissiveIntensity={0.5} />
+          <meshStandardMaterial
+            color={isSelected ? "#eab308" : color}
+            metalness={0.85}
+            roughness={0.2}
+            emissive={color}
+            emissiveIntensity={isSelected ? 0.6 : 0.3}
+          />
         </mesh>
 
-        {/* Communications Antenna Dish */}
+        {/* Communications Antenna Dish pointing Earthward */}
         <mesh position={[0, 0, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0, 0.6, 0.5, 16]} />
           <meshStandardMaterial color="#f8fafc" metalness={0.9} roughness={0.1} />
         </mesh>
 
-        {/* Left Solar Array Wing */}
+        {/* Photovoltaic Solar Array Wings */}
         <mesh position={[-2.3, 0, 0]}>
           <boxGeometry args={[2.5, 0.75, 0.08]} />
-          <meshStandardMaterial color={color} metalness={0.6} roughness={0.3} emissive={color} emissiveIntensity={0.4} />
+          <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} emissive="#0369a1" emissiveIntensity={0.5} />
         </mesh>
-
-        {/* Right Solar Array Wing */}
         <mesh position={[2.3, 0, 0]}>
           <boxGeometry args={[2.5, 0.75, 0.08]} />
-          <meshStandardMaterial color={color} metalness={0.6} roughness={0.3} emissive={color} emissiveIntensity={0.4} />
+          <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} emissive="#0369a1" emissiveIntensity={0.5} />
         </mesh>
 
-        {/* Wing Axle */}
+        {/* Solar Array Axle */}
         <mesh rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.15, 0.15, 5.0, 8]} />
-          <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.1} />
         </mesh>
       </group>
 
-      {/* Interactive 3D Label */}
+      {/* 5. INTERACTIVE 3D FLOATING HUD BADGE */}
       {shouldRenderLabel && (
-        <Html distanceFactor={140} position={[0, 3.8, 0]} className="pointer-events-auto select-none">
+        <Html distanceFactor={140} position={[0, isSelected ? 6.5 : 4.5, 0]} className="pointer-events-auto select-none">
           <div
             onClick={() => onSelectSat(sat)}
             className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold shadow-2xl border cursor-pointer backdrop-blur-md whitespace-nowrap transition transform hover:scale-110 flex items-center gap-1.5 ${
@@ -998,7 +1022,7 @@ function Live3DSatelliteNode({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3D ORBIT TRAJECTORIES LAYER (PINK ORBIT PATH ARCS & EVENT MARKERS)
+// 3D ORBIT TRAJECTORIES LAYER (AUTHENTIC AEROSPACE PASS TRAJECTORY FOR SELECTED SATELLITE)
 // ─────────────────────────────────────────────────────────────────────────────
 function OrbitTrajectoriesLayer({
   satellites,
@@ -1011,46 +1035,97 @@ function OrbitTrajectoriesLayer({
 }) {
   if (!showOrbits) return null;
 
-  // Render trajectories for selected satellite and all visible overhead satellites with paths
-  const trajectorySats = satellites.filter(
-    (s) => (s.id === selectedSatId || s.isAboveHorizon) && s.trajectoryPoints && s.trajectoryPoints.length >= 2
-  );
+  // Target satellite: Selected satellite has highest priority. If none selected, default to ISS or top visible pass
+  const targetSat =
+    satellites.find((s) => s.id === selectedSatId) ||
+    satellites.find((s) => s.name.toUpperCase().includes("ISS") && s.isAboveHorizon) ||
+    satellites.find((s) => s.isAboveHorizon && s.trajectoryPoints && s.trajectoryPoints.length >= 2);
+
+  if (!targetSat || !targetSat.trajectoryPoints || targetSat.trajectoryPoints.length < 2) {
+    return null;
+  }
+
+  const isSelected = targetSat.id === selectedSatId;
 
   return (
-    <group>
-      {trajectorySats.map((sat) => {
-        const isSelected = sat.id === selectedSatId;
-        const color = isSelected ? "#ffe600" : "#ec4899";
-        const width = isSelected ? 4.8 : 2.2;
-        const opacity = isSelected ? 0.98 : 0.6;
-        return (
-          <group key={`orbit-path-${sat.id}`}>
-            <Line
-              points={sat.trajectoryPoints}
-              color={color}
-              lineWidth={width}
-              transparent
-              opacity={opacity}
-            />
-            {isSelected && sat.passDetails && (
-              <>
-                <mesh position={sat.passDetails.riseVec3.toArray()}>
-                  <sphereGeometry args={[1.4, 16, 16]} />
-                  <meshBasicMaterial color="#ec4899" />
-                </mesh>
-                <mesh position={sat.passDetails.peakVec3.toArray()}>
-                  <sphereGeometry args={[1.8, 16, 16]} />
-                  <meshBasicMaterial color="#ffe600" />
-                </mesh>
-                <mesh position={sat.passDetails.setVec3.toArray()}>
-                  <sphereGeometry args={[1.4, 16, 16]} />
-                  <meshBasicMaterial color="#f472b6" />
-                </mesh>
-              </>
-            )}
+    <group key={`orbit-trajectory-${targetSat.id}`}>
+      {/* 1. Past Trajectory Arc (Subtle dashed path trailing the satellite) */}
+      {targetSat.pastTrajectoryPoints && targetSat.pastTrajectoryPoints.length >= 2 && (
+        <Line
+          points={targetSat.pastTrajectoryPoints}
+          color="#0284c7"
+          lineWidth={3.2}
+          transparent
+          opacity={0.55}
+          dashed
+          dashSize={8}
+          gapSize={4}
+        />
+      )}
+
+      {/* 2. Future Trajectory Arc (Bright solid laser arc ahead to horizon set) */}
+      {targetSat.futureTrajectoryPoints && targetSat.futureTrajectoryPoints.length >= 2 ? (
+        <Line
+          points={targetSat.futureTrajectoryPoints}
+          color={isSelected ? "#ffe600" : "#00f0ff"}
+          lineWidth={4.5}
+          transparent
+          opacity={0.95}
+        />
+      ) : (
+        /* Fallback: Full continuous arc */
+        <Line
+          points={targetSat.trajectoryPoints}
+          color={isSelected ? "#ffe600" : "#00f0ff"}
+          lineWidth={4.2}
+          transparent
+          opacity={0.9}
+        />
+      )}
+
+      {/* 3. Horizon Pass Event Beacons (AOS Rise, PCA Peak, LOS Set) */}
+      {targetSat.passDetails && (
+        <>
+          {/* AOS Horizon Rise Beacon (0° Elevation) */}
+          <group position={targetSat.passDetails.riseVec3.toArray()}>
+            <mesh>
+              <sphereGeometry args={[2.8, 16, 16]} />
+              <meshBasicMaterial color="#10b981" />
+            </mesh>
+            <Html distanceFactor={140} position={[0, 4, 0]}>
+              <div className="px-2 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/60 text-emerald-300 text-[9px] font-mono font-bold whitespace-nowrap shadow-lg">
+                AOS RISE ({targetSat.passDetails.riseTimeStr})
+              </div>
+            </Html>
           </group>
-        );
-      })}
+
+          {/* PCA Peak Elevation Zenith Beacon */}
+          <group position={targetSat.passDetails.peakVec3.toArray()}>
+            <mesh>
+              <sphereGeometry args={[3.6, 16, 16]} />
+              <meshBasicMaterial color="#ffe600" />
+            </mesh>
+            <Html distanceFactor={140} position={[0, 4.5, 0]}>
+              <div className="px-2 py-0.5 rounded-md bg-yellow-950/90 border border-yellow-400/80 text-yellow-300 text-[9px] font-mono font-bold whitespace-nowrap shadow-lg">
+                PEAK {targetSat.passDetails.peakElevationDeg}° ({targetSat.passDetails.peakTimeStr})
+              </div>
+            </Html>
+          </group>
+
+          {/* LOS Horizon Set Beacon (0° Elevation) */}
+          <group position={targetSat.passDetails.setVec3.toArray()}>
+            <mesh>
+              <sphereGeometry args={[2.8, 16, 16]} />
+              <meshBasicMaterial color="#f43f5e" />
+            </mesh>
+            <Html distanceFactor={140} position={[0, 4, 0]}>
+              <div className="px-2 py-0.5 rounded-md bg-rose-950/90 border border-rose-500/60 text-rose-300 text-[9px] font-mono font-bold whitespace-nowrap shadow-lg">
+                LOS SET ({targetSat.passDetails.setTimeStr})
+              </div>
+            </Html>
+          </group>
+        </>
+      )}
     </group>
   );
 }
@@ -2092,11 +2167,13 @@ function SatelliteTrackerCelestialScene({
         showOrbits={showOrbits}
       />
 
-      {/* 3D Satellite Nodes (Green 3D Globe Satellite Model - capped at top 40 for optimal 60fps performance) */}
-      {satellites
-        .filter((sat) => sat.isAboveHorizon || sat.id === selectedSat?.id)
-        .slice(0, 40)
-        .map((sat, idx) => (
+      {/* 3D Satellite Nodes (Luminous Celestial Beacons & 3D Spacecraft Models) */}
+      {(() => {
+        const visibleSats = satellites.filter((sat) => sat.isAboveHorizon || sat.id === selectedSat?.id);
+        if (selectedSat && !visibleSats.some((s) => s.id === selectedSat.id)) {
+          visibleSats.unshift(selectedSat);
+        }
+        return visibleSats.slice(0, 100).map((sat, idx) => (
           <Live3DSatelliteNode
             key={sat.id}
             sat={sat}
@@ -2105,7 +2182,8 @@ function SatelliteTrackerCelestialScene({
             rank={idx}
             onSelectSat={onSelectSat}
           />
-        ))}
+        ));
+      })()}
 
       {/* Sky Dome, Compass, Robot Sight Beam & Starfield */}
       <Clean3DSkyDome
@@ -2716,6 +2794,21 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           isMobileSynced={isMobileSynced}
           onOpenSimDock={() => setShowSimDock((prev) => !prev)}
           showSimDock={showSimDock}
+          isPlaying={isPlaying}
+          onTogglePlay={() => setIsPlaying((prev) => !prev)}
+          timeMultiplier={timeMultiplier}
+          onSetMultiplier={(val) => {
+            setTimeMultiplier(val);
+            if (!isPlaying) setIsPlaying(true);
+            showToast(`Simulation Speed: ${val}x`);
+          }}
+          onResetNow={() => {
+            setCurrentDate(new Date());
+            setTimeMultiplier(1);
+            setSimOffsetMinutes(0);
+            setIsPlaying(true);
+            showToast("Reset to Real Time Now");
+          }}
         />
 
         {/* FLOATING COMPASS SIGHT ALIGNMENT GUIDANCE HUD OVERLAY */}

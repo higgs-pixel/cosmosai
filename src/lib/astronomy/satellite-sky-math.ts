@@ -176,19 +176,19 @@ export function computeViewingRequirements(
   let recommendedOptics = "No Telescope Needed (Naked Eye)";
 
   if (mag <= 2.0) {
-    visibilityClass = "🌟 Ultra-Bright (Naked Eye Landmark)";
+    visibilityClass = "Ultra-Bright (Naked Eye Landmark)";
     visibilityBadgeColor = "text-amber-300 border-amber-500/60 bg-amber-950/80";
     recommendedOptics = "Direct Naked-Eye Sight (Bright Star-Like Flare)";
   } else if (mag <= 5.5) {
-    visibilityClass = "👁️ Naked Eye Visible in Dark/Suburban Sky";
+    visibilityClass = "Naked Eye Visible in Dark/Suburban Sky";
     visibilityBadgeColor = "text-emerald-300 border-emerald-500/50 bg-emerald-950/60";
     recommendedOptics = "Naked Eye or Wide Field 7x50 Binoculars";
   } else if (mag <= 8.5) {
-    visibilityClass = "🔭 Binoculars Required";
+    visibilityClass = "Binoculars Required";
     visibilityBadgeColor = "text-cyan-300 border-cyan-500/50 bg-cyan-950/60";
     recommendedOptics = "Standard 7x50 / 10x50 Astronomical Binoculars";
   } else {
-    visibilityClass = "🔬 Small Telescope Required";
+    visibilityClass = "Small Telescope Required";
     visibilityBadgeColor = "text-purple-300 border-purple-500/50 bg-purple-950/60";
     recommendedOptics = "70mm+ Aperture Refractor / Reflector Telescope";
   }
@@ -430,9 +430,12 @@ export function computeSatelliteState(
     let viewingRequirements: ObserverViewingRequirements | undefined;
 
     if (includeTrajectory) {
-      const isLEO = satAltitudeKm < 3000;
-      const orbitalPeriodSecs = isLEO ? Math.round(((2 * Math.PI) / (satrec.no || 0.06)) * 60) : 7200;
-      const stepSecs = isLEO ? 20 : 60;
+      // True Keplerian orbital period in seconds from mean motion no (rad/min)
+      const meanMotionRadPerMin = (satrec.no && satrec.no > 0) ? satrec.no : 0.06;
+      const trueOrbitalPeriodSecs = Math.max(5000, Math.min(86400, Math.round(((2 * Math.PI) / meanMotionRadPerMin) * 60)));
+      const isLEO = trueOrbitalPeriodSecs <= 7200;
+      const stepSecs = isLEO ? 20 : 90;
+      const maxScanSecs = Math.min(43200, Math.round(trueOrbitalPeriodSecs * 0.65));
 
       let passRiseTimeMs: number = date.getTime();
       let passSetTimeMs: number = date.getTime();
@@ -442,9 +445,10 @@ export function computeSatelliteState(
         // Satellite is currently overhead: scan backward for rise and forward for set
         let tLast = 0;
         let elLast = elevationDeg;
+        let foundRise = false;
 
         // 1. Scan backward for rise
-        for (let t = -stepSecs; t >= -orbitalPeriodSecs; t -= stepSecs) {
+        for (let t = -stepSecs; t >= -maxScanSecs; t -= stepSecs) {
           const sampleDate = new Date(date.getTime() + t * 1000);
           const pv = satellite.propagate(satrec, sampleDate);
           if (pv?.position && typeof pv.position !== "boolean") {
@@ -455,17 +459,23 @@ export function computeSatelliteState(
               // Linear interpolation of exact 0° horizon crossing
               const frac = elLast / (elLast - el);
               passRiseTimeMs = date.getTime() + (tLast + frac * (t - tLast)) * 1000;
+              foundRise = true;
               break;
             }
             tLast = t;
             elLast = el;
           }
         }
+        if (!foundRise) {
+          // Pass started earlier than maxScanSecs or satellite is circumpolar
+          passRiseTimeMs = date.getTime() - Math.min(maxScanSecs, 14400) * 1000;
+        }
 
         // 2. Scan forward for set
         tLast = 0;
         elLast = elevationDeg;
-        for (let t = stepSecs; t <= orbitalPeriodSecs; t += stepSecs) {
+        let foundSet = false;
+        for (let t = stepSecs; t <= maxScanSecs; t += stepSecs) {
           const sampleDate = new Date(date.getTime() + t * 1000);
           const pv = satellite.propagate(satrec, sampleDate);
           if (pv?.position && typeof pv.position !== "boolean") {
@@ -476,20 +486,27 @@ export function computeSatelliteState(
               // Linear interpolation of exact 0° horizon crossing
               const frac = elLast / (elLast - el);
               passSetTimeMs = date.getTime() + (tLast + frac * (t - tLast)) * 1000;
+              foundSet = true;
               break;
             }
             tLast = t;
             elLast = el;
           }
         }
+        if (!foundSet) {
+          // Pass extends beyond maxScanSecs or satellite is circumpolar
+          passSetTimeMs = date.getTime() + Math.min(maxScanSecs, 14400) * 1000;
+        }
+
         hasValidPass = passSetTimeMs > passRiseTimeMs;
       } else {
         // Satellite is below horizon: scan forward over 24 hours to find the next upcoming pass
         let scanInPass = false;
         let tLast = 0;
         let elLast = elevationDeg;
+        const forwardStepSecs = isLEO ? 45 : 120;
 
-        for (let t = 60; t <= 86400; t += 60) {
+        for (let t = forwardStepSecs; t <= 86400; t += forwardStepSecs) {
           const sampleDate = new Date(date.getTime() + t * 1000);
           const pv = satellite.propagate(satrec, sampleDate);
           if (pv?.position && typeof pv.position !== "boolean") {
@@ -514,7 +531,7 @@ export function computeSatelliteState(
       }
 
       if (hasValidPass && passSetTimeMs > passRiseTimeMs) {
-        const numSamples = 60;
+        const numSamples = 64;
         const durationMs = passSetTimeMs - passRiseTimeMs;
         let maxEl = -90;
         let peakTime = new Date(passRiseTimeMs + durationMs / 2);
@@ -526,23 +543,10 @@ export function computeSatelliteState(
         let setVec = vec3;
 
         const graphPts: PassGraphPoint[] = [];
-        let insertedCurrentVec = false;
+        const rawFullPoints: { timeMs: number; pt: THREE.Vector3 }[] = [];
 
         for (let i = 0; i <= numSamples; i++) {
           const sampleTimeMs = passRiseTimeMs + (i / numSamples) * durationMs;
-
-          // If satellite is currently in the sky and we cross current date, insert the exact current vec3!
-          if (
-            isAboveHorizon &&
-            !insertedCurrentVec &&
-            sampleTimeMs >= date.getTime()
-          ) {
-            insertedCurrentVec = true;
-            fullTrajectoryPoints.push(vec3);
-            pastTrajectoryPoints.push(vec3);
-            futureTrajectoryPoints.push(vec3);
-          }
-
           const sampleDate = new Date(sampleTimeMs);
           const pv = satellite.propagate(satrec, sampleDate);
           if (pv?.position && typeof pv.position !== "boolean") {
@@ -552,10 +556,7 @@ export function computeSatelliteState(
             const az = (((l.azimuth * 180) / Math.PI % 360) + 360) % 360;
 
             const pt = satAltAzToVector3(az, Math.max(0, el), skyRadius * 0.92);
-            fullTrajectoryPoints.push(pt);
-
-            if (sampleTimeMs <= date.getTime()) pastTrajectoryPoints.push(pt);
-            if (sampleTimeMs >= date.getTime()) futureTrajectoryPoints.push(pt);
+            rawFullPoints.push({ timeMs: sampleTimeMs, pt });
 
             if (i === 0) {
               riseAz = az;
@@ -586,6 +587,16 @@ export function computeSatelliteState(
             });
           }
         }
+
+        // When satellite is overhead, ensure the exact instantaneous vec3 is inserted at the precise timestamp
+        if (isAboveHorizon) {
+          rawFullPoints.push({ timeMs: date.getTime(), pt: vec3 });
+        }
+        rawFullPoints.sort((a, b) => a.timeMs - b.timeMs);
+
+        fullTrajectoryPoints = rawFullPoints.map((p) => p.pt);
+        pastTrajectoryPoints = rawFullPoints.filter((p) => p.timeMs <= date.getTime()).map((p) => p.pt);
+        futureTrajectoryPoints = rawFullPoints.filter((p) => p.timeMs >= date.getTime()).map((p) => p.pt);
 
         passGraphPoints = graphPts;
 
@@ -745,7 +756,8 @@ export function getAllSatelliteStates(
   const catalog = customCatalog && customCatalog.length > 0 ? customCatalog : DEFAULT_SATELLITE_CATALOG;
 
   let trajectoryCount = 0;
-  const MAX_TRAJECTORIES = 10;
+  // Compute trajectory strictly for selected satellite, or default top pass if none selected
+  const MAX_TRAJECTORIES = 1;
 
   for (const sat of catalog) {
     const isSelected = selectedSatId != null && sat.id === selectedSatId;
@@ -762,8 +774,8 @@ export function getAllSatelliteStates(
     const fastCheck = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, false);
     if (!fastCheck) continue;
 
-    // For top visible satellites overhead, compute full trajectory arcs for the dome
-    if (fastCheck.isAboveHorizon && trajectoryCount < MAX_TRAJECTORIES) {
+    // For default view when no satellite is selected, compute full trajectory for top visible pass (e.g. ISS)
+    if (selectedSatId == null && fastCheck.isAboveHorizon && trajectoryCount < MAX_TRAJECTORIES) {
       const detailed = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, true);
       if (detailed) {
         results.push(detailed);
