@@ -68,9 +68,9 @@ function calculateDeviceSightOrientation(
   elevationDeg = Math.max(0, Math.min(90, elevationDeg));
 
   return {
-    heading: Math.round(finalHeading),
-    pitch: Math.round(elevationDeg),
-    roll: Math.round(gammaDeg || 0),
+    heading: Number(finalHeading.toFixed(1)),
+    pitch: Number(elevationDeg.toFixed(1)),
+    roll: Number((gammaDeg || 0).toFixed(1)),
   };
 }
 
@@ -100,6 +100,9 @@ export default function MobileCompassSyncPage() {
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
   const rollRef = useRef<number>(0);
+  const smoothedHeadingRef = useRef<number | null>(null);
+  const smoothedPitchRef = useRef<number | null>(null);
+  const smoothedRollRef = useRef<number | null>(null);
   const lastSendTime = useRef<number>(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
@@ -208,14 +211,38 @@ export default function MobileCompassSyncPage() {
         normRoll = computed.roll;
       }
 
-      setHeading(normHeading);
-      setPitch(normElevation);
-      setRoll(normRoll);
+      // Apply smooth Exponential Moving Average (EMA) filter to eradicate sensor noise
+      if (smoothedHeadingRef.current === null) {
+        smoothedHeadingRef.current = normHeading;
+      } else {
+        const diff = (normHeading - smoothedHeadingRef.current + 540) % 360 - 180;
+        smoothedHeadingRef.current = (smoothedHeadingRef.current + diff * 0.42 + 360) % 360;
+      }
+
+      if (smoothedPitchRef.current === null) {
+        smoothedPitchRef.current = normElevation;
+      } else {
+        smoothedPitchRef.current += (normElevation - smoothedPitchRef.current) * 0.42;
+      }
+
+      if (smoothedRollRef.current === null) {
+        smoothedRollRef.current = normRoll;
+      } else {
+        smoothedRollRef.current += (normRoll - smoothedRollRef.current) * 0.42;
+      }
+
+      const smoothH = Number(smoothedHeadingRef.current.toFixed(1));
+      const smoothP = Number(smoothedPitchRef.current.toFixed(1));
+      const smoothR = Number(smoothedRollRef.current.toFixed(1));
+
+      setHeading(Math.round(smoothH));
+      setPitch(Math.round(smoothP));
+      setRoll(Math.round(smoothR));
 
       const now = Date.now();
-      if (now - lastSendTime.current >= 80) {
+      if (now - lastSendTime.current >= 50) {
         lastSendTime.current = now;
-        sendOrientationData(normHeading, normElevation, normRoll);
+        sendOrientationData(smoothH, smoothP, smoothR);
       }
     };
 

@@ -78,79 +78,260 @@ function getCardinalText(azDeg: number): string {
 // SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// STELLARIUM MOBILE CAMERA SIGHT RETICLE (CELESTIAL SPHERE HUD TARGET)
+// HUMAN EYE DIRECT GAZE FIELD (HEAD STRAIGHT: 30° UPWARD TO 40° DOWNWARD)
 // ─────────────────────────────────────────────────────────────────────────────
-function MobileCameraSightReticle({
-  mobileOrientation,
-  satellites,
+// Ergonomics: Keeping the head straight, the natural human visual field
+// without turning the head spans 30° upward (+30°) to 40° downward (-40°).
+// Color: Vivid luminous Orange (#ff6a00 / #f97316 / #ff8c00).
+function HumanPrimaryGazeField({
+  radius = 236,
+  opacity = 0.35,
 }: {
-  mobileOrientation: { heading: number; pitch: number; roll?: number };
-  satellites: ComputedSatelliteSkyState[];
+  radius?: number;
+  opacity?: number;
 }) {
-  const r = SKY_RADIUS * 0.96; // 268.8
-  const azRad = (mobileOrientation.heading * Math.PI) / 180;
-  const elRad = (mobileOrientation.pitch * Math.PI) / 180;
+  const upDeg = 30; // +30° Upward angle
+  const downDeg = 40; // -40° Downward angle
+  const hSpanDeg = 130; // 130° horizontal direct gaze span (±65°)
 
-  // Stellarium exact Cartesian unit vector transformation (North: -Z, East: +X, Up: +Y)
-  const dirX = Math.cos(elRad) * Math.sin(azRad);
-  const dirY = Math.sin(elRad);
-  const dirZ = -Math.cos(elRad) * Math.cos(azRad);
+  const upRad = (upDeg * Math.PI) / 180;
+  const downRad = (-downDeg * Math.PI) / 180;
+  const hHalfRad = ((hSpanDeg / 2) * Math.PI) / 180;
 
-  const pos = useMemo(() => new THREE.Vector3(dirX * r, dirY * r, dirZ * r), [dirX, dirY, dirZ, r]);
-  const sightDir = useMemo(() => new THREE.Vector3(dirX, dirY, dirZ), [dirX, dirY, dirZ]);
+  const {
+    visorGeometry,
+    topArc,
+    bottomArc,
+    leftBorder,
+    rightBorder,
+    horizonArc,
+    vertGazeMeridian,
+    frustumWallGeo,
+  } = useMemo(() => {
+    const apex = new THREE.Vector3(0, 2.2, 0);
+    const numH = 48;
+    const numV = 24;
 
-  // Satellite Proximity Detection (Within 8 degrees of sight vector)
-  const lockedSat = useMemo(() => {
-    let closestSat: ComputedSatelliteSkyState | null = null;
-    let minAngle = 0.14; // ~8 degrees in radians
+    // Curved visor mesh vertices & indices
+    const verts: number[] = [];
+    const indices: number[] = [];
 
-    for (const sat of satellites) {
-      if (!sat.isAboveHorizon) continue;
-      const satDir = sat.vec3.clone().normalize();
-      const angle = sightDir.angleTo(satDir);
-      if (angle < minAngle) {
-        minAngle = angle;
-        closestSat = sat;
+    for (let j = 0; j <= numV; j++) {
+      const vFrac = j / numV;
+      // Interpolate from downward (-40°) to upward (+30°)
+      const phi = downRad + vFrac * (upRad - downRad);
+      for (let i = 0; i <= numH; i++) {
+        const hFrac = i / numH;
+        // Azimuth from -hHalfRad to +hHalfRad
+        const theta = -hHalfRad + hFrac * (hHalfRad * 2);
+        const x = radius * Math.sin(theta) * Math.cos(phi);
+        const y = radius * Math.sin(phi) + 2.2;
+        const z = radius * Math.cos(theta) * Math.cos(phi);
+        verts.push(x, y, z);
       }
     }
-    return closestSat;
-  }, [sightDir, satellites]);
 
+    for (let j = 0; j < numV; j++) {
+      for (let i = 0; i < numH; i++) {
+        const row1 = j * (numH + 1);
+        const row2 = (j + 1) * (numH + 1);
+        const a = row1 + i;
+        const b = row1 + i + 1;
+        const c = row2 + i;
+        const d = row2 + i + 1;
+        indices.push(a, c, b);
+        indices.push(b, c, d);
+      }
+    }
+
+    const visorGeo = new THREE.BufferGeometry();
+    visorGeo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+    visorGeo.setIndex(indices);
+    visorGeo.computeVertexNormals();
+
+    // Top boundary arc (+30° Upward)
+    const topPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= numH; i++) {
+      const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
+      const x = radius * Math.sin(theta) * Math.cos(upRad);
+      const y = radius * Math.sin(upRad) + 2.2;
+      const z = radius * Math.cos(theta) * Math.cos(upRad);
+      topPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Bottom boundary arc (-40° Downward)
+    const botPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= numH; i++) {
+      const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
+      const x = radius * Math.sin(theta) * Math.cos(downRad);
+      const y = radius * Math.sin(downRad) + 2.2;
+      const z = radius * Math.cos(theta) * Math.cos(downRad);
+      botPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Left border (connecting -40° to +30° at -hHalfRad)
+    const leftPts: THREE.Vector3[] = [];
+    for (let j = 0; j <= numV; j++) {
+      const phi = downRad + (j / numV) * (upRad - downRad);
+      const x = radius * Math.sin(-hHalfRad) * Math.cos(phi);
+      const y = radius * Math.sin(phi) + 2.2;
+      const z = radius * Math.cos(-hHalfRad) * Math.cos(phi);
+      leftPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Right border (connecting -40° to +30° at +hHalfRad)
+    const rightPts: THREE.Vector3[] = [];
+    for (let j = 0; j <= numV; j++) {
+      const phi = downRad + (j / numV) * (upRad - downRad);
+      const x = radius * Math.sin(hHalfRad) * Math.cos(phi);
+      const y = radius * Math.sin(phi) + 2.2;
+      const z = radius * Math.cos(hHalfRad) * Math.cos(phi);
+      rightPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // 0° Eye-level Horizon Meridian Arc
+    const horizPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= numH; i++) {
+      const theta = -hHalfRad + (i / numH) * (hHalfRad * 2);
+      const x = radius * Math.sin(theta);
+      const y = 2.2;
+      const z = radius * Math.cos(theta);
+      horizPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Central Vertical Gaze Meridian (0° azimuth from -40° to +30°)
+    const vertGazePts: THREE.Vector3[] = [];
+    for (let j = 0; j <= numV; j++) {
+      const phi = downRad + (j / numV) * (upRad - downRad);
+      const x = 0;
+      const y = radius * Math.sin(phi) + 2.2;
+      const z = radius * Math.cos(phi);
+      vertGazePts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Volumetric Side Frustum walls connecting apex to outer boundary
+    const fVerts: number[] = [];
+    // Top wall
+    for (let i = 0; i < numH; i++) {
+      fVerts.push(apex.x, apex.y, apex.z, topPts[i].x, topPts[i].y, topPts[i].z, topPts[i + 1].x, topPts[i + 1].y, topPts[i + 1].z);
+    }
+    // Bottom wall
+    for (let i = 0; i < numH; i++) {
+      fVerts.push(apex.x, apex.y, apex.z, botPts[i + 1].x, botPts[i + 1].y, botPts[i + 1].z, botPts[i].x, botPts[i].y, botPts[i].z);
+    }
+    // Left wall
+    for (let j = 0; j < numV; j++) {
+      fVerts.push(apex.x, apex.y, apex.z, leftPts[j].x, leftPts[j].y, leftPts[j].z, leftPts[j + 1].x, leftPts[j + 1].y, leftPts[j + 1].z);
+    }
+    // Right wall
+    for (let j = 0; j < numV; j++) {
+      fVerts.push(apex.x, apex.y, apex.z, rightPts[j + 1].x, rightPts[j + 1].y, rightPts[j + 1].z, rightPts[j].x, rightPts[j].y, rightPts[j].z);
+    }
+
+    const frustumGeo = new THREE.BufferGeometry();
+    frustumGeo.setAttribute("position", new THREE.Float32BufferAttribute(fVerts, 3));
+    frustumGeo.computeVertexNormals();
+
+    return {
+      visorGeometry: visorGeo,
+      topArc: topPts,
+      bottomArc: botPts,
+      leftBorder: leftPts,
+      rightBorder: rightPts,
+      horizonArc: horizPts,
+      vertGazeMeridian: vertGazePts,
+      frustumWallGeo: frustumGeo,
+    };
+  }, [radius, upRad, downRad, hHalfRad]);
 
   return (
-    <group position={pos.toArray()}>
-      {/* Outer Rotating Cyan/Amber Sight Target Ring */}
-      <mesh>
-        <ringGeometry args={[4.5, 6.2, 32]} />
-        <meshBasicMaterial color={lockedSat ? "#f59e0b" : "#06b6d4"} transparent opacity={0.85} side={THREE.DoubleSide} />
+    <group>
+      {/* Volumetric Frustum Walls (Subtle Translucent Orange) */}
+      <mesh geometry={frustumWallGeo}>
+        <meshBasicMaterial
+          color="#ff6600"
+          transparent
+          opacity={opacity * 0.28}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
       </mesh>
 
-      {/* Crosshair Alignment Lines */}
-      <Line
-        points={[new THREE.Vector3(-9, 0, 0), new THREE.Vector3(9, 0, 0)]}
-        color={lockedSat ? "#f59e0b" : "#06b6d4"}
-        lineWidth={2.2}
-      />
-      <Line
-        points={[new THREE.Vector3(0, -9, 0), new THREE.Vector3(0, 9, 0)]}
-        color={lockedSat ? "#f59e0b" : "#06b6d4"}
-        lineWidth={2.2}
-      />
-
-      {/* Central Impact Dot */}
-      <mesh>
-        <sphereGeometry args={[1.5, 16, 16]} />
-        <meshBasicMaterial color={lockedSat ? "#ffea00" : "#22d3ee"} />
+      {/* Main Curved Visor Canopy (Luminous Orange Surface) */}
+      <mesh geometry={visorGeometry}>
+        <meshBasicMaterial
+          color="#ff7300"
+          transparent
+          opacity={opacity}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
       </mesh>
 
-      {/* Satellite Lock Badge — shown only when a satellite is in the crosshair */}
-      {lockedSat && (
-        <Html center position={[0, -9, 0]} className="pointer-events-none select-none">
-          <div className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 border border-amber-400 text-amber-200 text-[9px] font-mono font-extrabold shadow-lg animate-bounce whitespace-nowrap">
-            🎯 LOCK: {lockedSat.name} ({Math.round(lockedSat.elevationDeg)}° EL)
-          </div>
-        </Html>
-      )}
+      {/* Top Arc Boundary (+30° Upward) */}
+      <Line
+        points={topArc}
+        color="#ff8c00"
+        lineWidth={3.2}
+        transparent
+        opacity={0.95}
+      />
+
+      {/* Bottom Arc Boundary (-40° Downward) */}
+      <Line
+        points={bottomArc}
+        color="#ff4500"
+        lineWidth={3.2}
+        transparent
+        opacity={0.95}
+      />
+
+      {/* Left & Right Outer Edges */}
+      <Line
+        points={leftBorder}
+        color="#ff7300"
+        lineWidth={2.2}
+        transparent
+        opacity={0.8}
+      />
+      <Line
+        points={rightBorder}
+        color="#ff7300"
+        lineWidth={2.2}
+        transparent
+        opacity={0.8}
+      />
+
+      {/* Eye Level 0° Horizon Arc */}
+      <Line
+        points={horizonArc}
+        color="#ffb703"
+        lineWidth={2.4}
+        transparent
+        opacity={0.85}
+      />
+
+      {/* Central Vertical Sight Line (Prime Meridian) */}
+      <Line
+        points={vertGazeMeridian}
+        color="#ffa200"
+        lineWidth={2.4}
+        transparent
+        opacity={0.85}
+      />
+
+      {/* Degree Markers on Curved Visor Canopy */}
+      <Html center position={[0, radius * Math.sin(upRad) + 5, radius * Math.cos(upRad)]} className="pointer-events-none select-none">
+        <div className="px-2 py-0.5 rounded bg-orange-950/90 border border-orange-500 text-orange-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
+          ▲ +30° Eye Upward (Head Straight)
+        </div>
+      </Html>
+
+      <Html center position={[0, radius * Math.sin(downRad) - 5, radius * Math.cos(downRad)]} className="pointer-events-none select-none">
+        <div className="px-2 py-0.5 rounded bg-orange-950/90 border border-orange-600 text-orange-300 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
+          ▼ -40° Eye Downward (Head Straight)
+        </div>
+      </Html>
     </group>
   );
 }
@@ -371,10 +552,16 @@ function ObserverGroundStation({
   mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
 }) {
   const domeRef = useRef<THREE.Group>(null);
+  const currentQuat = useRef<THREE.Quaternion>(new THREE.Quaternion());
+  const isInitialized = useRef<boolean>(false);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime();
     if (!domeRef.current) return;
+
+    // Frame-rate independent exponential damping for liquid-smooth continuous motion
+    // At 60fps (delta ≈ 0.016s), dampFactor ≈ 0.12, continuously interpolating between data updates
+    const dampFactor = 1 - Math.exp(-7.5 * Math.min(delta, 0.1));
 
     if (mobileOrientation) {
       // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH-ROLL MAPPING)
@@ -385,7 +572,13 @@ function ObserverGroundStation({
       const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, -rollRad, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      domeRef.current.quaternion.slerp(targetQuat, 0.35);
+      if (!isInitialized.current) {
+        currentQuat.current.copy(targetQuat);
+        isInitialized.current = true;
+      } else {
+        currentQuat.current.slerp(targetQuat, dampFactor);
+      }
+      domeRef.current.quaternion.copy(currentQuat.current);
     } else if (targetSat) {
       // SCIENTIFICALLY PRECISE SATELLITE TRACKING VECTOR ALIGNMENT
       const stationPos = new THREE.Vector3(0, 2.4, 0);
@@ -401,7 +594,13 @@ function ObserverGroundStation({
       const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      domeRef.current.quaternion.slerp(targetQuat, 0.2);
+      if (!isInitialized.current) {
+        currentQuat.current.copy(targetQuat);
+        isInitialized.current = true;
+      } else {
+        currentQuat.current.slerp(targetQuat, dampFactor);
+      }
+      domeRef.current.quaternion.copy(currentQuat.current);
     } else {
       // DEFAULT NORTH SIGHT ALIGNMENT (Azimuth 0° North, 15° elevation pitch)
       const idleAz = Math.sin(t * 0.4) * 3;
@@ -411,7 +610,9 @@ function ObserverGroundStation({
       const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      domeRef.current.quaternion.slerp(targetQuat, 0.1);
+      const idleDamp = 1 - Math.exp(-3.0 * Math.min(delta, 0.1));
+      currentQuat.current.slerp(targetQuat, idleDamp);
+      domeRef.current.quaternion.copy(currentQuat.current);
     }
   });
 
@@ -425,7 +626,7 @@ function ObserverGroundStation({
         <meshStandardMaterial color="#0b1329" roughness={0.2} metalness={0.8} />
       </mesh>
 
-      {/* Rotating Dome Head & Laser Aperture */}
+      {/* Rotating Dome Head & Aperture */}
       <group ref={domeRef} position={[0, 2.4, 0]}>
         <mesh position={[0, 1.5, 0]}>
           <sphereGeometry args={[4.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -447,10 +648,16 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.9} />
         </mesh>
 
-        {/* HUMAN EYE BINOCULAR LINE OF SIGHT (210°H × 140°V) */}
+        {/* 1. CURVED FIELD VIEW IN ORANGE (+30° UPWARD TO -40° DOWNWARD, HEAD STRAIGHT) */}
+        <HumanPrimaryGazeField
+          radius={236}
+          opacity={mobileOrientation ? 0.38 : 0.32}
+        />
+
+        {/* 2. HUMAN EYE PERIPHERAL BINOCULAR FIELD (210°H × 140°V ENVELOPE) */}
         <HumanBinocularSightField
           color={sightColor}
-          opacity={mobileOrientation ? 0.32 : targetSat ? 0.35 : 0.18}
+          opacity={mobileOrientation ? 0.22 : targetSat ? 0.25 : 0.14}
         />
       </group>
 
@@ -475,17 +682,17 @@ function ObserverGroundStation({
       <Html center position={[0, 9.5, 0]} className="pointer-events-none select-none">
         <div className={`px-3.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-2xl border backdrop-blur-md whitespace-nowrap transition ${
           mobileOrientation
-            ? "bg-cyan-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.6)]"
+            ? "bg-orange-950/95 border-orange-400 text-orange-300 shadow-[0_0_20px_rgba(249,115,22,0.6)]"
             : targetSat
             ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]"
             : "bg-emerald-950/95 border-emerald-500/60 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
         }`}>
           <span>
             {mobileOrientation
-              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • HUMAN FOV (210°H × 140°V)`
+              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • 👁️ DIRECT GAZE: +30° / -40° (ORANGE)`
               : targetSat
-              ? `🎯 SIGHT LOCKED: ${targetSat.name} • HUMAN FOV (210°H × 140°V)`
-              : "👁️ BOT SIGHT: HUMAN EYE FIELD (210°H × 140°V)"}
+              ? `🎯 SIGHT LOCKED: ${targetSat.name} • 👁️ DIRECT GAZE: +30° / -40°`
+              : "👁️ HUMAN EYE SIGHT: +30° UP / -40° DOWN GAZE • 210° × 140° BINOCULAR"}
           </span>
         </div>
       </Html>
@@ -828,13 +1035,6 @@ function Clean3DSkyDome({
         mobileOrientation={mobileOrientation}
       />
 
-      {/* Stellarium Mobile Camera Sight Reticle on Sky Dome Sphere */}
-      {mobileOrientation && (
-        <MobileCameraSightReticle
-          mobileOrientation={mobileOrientation}
-          satellites={satellites}
-        />
-      )}
 
       {cardinals.map((c) => (
         <group key={c.label} position={c.pos}>
@@ -1696,7 +1896,10 @@ function SatelliteTrackerCelestialScene({
   mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
   mobileSightMode?: "ar" | "track";
 }) {
-  useFrame(({ camera }) => {
+  const smoothedTarget = useRef<THREE.Vector3>(new THREE.Vector3(0, 40, 200));
+  const isTargetInit = useRef<boolean>(false);
+
+  useFrame(({ camera }, delta) => {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
     const facingAz = ((Math.atan2(dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
@@ -1710,14 +1913,24 @@ function SatelliteTrackerCelestialScene({
       const targetX = r * Math.sin(azRad) * Math.cos(elRad);
       const targetY = Math.max(5, r * Math.sin(elRad));
       const targetZ = -r * Math.cos(azRad) * Math.cos(elRad);
+      const rawTarget = new THREE.Vector3(targetX, targetY, targetZ);
+
+      // Liquid-smooth continuous damping across rendering frames
+      const damp = 1 - Math.exp(-6.5 * Math.min(delta, 0.1));
+      if (!isTargetInit.current) {
+        smoothedTarget.current.copy(rawTarget);
+        isTargetInit.current = true;
+      } else {
+        smoothedTarget.current.lerp(rawTarget, damp);
+      }
 
       if (mobileSightMode === "ar") {
-        // FIRST-PERSON AR SKY VIEWER MODE: Eye at ground station looking outward along back-camera vector
+        // FIRST-PERSON AR SKY VIEWER MODE: Smooth fluid orientation
         camera.position.set(0, 10, 0);
-        camera.lookAt(targetX, targetY, targetZ);
+        camera.lookAt(smoothedTarget.current);
       } else if (controlsRef.current) {
-        // OBSERVATORY TRACK MODE: Orbit controls target smoothly centers on mobile sight vector
-        controlsRef.current.target.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.15);
+        // OBSERVATORY TRACK MODE: Orbit controls target smoothly glides to sight vector
+        controlsRef.current.target.lerp(smoothedTarget.current, damp);
         controlsRef.current.update();
       }
     }
@@ -1918,7 +2131,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       } catch {
         /* skip network hiccups */
       }
-    }, 80);
+    }, 50);
 
     return () => {
       isSubscribed = false;
