@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-const TrackMySkyDashboard = dynamic(
-  () => import("@/components/intelligence/TrackMySkyDashboard"),
+const OrbitCinematicDashboard = dynamic(
+  () => import("@/components/intelligence/OrbitCinematicDashboard"),
   {
     ssr: false,
     loading: () => (
@@ -20,7 +20,7 @@ export default function OrbitPage() {
       id="main-content"
       className="relative min-h-screen overflow-x-hidden bg-black text-slate-100 selection:bg-cyan-500 selection:text-black"
     >
-      <TrackMySkyDashboard />
+      <OrbitCinematicDashboard />
     </main>
   );
 }

@@ -22,7 +22,7 @@ export default function TrackMySkyPage() {
   return (
     <main
       id="main-content"
-      className="relative min-h-screen overflow-x-hidden bg-black text-slate-100 selection:bg-cyan-500 selection:text-black"
+      className="relative min-h-screen overflow-x-hidden bg-[#030611] text-slate-100 selection:bg-cyan-500 selection:text-black"
     >
       {/* Cinematic Deep Space Operations Canvas with Mouse Parallax & Volumetric Nebula */}
       <SpaceOperationsBackground />
