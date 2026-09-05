@@ -169,13 +169,23 @@ export function computeViewingRequirements(
   mag: number,
   maxEl: number,
   peakTimeStr: string,
-  peakAz: number
+  peakAz: number,
+  isSunlit: boolean = true,
+  isObserverDark: boolean = true
 ): ObserverViewingRequirements {
   let visibilityClass = "Naked Eye Visible";
   let visibilityBadgeColor = "text-emerald-400 border-emerald-500/50 bg-emerald-950/60";
   let recommendedOptics = "No Telescope Needed (Naked Eye)";
 
-  if (mag <= 2.0) {
+  if (!isSunlit) {
+    visibilityClass = "Eclipsed (In Earth Shadow)";
+    visibilityBadgeColor = "text-purple-400 border-purple-500/50 bg-purple-950/70";
+    recommendedOptics = "Optical Darkness — Satellite is completely eclipsed in Earth umbra";
+  } else if (!isObserverDark) {
+    visibilityClass = "Daylight Transit (Overhead in Day Sky)";
+    visibilityBadgeColor = "text-blue-300 border-blue-500/50 bg-blue-950/60";
+    recommendedOptics = "Daylight Sky Drowns Satellite (Only optical transit visible)";
+  } else if (mag <= 2.0) {
     visibilityClass = "Ultra-Bright (Naked Eye Landmark)";
     visibilityBadgeColor = "text-amber-300 border-amber-500/60 bg-amber-950/80";
     recommendedOptics = "Direct Naked-Eye Sight (Bright Star-Like Flare)";
@@ -202,10 +212,16 @@ export function computeViewingRequirements(
 
   const optimalWindow = `Peak brightness at ${peakTimeStr} (AZ ${Math.round(peakAz)}°)`;
 
+  const sunIlluminationStatus = !isSunlit
+    ? "Eclipsed in Earth Shadow (Zero Reflected Sunlight)"
+    : isObserverDark
+    ? "Sunlit in Twilight/Night Sky (High Contrast Optical Visibility)"
+    : "Sunlit in Daylight Sky (Drowned by Atmospheric Sunlight)";
+
   return {
     visibilityClass,
     visibilityBadgeColor,
-    sunIlluminationStatus: "Sunlit in Twilight Sky (High Contrast Visibility)",
+    sunIlluminationStatus,
     minElevationRequirement,
     recommendedOptics,
     bortleScale: mag > 4.0 ? "Bortle 1-4 (Dark Sky Site Preferred)" : "Bortle 1-6 (Suburban City Sky)",
@@ -274,35 +290,73 @@ export function computeObserverSunCoords(
   };
 }
 
-// 3. Conical Earth Shadow Umbra Physics Test
+// 3. Vallado Algorithm 34 Dual-Cone Earth Umbra / Penumbra Shadow Physics Model
+export interface SolarIlluminationPhysics {
+  isSunlit: boolean;
+  shadowStatus: "Sunlit" | "Penumbra" | "Umbra (Eclipsed)";
+  eclipseFraction: number; // 0 = 100% full sunlight, 1.0 = total umbral darkness
+}
+
 export function checkSatelliteSunlitPhysics(
   posEci: { x: number; y: number; z: number },
   sunEci: { x: number; y: number; z: number }
-): { isSunlit: boolean; eclipseFraction: number } {
-  const EARTH_RADIUS_KM = 6378.137;
+): SolarIlluminationPhysics {
+  // Effective Earth radius augmented by 100km for optical atmospheric absorption & extinction
+  const R_EARTH_EFF = 6378.137 + 100.0; // 6478.137 km
+  const R_SUN = 696000.0; // Solar radius in km
 
-  const rSat = new THREE.Vector3(posEci.x, posEci.y, posEci.z);
-  const rSun = new THREE.Vector3(sunEci.x, sunEci.y, sunEci.z);
-  const sHat = rSun.clone().normalize();
+  // Vector from satellite to Sun
+  const dx = sunEci.x - posEci.x;
+  const dy = sunEci.y - posEci.y;
+  const dz = sunEci.z - posEci.z;
+  const dSatSun = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-  // Projection of satellite position along Sun direction vector
-  const projSatAlongSun = rSat.dot(sHat);
+  const rSat = Math.sqrt(posEci.x ** 2 + posEci.y ** 2 + posEci.z ** 2);
+  const rSun = Math.sqrt(sunEci.x ** 2 + sunEci.y ** 2 + sunEci.z ** 2);
 
-  // If satellite is on the day side of Earth (proj > 0), it is 100% sunlit
-  if (projSatAlongSun >= 0) {
-    return { isSunlit: true, eclipseFraction: 0 };
+  if (rSat < 100 || dSatSun < 1000) {
+    return { isSunlit: true, shadowStatus: "Sunlit", eclipseFraction: 0 };
   }
 
-  // Distance from satellite to Earth-Sun center line
-  const dPerpSq = rSat.lengthSq() - projSatAlongSun * projSatAlongSun;
-  const dPerp = Math.sqrt(Math.max(0, dPerpSq));
+  // Dot product of satellite position with Sun direction
+  const dotSatSun = (posEci.x * sunEci.x + posEci.y * sunEci.y + posEci.z * sunEci.z) / (rSat * rSun);
 
-  // If satellite distance to shadow axis is less than Earth's radius, satellite is in Earth's Umbral Shadow
-  if (dPerp < EARTH_RADIUS_KM) {
-    return { isSunlit: false, eclipseFraction: 1.0 };
+  // Apparent angular semi-diameters
+  const sinAlphaEarth = Math.min(1.0, R_EARTH_EFF / rSat);
+  const alphaEarth = Math.asin(sinAlphaEarth);
+
+  const sinAlphaSun = Math.min(1.0, R_SUN / dSatSun);
+  const alphaSun = Math.asin(sinAlphaSun);
+
+  // Apparent angular separation of Earth center and Sun center as seen from satellite
+  // Vector sat -> Earth center is -posEci
+  // Vector sat -> Sun center is (sunEci - posEci)
+  const dotSeparation = ((-posEci.x) * dx + (-posEci.y) * dy + (-posEci.z) * dz) / (rSat * dSatSun);
+  const thetaSep = Math.acos(Math.max(-1.0, Math.min(1.0, dotSeparation)));
+
+  // If satellite is on dayside facing Sun and unobstructed by Earth limb
+  if (dotSatSun > 0 && thetaSep > alphaEarth + alphaSun) {
+    return { isSunlit: true, shadowStatus: "Sunlit", eclipseFraction: 0 };
   }
 
-  return { isSunlit: true, eclipseFraction: 0 };
+  // Vallado Eclipse Cone Geometric Test (Algorithm 34)
+  if (thetaSep >= alphaEarth + alphaSun) {
+    // Earth disk and Sun disk do not intersect at all: full sunlight
+    return { isSunlit: true, shadowStatus: "Sunlit", eclipseFraction: 0 };
+  } else if (thetaSep <= alphaEarth - alphaSun) {
+    // Earth disk completely covers Sun disk: Total Umbral Eclipse
+    return { isSunlit: false, shadowStatus: "Umbra (Eclipsed)", eclipseFraction: 1.0 };
+  } else {
+    // Partial eclipse (Penumbra)
+    const frac = (alphaEarth + alphaSun - thetaSep) / (2 * alphaSun);
+    const eclipseFrac = Math.max(0, Math.min(1.0, frac));
+    // For optical stargazing, if >50% of the Sun is eclipsed, the satellite appears darkened
+    return {
+      isSunlit: eclipseFrac < 0.5,
+      shadowStatus: "Penumbra",
+      eclipseFraction: Math.round(eclipseFrac * 100) / 100,
+    };
+  }
 }
 export function computeSatelliteState(
   sat: SatelliteData,
@@ -383,7 +437,7 @@ export function computeSatelliteState(
     let nextPassTimeMs: number | null = isAboveHorizon ? date.getTime() : null;
 
     if (includeTrajectory) {
-      const stepSecs = 300; // scan every 5 minutes over 24h for selected satellite
+      const stepSecs = 180; // scan every 3 minutes over 24h for detailed pass analysis
       for (let t = 0; t <= 86400; t += stepSecs) {
         const sampleDate = new Date(date.getTime() + t * 1000);
         const pv = satellite.propagate(satrec, sampleDate);
@@ -401,14 +455,27 @@ export function computeSatelliteState(
           }
         }
       }
-      if (isAboveHorizon || peakPassElevationDeg >= 12) {
-        hasUpcomingPassIn24h = true;
-      }
+      hasUpcomingPassIn24h = isAboveHorizon || peakPassElevationDeg >= 10;
     } else {
-      // In fast check mode, evaluate instantaneously without blocking main thread
-      const satInc = (satrec.inclo * 180) / Math.PI;
-      const latDiff = Math.abs(Math.abs(latDeg) - satInc);
-      hasUpcomingPassIn24h = isAboveHorizon || latDiff < 32;
+      // In fast check mode: 36-step temporal propagation over 24h (~0.4ms)
+      for (let t = 0; t <= 86400; t += 2400) {
+        const sampleDate = new Date(date.getTime() + t * 1000);
+        const pv = satellite.propagate(satrec, sampleDate);
+        if (pv && pv.position && typeof pv.position !== "boolean") {
+          const pEci = pv.position as { x: number; y: number; z: number };
+          const g = satellite.gstime(sampleDate);
+          const pEcf = satellite.eciToEcf(pEci, g);
+          const l = satellite.ecfToLookAngles(observerGd, pEcf);
+          const elDeg = (l.elevation * 180) / Math.PI;
+          if (elDeg > peakPassElevationDeg) {
+            peakPassElevationDeg = elDeg;
+            if (nextPassTimeMs === null && elDeg >= 10) {
+              nextPassTimeMs = sampleDate.getTime();
+            }
+          }
+        }
+      }
+      hasUpcomingPassIn24h = isAboveHorizon || peakPassElevationDeg >= 10;
     }
 
     const passStatus: "Overhead" | "High Sky" | "Low Horizon" | "Below Horizon" =
@@ -621,7 +688,9 @@ export function computeSatelliteState(
           visualMagnitude,
           maxEl,
           fmtTime(peakTime),
-          peakAz
+          peakAz,
+          isSunlit,
+          isObserverDark
         );
       }
     } else {
@@ -630,7 +699,9 @@ export function computeSatelliteState(
         visualMagnitude,
         elevationDeg,
         "Now",
-        azimuthDeg
+        azimuthDeg,
+        isSunlit,
+        isObserverDark
       );
     }
 
@@ -774,8 +845,8 @@ export function getAllSatelliteStates(
     const fastCheck = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, false);
     if (!fastCheck) continue;
 
-    // For all visible satellites overhead, compute full trajectory arcs for the dome in pink
-    if (fastCheck.isAboveHorizon && trajectoryCount < MAX_TRAJECTORIES) {
+    // For all visible satellites overhead in the dome, compute full trajectory arcs for the dome in pink
+    if (fastCheck.isAboveHorizon) {
       const detailed = computeSatelliteState(sat, latDeg, lonDeg, altMeters, date, skyRadius, true);
       if (detailed) {
         results.push(detailed);

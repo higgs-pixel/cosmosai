@@ -913,7 +913,10 @@ function Live3DSatelliteNode({
   const glowRef = useRef<THREE.Mesh>(null);
 
   const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
-  const color = isSelected ? "#ffe600" : catStyle.colorHex;
+  const baseColor = isSelected ? "#ffe600" : catStyle.colorHex;
+  // Illumination astrophysics: when eclipsed in Earth shadow, dimmer body reflectivity
+  const color = !sat.isSunlit && !isSelected ? "#64748b" : baseColor;
+  const emissiveIntensity = isSelected ? 0.9 : sat.isSunlit ? 0.6 : 0.15;
 
   useFrame(({ clock }, delta) => {
     // 1. Fluid 60fps positional smoothing along propagated orbital trajectory
@@ -953,7 +956,7 @@ function Live3DSatelliteNode({
             metalness={0.8}
             roughness={0.2}
             emissive={color}
-            emissiveIntensity={0.5}
+            emissiveIntensity={emissiveIntensity}
           />
         </mesh>
 
@@ -971,7 +974,7 @@ function Live3DSatelliteNode({
             metalness={0.6}
             roughness={0.3}
             emissive={color}
-            emissiveIntensity={0.4}
+            emissiveIntensity={emissiveIntensity * 0.8}
           />
         </mesh>
 
@@ -983,7 +986,7 @@ function Live3DSatelliteNode({
             metalness={0.6}
             roughness={0.3}
             emissive={color}
-            emissiveIntensity={0.4}
+            emissiveIntensity={emissiveIntensity * 0.8}
           />
         </mesh>
 
@@ -1008,6 +1011,8 @@ function Live3DSatelliteNode({
             <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: color }} />
             <span>{sat.name}</span>
             <span className="opacity-70">({Math.round(sat.elevationDeg)}°)</span>
+            {!sat.isSunlit && <span className="text-[9px] text-purple-300 font-normal">[Eclipsed]</span>}
+            {sat.isNakedEyeVisible && <span className="text-[9px] text-amber-300 font-bold">[Eye]</span>}
           </div>
         </Html>
       )}
@@ -1039,8 +1044,8 @@ function OrbitTrajectoriesLayer({
       {trajectorySats.map((sat) => {
         const isSelected = sat.id === selectedSatId;
         const color = "#ec4899"; // All satellite trajectory paths strictly in pink line
-        const width = isSelected ? 4.0 : 2.0;
-        const opacity = isSelected ? 0.98 : 0.65;
+        const width = isSelected ? 4.5 : 2.4;
+        const opacity = isSelected ? 1.0 : 0.85;
 
         return (
           <group key={`orbit-path-${sat.id}`}>
@@ -1054,15 +1059,15 @@ function OrbitTrajectoriesLayer({
             {isSelected && sat.passDetails && (
               <>
                 <mesh position={sat.passDetails.riseVec3.toArray()}>
-                  <sphereGeometry args={[1.5, 16, 16]} />
+                  <sphereGeometry args={[1.8, 16, 16]} />
                   <meshBasicMaterial color="#ec4899" />
                 </mesh>
                 <mesh position={sat.passDetails.peakVec3.toArray()}>
-                  <sphereGeometry args={[2.0, 16, 16]} />
+                  <sphereGeometry args={[2.4, 16, 16]} />
                   <meshBasicMaterial color="#f472b6" />
                 </mesh>
                 <mesh position={sat.passDetails.setVec3.toArray()}>
-                  <sphereGeometry args={[1.5, 16, 16]} />
+                  <sphereGeometry args={[1.8, 16, 16]} />
                   <meshBasicMaterial color="#ec4899" />
                 </mesh>
               </>
@@ -2392,11 +2397,13 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [satCatalog, setSatCatalog] = useState<SatelliteData[]>(DEFAULT_SATELLITE_CATALOG);
   const [tleStatusText, setTleStatusText] = useState<string>("Fetching Live CelesTrak NORAD TLEs...");
 
-  // Load Real-Time Multi-Group TLEs with 3-hour automatic refresh cycle
+  // Load Real-Time Authentic CelesTrak Visual TLEs with 3-hour automatic refresh cycle
   const loadRealTimeTles = useCallback(async (showManualFeedback = false) => {
     setIsRefreshingTles(true);
     try {
-      const groups = ["stations", "visual", "weather", "gnss", "science"];
+      // Strictly fetch authentic visual satellites and space stations (CelesTrak visual & stations)
+      // Excludes non-visual GPS / GEO weather satellites
+      const groups = ["visual", "stations"];
       const fetchPromises = groups.map((g) =>
         fetch(`/api/orbital?group=${g}&format=tle&_t=${Date.now()}`)
           .then((r) => (r.ok ? r.text() : ""))
@@ -2409,9 +2416,9 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       if (liveSats.length >= 5) {
         setSatCatalog(liveSats);
         setLastRefreshedDate(new Date());
-        setTleStatusText(`CelesTrak Multi-Group Live API (${liveSats.length} Real TLEs)`);
+        setTleStatusText(`CelesTrak Visual Fleet Live API (${liveSats.length} Real TLEs)`);
         if (showManualFeedback) {
-          showToast(`24h Passes: ${liveSats.length} Satellites Synchronized`);
+          showToast(`Observatory: ${liveSats.length} Real-Time Visual Satellites Synced`);
         }
       }
     } catch (err) {

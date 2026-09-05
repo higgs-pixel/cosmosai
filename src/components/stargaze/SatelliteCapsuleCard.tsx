@@ -73,13 +73,30 @@ export function SatelliteCapsuleCard({
               </GlassBadge>
             )}
 
-            <GlassBadge tone={sat.isAboveHorizon ? (sat.isSunlit ? "amber" : "purple") : "cyan"}>
+            <GlassBadge
+              tone={
+                sat.isAboveHorizon
+                  ? sat.isSunlit
+                    ? sat.isObserverDark
+                      ? "amber"
+                      : "cyan"
+                    : "purple"
+                  : "cyan"
+              }
+            >
               {sat.isAboveHorizon ? (
                 sat.isSunlit ? (
-                  <>
-                    <Sun className="h-2.5 w-2.5 text-amber-400" />
-                    <span>SUNLIT</span>
-                  </>
+                  sat.isObserverDark ? (
+                    <>
+                      <Sun className="h-2.5 w-2.5 text-amber-400" />
+                      <span>SUNLIT</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="h-2.5 w-2.5 text-cyan-300" />
+                      <span>SUNLIT (DAY)</span>
+                    </>
+                  )
                 ) : (
                   <>
                     <Moon className="h-2.5 w-2.5 text-purple-300" />
