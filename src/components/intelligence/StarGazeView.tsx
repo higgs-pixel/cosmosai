@@ -908,21 +908,25 @@ function Live3DSatelliteNode({
   rank?: number;
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
 }) {
+  const rootGroupRef = useRef<THREE.Group>(null);
   const nodeRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Mesh>(null);
 
   const catStyle = getSatelliteCategoryStyle(sat.category, sat.name);
   const color = isSelected ? "#ffe600" : catStyle.colorHex;
 
-  // Performance: Only run useFrame animation for the selected satellite (avoids 80 per-frame loops)
-  useFrame(({ clock }) => {
-    if (!isSelected) return;
-    const t = clock.getElapsedTime();
-    if (glowRef.current) {
-      glowRef.current.rotation.z = t * 0.8;
+  useFrame(({ clock }, delta) => {
+    // 1. Fluid 60fps positional smoothing along propagated orbital trajectory
+    if (rootGroupRef.current) {
+      const damp = 1 - Math.exp(-14 * Math.min(delta, 0.1));
+      rootGroupRef.current.position.lerp(sat.vec3, damp);
     }
-    if (nodeRef.current) {
-      nodeRef.current.rotation.y = t * 0.4;
+
+    // 2. Selected satellite pulse and rotation
+    if (isSelected) {
+      const t = clock.getElapsedTime();
+      if (glowRef.current) glowRef.current.rotation.z = t * 0.8;
+      if (nodeRef.current) nodeRef.current.rotation.y = t * 0.4;
     }
   });
 
@@ -930,7 +934,7 @@ function Live3DSatelliteNode({
   const shouldRenderLabel = isSelected || (showLabels && rank != null && rank < 16);
 
   return (
-    <group position={sat.vec3.toArray()} onClick={() => onSelectSat(sat)}>
+    <group ref={rootGroupRef} position={sat.vec3.toArray()} onClick={() => onSelectSat(sat)}>
       {/* Outer Pulsing Lock Target Ring */}
       {isSelected && (
         <mesh ref={glowRef}>
@@ -1005,49 +1009,48 @@ function OrbitTrajectoriesLayer({
   selectedSatId: number | null;
   showOrbits: boolean;
 }) {
-  // Only draw orbit trajectory for the currently selected/targeted satellite (uncluttering the dome)
-  const selectedSat = useMemo(() => {
-    if (!showOrbits || !selectedSatId) return null;
-    return (
-      satellites.find(
-        (s) => s.id === selectedSatId && s.trajectoryPoints && s.trajectoryPoints.length >= 2
-      ) || null
-    );
-  }, [satellites, selectedSatId, showOrbits]);
+  if (!showOrbits) return null;
 
-  if (!showOrbits || !selectedSat || !selectedSat.trajectoryPoints) return null;
-
-  const pts = selectedSat.trajectoryPoints;
-  const strokeColor = "#ff1493";
+  // Render trajectories for selected satellite and all visible overhead satellites with paths
+  const trajectorySats = satellites.filter(
+    (s) => (s.id === selectedSatId || s.isAboveHorizon) && s.trajectoryPoints && s.trajectoryPoints.length >= 2
+  );
 
   return (
     <group>
-      <Line
-        points={pts}
-        color={strokeColor}
-        lineWidth={4.8}
-        transparent
-        opacity={0.98}
-      />
-
-      {selectedSat.passDetails && (
-        <>
-          <mesh position={selectedSat.passDetails.riseVec3.toArray()}>
-            <sphereGeometry args={[1.4, 16, 16]} />
-            <meshBasicMaterial color="#ec4899" />
-          </mesh>
-
-          <mesh position={selectedSat.passDetails.peakVec3.toArray()}>
-            <sphereGeometry args={[1.8, 16, 16]} />
-            <meshBasicMaterial color="#ff1493" />
-          </mesh>
-
-          <mesh position={selectedSat.passDetails.setVec3.toArray()}>
-            <sphereGeometry args={[1.4, 16, 16]} />
-            <meshBasicMaterial color="#f472b6" />
-          </mesh>
-        </>
-      )}
+      {trajectorySats.map((sat) => {
+        const isSelected = sat.id === selectedSatId;
+        const color = isSelected ? "#ffe600" : "#ec4899";
+        const width = isSelected ? 4.8 : 2.2;
+        const opacity = isSelected ? 0.98 : 0.6;
+        return (
+          <group key={`orbit-path-${sat.id}`}>
+            <Line
+              points={sat.trajectoryPoints}
+              color={color}
+              lineWidth={width}
+              transparent
+              opacity={opacity}
+            />
+            {isSelected && sat.passDetails && (
+              <>
+                <mesh position={sat.passDetails.riseVec3.toArray()}>
+                  <sphereGeometry args={[1.4, 16, 16]} />
+                  <meshBasicMaterial color="#ec4899" />
+                </mesh>
+                <mesh position={sat.passDetails.peakVec3.toArray()}>
+                  <sphereGeometry args={[1.8, 16, 16]} />
+                  <meshBasicMaterial color="#ffe600" />
+                </mesh>
+                <mesh position={sat.passDetails.setVec3.toArray()}>
+                  <sphereGeometry args={[1.4, 16, 16]} />
+                  <meshBasicMaterial color="#f472b6" />
+                </mesh>
+              </>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -2143,7 +2146,33 @@ interface StarGazeViewProps {
 
 export default function StarGazeView({ observer: initialObserver }: StarGazeViewProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const [currentObserver, setCurrentObserver] = useState<ObserverCoords>(initialObserver);
+  const [currentObserver, setCurrentObserver] = useState<ObserverCoords>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("cosmos_sky_observer");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.lat === "number" && typeof parsed.lon === "number") {
+            return parsed;
+          }
+        }
+      } catch {
+        /* fallback */
+      }
+    }
+    return initialObserver;
+  });
+
+  // Keep observer synchronized with real-time GPS or localStorage changes
+  useEffect(() => {
+    if (
+      initialObserver &&
+      (Math.abs(initialObserver.lat - currentObserver.lat) > 0.0001 ||
+        Math.abs(initialObserver.lon - currentObserver.lon) > 0.0001)
+    ) {
+      setCurrentObserver(initialObserver);
+    }
+  }, [initialObserver, currentObserver.lat, currentObserver.lon]);
 
   // Time & Simulation Controls
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
@@ -2345,7 +2374,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const loadRealTimeTles = useCallback(async (showManualFeedback = false) => {
     setIsRefreshingTles(true);
     try {
-      const groups = ["visual", "stations", "bright", "weather", "resource"];
+      const groups = ["stations", "visual", "weather", "gnss", "science"];
       const fetchPromises = groups.map((g) =>
         fetch(`/api/orbital?group=${g}&format=tle&_t=${Date.now()}`)
           .then((r) => (r.ok ? r.text() : ""))
@@ -2387,14 +2416,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
     return () => clearInterval(interval);
   }, [loadRealTimeTles]);
 
-  // Time simulation playback loop
+  // High-precision smooth simulation playback loop (100ms cadence prevents discrete 1s jumps)
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
       startTransition(() => {
-        setCurrentDate((prev) => new Date(prev.getTime() + 1000 * timeMultiplier));
+        setCurrentDate((prev) => new Date(prev.getTime() + 100 * timeMultiplier));
       });
-    }, 1000);
+    }, 100);
     return () => clearInterval(interval);
   }, [isPlaying, timeMultiplier]);
 
@@ -2528,25 +2557,63 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   };
 
   const handleRequestGps = useCallback(() => {
+    showToast("Acquiring Real Observatory GPS...");
+    const applyCoords = (userLoc: ObserverCoords) => {
+      setCurrentObserver(userLoc);
+      try {
+        localStorage.setItem("cosmos_sky_observer", JSON.stringify(userLoc));
+      } catch {}
+      showToast(`Observer Locked: ${userLoc.lat.toFixed(4)}°, ${userLoc.lon.toFixed(4)}°`);
+    };
+
     if (typeof navigator !== "undefined" && "geolocation" in navigator) {
-      showToast("Acquiring GPS Location Sensor...");
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const userLoc: ObserverCoords = {
+          applyCoords({
             name: "My GPS Location",
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude,
-            altMeters: pos.coords.altitude || 10,
-          };
-          setCurrentObserver(userLoc);
-          showToast(`Geolocation Locked: ${userLoc.lat.toFixed(2)}°, ${userLoc.lon.toFixed(2)}°`);
+            lat: parseFloat(pos.coords.latitude.toFixed(6)),
+            lon: parseFloat(pos.coords.longitude.toFixed(6)),
+            altMeters: Math.round(pos.coords.altitude || 10),
+          });
         },
         () => {
-          showToast("GPS Sensor Timeout: Defaulting to Selected Site");
-        }
+          // IP Network Geolocation Fallback
+          fetch("/api/geolocation")
+            .then((r) => r.json())
+            .then((geo) => {
+              if (geo && typeof geo.lat === "number" && typeof geo.lon === "number") {
+                const name = geo.city && geo.country ? `${geo.city}, ${geo.country}` : "Regional Observatory";
+                applyCoords({
+                  name,
+                  lat: parseFloat(geo.lat.toFixed(6)),
+                  lon: parseFloat(geo.lon.toFixed(6)),
+                  altMeters: 180,
+                });
+              } else {
+                showToast("GPS Sensor Timeout: Defaulting to Selected Site");
+              }
+            })
+            .catch(() => {
+              showToast("GPS Sensor Timeout: Defaulting to Selected Site");
+            });
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
       );
     } else {
-      showToast("Geolocation API Not Supported");
+      fetch("/api/geolocation")
+        .then((r) => r.json())
+        .then((geo) => {
+          if (geo && typeof geo.lat === "number" && typeof geo.lon === "number") {
+            const name = geo.city && geo.country ? `${geo.city}, ${geo.country}` : "Regional Observatory";
+            applyCoords({
+              name,
+              lat: parseFloat(geo.lat.toFixed(6)),
+              lon: parseFloat(geo.lon.toFixed(6)),
+              altMeters: 180,
+            });
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 

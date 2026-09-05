@@ -48,16 +48,56 @@ export default function StarGazePage() {
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setObserver((prev) => ({
-            ...prev,
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude,
-            altMeters: pos.coords.altitude || prev.altMeters || 10,
-          }));
+          const newObs: ObserverCoords = {
+            name: "GPS Observer Location",
+            lat: parseFloat(pos.coords.latitude.toFixed(6)),
+            lon: parseFloat(pos.coords.longitude.toFixed(6)),
+            altMeters: Math.round(pos.coords.altitude || 180),
+          };
+          setObserver(newObs);
+          try {
+            localStorage.setItem("cosmos_sky_observer", JSON.stringify(newObs));
+          } catch {}
         },
-        () => {},
+        () => {
+          // IP Network Geolocation Fallback
+          fetch("/api/geolocation")
+            .then((r) => r.json())
+            .then((geo) => {
+              if (geo && typeof geo.lat === "number" && typeof geo.lon === "number") {
+                const name = geo.city && geo.country ? `${geo.city}, ${geo.country}` : "Regional Observatory";
+                const ipObs: ObserverCoords = {
+                  name,
+                  lat: parseFloat(geo.lat.toFixed(6)),
+                  lon: parseFloat(geo.lon.toFixed(6)),
+                  altMeters: 180,
+                };
+                setObserver(ipObs);
+                try {
+                  localStorage.setItem("cosmos_sky_observer", JSON.stringify(ipObs));
+                } catch {}
+              }
+            })
+            .catch(() => {});
+        },
         { enableHighAccuracy: true, timeout: 6000 }
       );
+    } else {
+      fetch("/api/geolocation")
+        .then((r) => r.json())
+        .then((geo) => {
+          if (geo && typeof geo.lat === "number" && typeof geo.lon === "number") {
+            const name = geo.city && geo.country ? `${geo.city}, ${geo.country}` : "Regional Observatory";
+            const ipObs: ObserverCoords = {
+              name,
+              lat: parseFloat(geo.lat.toFixed(6)),
+              lon: parseFloat(geo.lon.toFixed(6)),
+              altMeters: 180,
+            };
+            setObserver(ipObs);
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
