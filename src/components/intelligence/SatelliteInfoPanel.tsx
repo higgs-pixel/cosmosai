@@ -878,16 +878,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Discovery card sub-component
-// ─────────────────────────────────────────────────────────────────────────────
 function DiscoveryCard({ d }: { d: { title: string; desc: string; imageUrl?: string } }) {
   const [cardImgErr, setCardImgErr] = useState(false);
 
   return (
-    <div className="rounded-lg bg-slate-900/60 border border-slate-800/80 overflow-hidden flex flex-col justify-between">
+    <div className="border border-zinc-850 bg-black overflow-hidden flex flex-col justify-between">
       {d.imageUrl && !cardImgErr && (
-        <div className="h-32 overflow-hidden relative bg-slate-950">
+        <div className="h-32 overflow-hidden relative bg-black">
           <img
             src={d.imageUrl}
             alt={d.title}
@@ -896,15 +893,15 @@ function DiscoveryCard({ d }: { d: { title: string; desc: string; imageUrl?: str
             className="w-full h-full object-cover opacity-90 hover:opacity-100 transition duration-300"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
         </div>
       )}
-      <div className="p-3">
-        <p className="text-[11px] font-bold text-[#00e5ff] leading-tight flex items-center gap-1.5">
+      <div className="p-3.5">
+        <p className="text-[11px] font-bold text-white leading-tight flex items-center gap-1.5">
           <Star className="h-3 w-3 text-[#00e5ff] flex-shrink-0" />
           {d.title}
         </p>
-        <p className="text-[10px] text-slate-300 mt-1.5 leading-relaxed">{d.desc}</p>
+        <p className="text-[10px] text-zinc-400 mt-1.5 leading-relaxed">{d.desc}</p>
       </div>
     </div>
   );
@@ -997,27 +994,27 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
   const isDebris = isDebrisOrRocketBody(satName);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-gradient-to-br from-[#0b0f19] to-[#080c16] overflow-hidden shadow-2xl mt-4">
+    <div className="border border-zinc-850 bg-zinc-950 overflow-hidden mt-4">
       {/* Header banner */}
-      <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${isDebris ? "border-red-900/60 bg-red-950/20" : "border-slate-800/80 bg-[#00e5ff]/5"}`}>
+      <div className={`flex items-center gap-2 px-5 py-3 border-b ${isDebris ? "border-red-900/60 bg-red-950/20" : "border-zinc-850 bg-black"}`}>
         {isDebris ? (
           <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 animate-pulse" />
         ) : (
           <Eye className="h-4 w-4 text-[#00e5ff] flex-shrink-0" />
         )}
-        <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${isDebris ? "text-red-400" : "text-[#00e5ff]"}`}>
+        <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${isDebris ? "text-red-400" : "text-white"}`}>
           {isDebris ? "Debris Intelligence & Hazard Dossier" : "Mission Intelligence & Technical Dossier"}
         </span>
-        <span className="ml-auto text-[10px] font-mono text-slate-400 bg-slate-900/80 border border-slate-800 px-2 py-0.5 rounded">
+        <span className="ml-auto text-[10px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-0.5">
           NORAD #{noradId}
         </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-0">
         {/* Left: Satellite image + Technical specifications */}
-        <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800/80 bg-slate-950/40">
+        <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-850 bg-black">
           {/* Image Container with SVG fallback */}
-          <div className="relative h-52 lg:h-60 bg-slate-950 overflow-hidden flex items-center justify-center border-b border-slate-800/60">
+          <div className="relative h-56 lg:h-64 bg-black overflow-hidden flex items-center justify-center border-b border-zinc-850">
             <img
               src={imgError ? LOCAL_FALLBACK_IMG : (info.imageUrl || LOCAL_FALLBACK_IMG)}
               alt={info.name}
@@ -1026,13 +1023,13 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
               className="w-full h-full object-cover opacity-95 hover:opacity-100 transition duration-300"
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
             
             {/* Tags overlay */}
             {tags.length > 0 && (
-              <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex flex-wrap gap-1">
                 {tags.slice(0, 3).map((t) => (
-                  <span key={t} className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm border ${isDebris ? "text-red-400 border-red-500/30" : "text-[#00e5ff] border-[#00e5ff]/20"}`}>
+                  <span key={t} className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 bg-black/85 backdrop-blur-sm border ${isDebris ? "text-red-400 border-red-500/40" : "text-zinc-200 border-white/20"}`}>
                     {t}
                   </span>
                 ))}
@@ -1041,37 +1038,37 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
           </div>
 
           {/* Quick facts */}
-          <div className="p-4 space-y-3 flex-1 text-xs">
+          <div className="p-5 space-y-3.5 flex-1 text-xs">
             {info.status && (
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Operational Status</span>
+              <div className="flex items-center justify-between pb-2.5 border-b border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">Operational Status</span>
                 <StatusBadge status={info.status} />
               </div>
             )}
 
             {info.agency && (
-              <div className="pb-2 border-b border-slate-800/60">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
+              <div className="pb-2.5 border-b border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
                   <Globe className="h-3 w-3 text-[#00e5ff]" /> Operating Agency / Country
                 </span>
                 <p className="text-[11px] text-white font-bold leading-snug">{info.agency}</p>
-                {info.country && <p className="text-[9px] text-slate-400 font-mono mt-0.5">{info.country}</p>}
+                {info.country && <p className="text-[9px] text-zinc-400 font-mono mt-0.5">{info.country}</p>}
               </div>
             )}
 
             {info.launchDate && (
-              <div className="pb-2 border-b border-slate-800/60">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
+              <div className="pb-2.5 border-b border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
                   <Calendar className="h-3 w-3 text-amber-400" /> Launch Date &amp; Vehicle
                 </span>
                 <p className="text-[11px] text-white font-mono">{info.launchDate}</p>
-                {info.launchVehicle && <p className="text-[10px] text-slate-300 mt-0.5">{info.launchVehicle}</p>}
+                {info.launchVehicle && <p className="text-[10px] text-zinc-300 mt-0.5">{info.launchVehicle}</p>}
               </div>
             )}
 
             {info.orbit && (
               <div>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-wider flex items-center gap-1 mb-1 font-semibold">
                   <MapPin className="h-3 w-3 text-[#ff3366]" /> Orbit Profile
                 </span>
                 <p className="text-[10px] text-[#00e5ff] font-mono leading-snug">{info.orbit}</p>
@@ -1081,13 +1078,13 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
         </div>
 
         {/* Right: Technical Specifications, Mission Purpose & Discoveries */}
-        <div className="p-5 flex flex-col gap-5 overflow-hidden">
+        <div className="p-6 flex flex-col gap-6 overflow-hidden bg-zinc-950">
           
           {/* Mission title & description & Direct Wikipedia Button */}
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h2 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
-                {isDebris ? <AlertTriangle className="h-4.5 w-4.5 text-red-400" /> : <Satellite className="h-4.5 w-4.5 text-[#00e5ff]" />}
+                {isDebris ? <AlertTriangle className="h-4 w-4 text-red-400" /> : <Satellite className="h-4 w-4 text-[#00e5ff]" />}
                 {info.name}
               </h2>
 
@@ -1096,7 +1093,7 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
                   href={info.wikipediaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-bold text-slate-100 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-[#00e5ff] rounded-lg px-3 py-1.5 transition shadow-lg"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-zinc-200 hover:text-white bg-zinc-900 hover:bg-zinc-850 border border-zinc-750 px-3 py-1.5 transition"
                 >
                   <BookOpen className="h-3.5 w-3.5 text-[#00e5ff]" />
                   <span>Wikipedia Article</span>
@@ -1105,7 +1102,7 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
               )}
             </div>
 
-            <p className={`text-xs leading-relaxed border p-3.5 rounded-lg ${isDebris ? "bg-red-950/20 border-red-900/40 text-red-200" : "bg-slate-900/40 border-slate-850 text-slate-300"}`}>
+            <p className={`text-xs leading-relaxed border p-4 ${isDebris ? "bg-red-950/20 border-red-900/40 text-red-200" : "bg-black border-zinc-850 text-zinc-300"}`}>
               {info.purpose}
             </p>
           </div>
@@ -1113,42 +1110,42 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
           {/* Technical Specs Grid (Mass, Dimensions, Power, Instruments) */}
           {(info.mass || info.dimensions || info.power || (info.instruments && info.instruments.length > 0)) && (
             <div>
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 mb-3">
                 <Wrench className="h-3.5 w-3.5 text-amber-400" />
                 Spacecraft Technical Specifications
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {info.mass && (
-                  <div className="bg-slate-900/50 border border-slate-800/80 p-2.5 rounded-lg">
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Dry / Launch Mass</span>
+                  <div className="bg-black border border-zinc-850 p-3">
+                    <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider">Dry / Launch Mass</span>
                     <p className="text-xs font-bold text-white font-mono mt-1">{info.mass}</p>
                   </div>
                 )}
 
                 {info.dimensions && (
-                  <div className="bg-slate-900/50 border border-slate-800/80 p-2.5 rounded-lg">
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Physical Dimensions</span>
+                  <div className="bg-black border border-zinc-850 p-3">
+                    <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider">Physical Dimensions</span>
                     <p className="text-xs font-bold text-white font-mono mt-1">{info.dimensions}</p>
                   </div>
                 )}
 
                 {info.power && (
-                  <div className="bg-slate-900/50 border border-slate-800/80 p-2.5 rounded-lg">
-                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Electrical Power Output</span>
+                  <div className="bg-black border border-zinc-850 p-3">
+                    <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider">Electrical Power Output</span>
                     <p className="text-xs font-bold text-emerald-400 font-mono mt-1">{info.power}</p>
                   </div>
                 )}
               </div>
 
               {info.instruments && info.instruments.length > 0 && (
-                <div className="mt-3 bg-slate-900/30 border border-slate-850 p-3 rounded-lg">
-                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1 mb-2">
+                <div className="mt-3 bg-black border border-zinc-850 p-3.5">
+                  <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1 mb-2">
                     <Cpu className="h-3 w-3 text-[#00e5ff]" /> Onboard Payload &amp; Scientific Instruments
                   </span>
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {info.instruments.map((inst, idx) => (
-                      <li key={idx} className="text-[11px] text-slate-300 flex items-start gap-1.5">
+                      <li key={idx} className="text-[11px] text-zinc-300 flex items-start gap-1.5">
                         <span className="text-[#00e5ff] font-bold mt-0.5">•</span>
                         <span>{inst}</span>
                       </li>

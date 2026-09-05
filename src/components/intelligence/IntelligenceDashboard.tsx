@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import * as satellite from "satellite.js";
 import Link from "next/link";
 import {
@@ -18,6 +18,14 @@ import {
   Zap,
   Activity,
   MapPin,
+  ArrowLeft,
+  Sparkles,
+  ChevronDown,
+  ExternalLink,
+  SlidersHorizontal,
+  Radio,
+  Eye,
+  Crosshair,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useOrbitalStore, SatelliteData } from "./store";
@@ -27,8 +35,8 @@ import SatelliteInfoPanel from "./SatelliteInfoPanel";
 const Satellite3DView = dynamic(() => import("./Satellite3DView"), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#03040a] font-mono text-[10px] uppercase tracking-widest text-[#00e5ff]">
-      Loading 3D Orbit Globe...
+    <div className="absolute inset-0 flex items-center justify-center bg-black font-mono text-[11px] uppercase tracking-widest text-[#00e5ff]">
+      Calibrating 3D Orbital Ephemeris...
     </div>
   ),
 });
@@ -36,14 +44,13 @@ const Satellite3DView = dynamic(() => import("./Satellite3DView"), {
 const Satellite2DMap = dynamic(() => import("./Satellite2DMap"), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117] font-mono text-[10px] uppercase tracking-widest text-slate-500">
-      Loading 2D Satellite Radar...
+    <div className="absolute inset-0 flex items-center justify-center bg-black font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+      Initializing 2D Satellite Radar...
     </div>
   ),
 });
 
 // Available CelesTrak groups + Default COSMOS Catalog
-// Group IDs match CelesTrak's gp.php GROUP parameter. Verified working via API tests.
 const GROUPS = [
   { id: "stations", name: "Space Stations & Space Machines" },
   { id: "gnss", name: "GNSS (All GPS/GLONASS/Galileo/BeiDou)" },
@@ -113,53 +120,59 @@ function formatClockTime(timeMs: number, tzId: string): string {
   }
 }
 
-// Local spacecraft catalog definitions matching orbit page
+// Prominent flagship spacecraft catalog definitions matching orbit page
 const CATALOG_SATELLITES = [
   {
     id: 25544,
     name: "ISS (Zarya)",
+    agency: "NASA / International",
     category: "space-station",
-    description: "The International Space Station. First module launched in 1998, occupied continuously since 2000.",
-    icon: Orbit,
+    description: "The International Space Station. Continuously occupied microgravity science laboratory.",
+    date: "Launched Nov 1998",
   },
   {
     id: 48274,
     name: "Tiangong Space Station",
+    agency: "CNSA",
     category: "space-station",
-    description: "China's permanent space station in low Earth orbit. Completed assembly in late 2022.",
-    icon: Orbit,
+    description: "China's permanent modular space station in low Earth orbit.",
+    date: "Launched Apr 2021",
   },
   {
     id: 20580,
     name: "Hubble Space Telescope",
+    agency: "NASA / ESA",
     category: "telescope",
-    description: "NASA/ESA Hubble observatory launched in 1990. Still unlocking secrets of the deep universe.",
-    icon: Compass,
+    description: "Deep universe optical observatory operating above atmospheric distortion.",
+    date: "Launched Apr 1990",
   },
   {
     id: 33591,
     name: "NOAA 19",
+    agency: "NASA / NOAA",
     category: "weather",
-    description: "NASA/NOAA meteorological satellite monitoring Earth's atmosphere, clouds, and oceans.",
-    icon: Globe,
+    description: "Polar-orbiting meteorological observatory tracking climate and oceans.",
+    date: "Launched Feb 2009",
   },
   {
     id: 27386,
     name: "Envisat",
+    agency: "ESA",
     category: "debris",
-    description: "ESA Earth observation satellite launched in 2002. Contact lost in 2012; now a massive space debris hazard.",
-    icon: ShieldAlert,
+    description: "Massive inactive Earth-observation satellite now tracked as key debris.",
+    date: "Launched Mar 2002",
   },
   {
     id: 44713,
     name: "Starlink-1007",
+    agency: "SpaceX",
     category: "communication",
-    description: "One of the early satellites in SpaceX's massive megaconstellation providing global internet access.",
-    icon: Zap,
+    description: "High-speed broadband communication satellite in dense megaconstellation.",
+    date: "Launched Nov 2019",
   },
 ];
 
-// Helper to parse TLE Text file returned by CelesTrak proxy (supports both 2LE and 3LE formats)
+// Helper to parse TLE Text file returned by CelesTrak proxy
 function parseTleText(text: string, rawCategory: string): SatelliteData[] {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const list: SatelliteData[] = [];
@@ -197,7 +210,6 @@ function parseTleText(text: string, rawCategory: string): SatelliteData[] {
       const id = parseInt(line1.substring(2, 7).trim(), 10);
       if (isNaN(id)) continue;
       
-      // Strict unique satellite NORAD ID check
       if (seenIds.has(id)) continue;
       seenIds.add(id);
 
@@ -231,16 +243,15 @@ function parseTleText(text: string, rawCategory: string): SatelliteData[] {
         orbitClass = "HEO";
       }
 
-      // Only adjust phase offset if line2 is an exact duplicate fallback of ISS TLE line to preserve 100% raw CelesTrak precision
       if (id !== 25544 && line2.includes("15.49433609") && line2.includes("51.6415")) {
         try {
           const origMA = parseFloat(line2.substring(43, 51).trim());
           if (!isNaN(origMA)) {
-            const phaseOffset = ((id * 37) % 330) + 15; // Unique 15° to 345° orbital phase offset
+            const phaseOffset = ((id * 37) % 330) + 15;
             const newMA = ((origMA + phaseOffset) % 360).toFixed(4).padStart(8, " ");
             line2 = line2.substring(0, 43) + newMA + line2.substring(51);
           }
-        } catch (err) {
+        } catch {
           // ignore
         }
       }
@@ -254,7 +265,7 @@ function parseTleText(text: string, rawCategory: string): SatelliteData[] {
         orbitClass,
         epochDate: finalEpoch.toISOString(),
       });
-    } catch (e) {
+    } catch {
       // skip
     }
   }
@@ -298,6 +309,7 @@ export default function IntelligenceDashboard() {
   const [selectedTz, setSelectedTz] = useState("IST");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"3d" | "2d" | "split">("3d");
   
   const timeMs = useOrbitalStore((s) => s.timeMs);
   const isPaused = useOrbitalStore((s) => s.isPaused);
@@ -333,7 +345,6 @@ export default function IntelligenceDashboard() {
     setSatellitesList([]);
     setCategoryFilter("All");
     setOrbitClassFilter("All");
-    setSearchQuery("");
 
     const queryUrl = selectedGroup === "catalog"
       ? `/api/orbital?catnr=25544,48274,20580,33591,27386,44713&format=tle`
@@ -351,7 +362,6 @@ export default function IntelligenceDashboard() {
           throw new Error("No satellites could be parsed.");
         }
         setSatellitesList(parsed);
-        // Default to first loaded satellite
         if (parsed.length > 0) {
           setSelectedId(parsed[0].id);
         }
@@ -366,7 +376,7 @@ export default function IntelligenceDashboard() {
     return () => {
       active = false;
     };
-  }, [selectedGroup, setSatellitesList, setSelectedId, setCategoryFilter, setOrbitClassFilter, setSearchQuery]);
+  }, [selectedGroup, setSatellitesList, setSelectedId, setCategoryFilter, setOrbitClassFilter]);
 
   // 2. Initialize SGP4 Web Worker on satellite list load
   useEffect(() => {
@@ -427,7 +437,7 @@ export default function IntelligenceDashboard() {
     setLockCamera(true);
   };
 
-  // 4. Calculate filtered satellites with optimization algorithm for megaconstellations
+  // 4. Calculate filtered satellites
   const filteredSatellites = useMemo(() => {
     const seen = new Set<number>();
     const rawFiltered = satellitesList.filter((sat) => {
@@ -455,9 +465,6 @@ export default function IntelligenceDashboard() {
       return matchesSearch && matchesOrbit && matchesCategory;
     });
 
-    // HIGH-PERFORMANCE OPTIMIZATION ALGORITHM for Megaconstellations (Starlink, Active, etc.)
-    // If dataset exceeds 750 satellites and no specific query is active:
-    // Uniformly sub-sample the orbital planes to 750 satellites while preserving selectedId.
     if (!searchQuery && rawFiltered.length > 750) {
       const MAX_SATS = 750;
       const step = Math.ceil(rawFiltered.length / MAX_SATS);
@@ -481,7 +488,6 @@ export default function IntelligenceDashboard() {
     return rawFiltered;
   }, [satellitesList, searchQuery, orbitClassFilter, categoryFilter, selectedId]);
 
-  // Limit displayed satellites in sidebar listing to 150 to keep DOM rendering fast
   const displayedSatellites = useMemo(() => {
     return filteredSatellites.slice(0, 150);
   }, [filteredSatellites]);
@@ -493,7 +499,6 @@ export default function IntelligenceDashboard() {
   const selectedTelemetry = useMemo(() => {
     if (!selectedId || !selectedSat) return null;
     
-    // 1. Try positions buffer from SGP4 Web Worker
     if (latestPositionsRef.current) {
       const index = satellitesList.findIndex((s) => s.id === selectedId);
       if (index !== -1) {
@@ -512,7 +517,6 @@ export default function IntelligenceDashboard() {
       }
     }
 
-    // 2. Direct satellite.js SGP4 propagation fallback for selected satellite
     if (selectedSat.line1 && selectedSat.line2) {
       try {
         const satrec = satellite.twoline2satrec(selectedSat.line1, selectedSat.line2);
@@ -535,7 +539,7 @@ export default function IntelligenceDashboard() {
 
           return { px: pos.x, py: pos.y, pz: pos.z, lat, lon, alt, vel };
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -556,222 +560,185 @@ export default function IntelligenceDashboard() {
   }, [selectedSat, timeMs]);
 
   return (
-    <div className="flex flex-col gap-4 max-w-[1650px] mx-auto p-4 lg:p-6 w-full text-slate-100 font-sans">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#00e5ff]/20 selection:text-white">
       
-      {/* 1. Precision Advisory Header */}
-      <div className="rounded-xl border border-slate-800 bg-[#0f1422]/90 p-5 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold uppercase tracking-wider text-white">
-              Orbit Workspace
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              High-frequency SGP4/SDP4 propagation engine displaying real-world satellite imagery tracks.
-            </p>
-          </div>
-        
-        </div>
-      </div>
-
-      {/* 2. Primary Workspace Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
-        
-        {/* Left Column: Spacecraft Catalog Sidebar (styled after Orbit Tracker) */}
-        <div className="flex flex-col gap-4 border border-slate-800 bg-[#0b0f19] rounded-xl p-4 h-[710px] overflow-hidden shadow-2xl">
-          <div className="flex-none pb-2 border-b border-slate-800/60">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-[#00e5ff] flex items-center gap-1.5">
-              <Orbit className="h-4 w-4" />
-              Space Machines Catalog
-            </span>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Showing {displayedSatellites.length} of {filteredSatellites.length} space machine assets.
-            </p>
-          </div>
-
-          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 scrollbar-thin scrollbar-thumb-slate-850 scrollbar-track-transparent">
-            {loading ? (
-              <div className="text-center font-mono text-[9px] text-slate-500 py-10 uppercase tracking-widest animate-pulse">
-                Loading space machines...
-              </div>
-            ) : (
-              displayedSatellites.map((sat) => {
-                const isSelected = selectedId === sat.id;
-                return (
-                  <button
-                    key={sat.id}
-                    onClick={() => handleTrackSatellite(sat.id)}
-                    className={`flex flex-col gap-1.5 rounded-lg border p-2.5 text-left transition ${
-                      isSelected
-                        ? "border-[#00e5ff]/40 bg-[#00e5ff]/10 text-white shadow-[0_0_12px_rgba(0,229,255,0.15)]"
-                        : "border-slate-850 bg-slate-900/20 text-slate-400 hover:border-slate-850 hover:bg-slate-900/40"
-                    }`}
-                  >
-                    <span className="font-bold text-white text-xs truncate">{sat.name}</span>
-                    <div className="flex items-center justify-between text-[8px] font-mono text-slate-500">
-                      <span>NORAD: {sat.id}</span>
-                      <span className="text-[#00e5ff] font-bold">{sat.orbitClass}</span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Main Panel Layout */}
-        <div className="flex flex-col gap-4">
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          1. SLIM NASA-INSPIRED NAVIGATION BAR (Exact visual layout of Reference Header)
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-black/95 backdrop-blur-md">
+        <div className="mx-auto flex h-14 w-full items-center justify-between px-4 lg:px-8">
           
-          {/* Controls & Filter Panel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Clock */}
-            <div className="rounded-xl border border-slate-850 bg-[#0b0f19] p-4 flex flex-col justify-between shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs text-slate-400 uppercase tracking-wider">
-                  <Clock className="h-3.5 w-3.5" />
-                  Clock Configuration
+          {/* Left Brand: NASA-Style Crisp Logo */}
+          <div className="flex items-center gap-6">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 group transition"
+              title="Return to COSMOS Observatory"
+            >
+              <div className="border border-white/20 px-2.5 py-1 text-sm font-black tracking-[0.25em] text-white hover:border-white transition">
+                NASA
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold tracking-[0.18em] text-zinc-100 uppercase">
+                  COSMOS
                 </span>
-                <span className="text-[10px] font-bold bg-[#00e5ff]/10 text-[#00e5ff] px-2 py-0.5 rounded uppercase tracking-wider">
-                  {speed}x speed
-                </span>
-              </div>
-
-              {/* Country Timezone Dropdown Selector */}
-              <select
-                value={selectedTz}
-                onChange={(e) => setSelectedTz(e.target.value)}
-                className="mt-2 h-8 rounded-lg border border-slate-700 bg-slate-800 px-2 text-xs text-amber-400 font-semibold focus:outline-none focus:border-[#00e5ff]"
-              >
-                {TIMEZONE_OPTIONS.map((tz) => (
-                  <option key={tz.id} value={tz.id}>
-                    {tz.name}
-                  </option>
-                ))}
-              </select>
-
-              <div className="mt-2 font-mono text-[11px] font-semibold text-white tracking-wider bg-black/40 py-2 px-3 rounded text-center border border-white/5 truncate">
-                {formatClockTime(timeMs, selectedTz)}
-              </div>
-
-              <div className="flex items-center gap-2 mt-3">
-                <button
-                  onClick={togglePlay}
-                  className="flex-1 flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-semibold text-white hover:bg-slate-750 transition"
-                >
-                  {isPaused ? <Play className="h-3.5 w-3.5 text-emerald-400" /> : <Pause className="h-3.5 w-3.5 text-amber-400" />}
-                  {isPaused ? "Resume" : "Pause"}
-                </button>
-                <button
-                  onClick={() => {
-                    setTimeMs(Date.now());
-                    setSpeed(1);
-                    setIsPaused(false);
-                  }}
-                  className="flex h-8 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 transition"
-                  title="Reset to Real-Time"
-                >
-                  <RotateCcw className="h-3.5 w-3.5 text-slate-300" />
-                </button>
-              </div>
-            </div>
-
-            {/* Catalog Group selector */}
-            <div className="rounded-xl border border-slate-850 bg-[#0b0f19] p-4 flex flex-col justify-between shadow-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="flex items-center gap-1.5 text-xs text-slate-400 uppercase tracking-wider">
-                  <Layers className="h-3.5 w-3.5" />
-                  Observation Catalog
+                <span className="text-[8px] font-mono text-zinc-400 tracking-wider">
+                  ORBITAL OBSERVATORY
                 </span>
               </div>
+            </Link>
 
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  className="col-span-2 h-9 rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-xs text-white focus:outline-none focus:border-[#00e5ff]"
-                >
-                  {GROUPS.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-                
-                <select
-                  value={orbitClassFilter}
-                  onChange={(e) => setOrbitClassFilter(e.target.value as any)}
-                  className="h-9 rounded-lg border border-slate-700 bg-slate-800 px-2 text-xs text-white focus:outline-none focus:border-[#00e5ff]"
-                >
-                  <option value="All">All Orbits</option>
-                  <option value="LEO">LEO</option>
-                  <option value="MEO">MEO</option>
-                  <option value="GEO">GEO</option>
-                  <option value="HEO">HEO</option>
-                </select>
-
+            {/* Inline Editorial Search Input (as seen in reference header: "Search on all Nasa.gov") */}
+            <div className="relative hidden md:block w-64 lg:w-80">
+              <input
+                type="text"
+                placeholder="Search on all Cosmos satellites…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-8 rounded-none border border-zinc-800 bg-zinc-900/60 pl-8 pr-3 text-xs text-zinc-200 placeholder-zinc-500 focus:border-zinc-500 focus:bg-black focus:outline-none transition font-sans"
+              />
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-500" />
+              {searchQuery && (
                 <button
-                  onClick={() => setLockCamera(!lockCamera)}
-                  className={`h-9 flex items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition ${
-                    lockCamera
-                      ? "border-[#ff3366] bg-[#ff3366]/10 text-[#ff3366]"
-                      : "border-slate-700 bg-slate-800 text-[#00e5ff] hover:bg-slate-750"
-                  }`}
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-2 text-[10px] text-zinc-400 hover:text-white"
                 >
-                  <Cpu className="h-3.5 w-3.5" />
-                  {lockCamera ? "Camera Locked" : "Free Camera"}
+                  ✕
                 </button>
-              </div>
-            </div>
-
-            {/* Filtering search */}
-            <div className="rounded-xl border border-slate-850 bg-[#0b0f19] p-4 flex flex-col justify-between shadow-lg">
-              <span className="flex items-center gap-1.5 text-xs text-slate-400 uppercase tracking-wider mb-2">
-                <Search className="h-3.5 w-3.5" />
-                Query Filter
-              </span>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by name or NORAD ID…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-9 rounded-lg border border-slate-700 bg-slate-800 pl-8 pr-3 text-xs text-white focus:outline-none focus:border-[#00e5ff]"
-                />
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-              </div>
-
-              <div className="flex gap-2 mt-3">
-                {[1, 10, 60, 300, 900].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSpeed(s)}
-                    className={`flex-1 h-7 rounded border text-[10px] font-mono transition ${
-                      speed === s
-                        ? "border-[#00e5ff] bg-[#00e5ff]/20 text-[#00e5ff]"
-                        : "border-slate-800 bg-slate-900 text-slate-400 hover:bg-slate-800"
-                    }`}
-                  >
-                    {s}x
-                  </button>
-                ))}
-              </div>
+              )}
             </div>
           </div>
 
-          {/* 3D and 2D split rendering viewports */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[460px]">
-            {/* Left Side: 3D Earth Globe */}
-            <div className="relative rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-black">
-              <div className="absolute left-4 top-4 z-20 flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-lg">
-                <span className="flex h-2 w-2 rounded-full bg-[#00e5ff] animate-pulse" />
-                <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-slate-300">
-                  3D Earth Orbit Tracking
-                </span>
+          {/* Center Navigation Links: NASA Small Uppercase Editorial Menu */}
+          <nav className="hidden xl:flex items-center gap-6 text-[11px] font-medium tracking-wider text-zinc-300">
+            <button
+              onClick={() => {
+                const el = document.getElementById("fleet-catalog-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex items-center gap-1 hover:text-white transition uppercase"
+            >
+              Missions <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("hero-visual-area");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex items-center gap-1 hover:text-white transition uppercase"
+            >
+              Orbit Visuals <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("telemetry-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex items-center gap-1 hover:text-white transition uppercase"
+            >
+              Realtime Telemetry <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("dossier-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex items-center gap-1 hover:text-white transition uppercase"
+            >
+              Technical Dossier <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("fleet-catalog-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="flex items-center gap-1 text-zinc-400 hover:text-white transition uppercase"
+            >
+              Fleet Inventory ({filteredSatellites.length})
+            </button>
+          </nav>
+
+          {/* Right Navigation Actions: Retaining existing navigation links */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex h-8 items-center gap-1.5 border border-zinc-800 px-3 text-[11px] font-medium tracking-wider uppercase text-zinc-300 hover:border-zinc-600 hover:text-white transition bg-zinc-950/80"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              <span className="hidden sm:inline">Observatory</span>
+            </Link>
+
+            <Link
+              href="/track-my-sky"
+              className="inline-flex h-8 items-center gap-1.5 border border-[#00e5ff]/50 bg-[#00e5ff]/10 px-3 text-[11px] font-bold tracking-wider uppercase text-[#00e5ff] hover:bg-[#00e5ff]/20 hover:text-white transition shadow-[0_0_12px_rgba(0,229,255,0.12)]"
+            >
+              <Sparkles className="h-3 w-3" />
+              <span>Track My Sky</span>
+            </Link>
+          </div>
+
+        </div>
+      </header>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          2. CINEMATIC HERO SECTION (Matching the NASA visual composition)
+          Giant celestial body off-center against deep space with editorial text box
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <section
+        id="hero-visual-area"
+        className="relative w-full h-[78vh] min-h-[640px] max-h-[920px] bg-black overflow-hidden border-b border-zinc-900"
+      >
+        {/* Background Visual Layer: 3D Orbit Globe & 2D Radar Canvas */}
+        <div className="absolute inset-0 z-0">
+          {viewMode === "split" ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 h-full w-full">
+              <div className="relative h-full w-full border-r border-zinc-900 bg-black">
+                {loading ? (
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xs uppercase tracking-widest text-[#00e5ff]">
+                    Loading 3D Orbit Globe…
+                  </div>
+                ) : (
+                  <Satellite3DView
+                    satellites={filteredSatellites}
+                    latestPositions={latestPositionsRef}
+                    lockCamera={lockCamera}
+                    onTrackSatellite={handleTrackSatellite}
+                  />
+                )}
               </div>
-              
+              <div className="relative h-full w-full bg-zinc-950">
+                {loading ? (
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xs uppercase tracking-widest text-zinc-500">
+                    Loading 2D Satellite Radar…
+                  </div>
+                ) : (
+                  <Satellite2DMap
+                    satellites={filteredSatellites}
+                    latestPositions={latestPositionsRef}
+                    onTrackSatellite={handleTrackSatellite}
+                  />
+                )}
+              </div>
+            </div>
+          ) : viewMode === "2d" ? (
+            <div className="relative h-full w-full bg-zinc-950">
               {loading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#03040a] font-mono text-[10px] uppercase tracking-widest text-[#00e5ff]">
-                  Loading catalog coordinates...
+                <div className="absolute inset-0 flex items-center justify-center font-mono text-xs uppercase tracking-widest text-zinc-500">
+                  Loading 2D Satellite Radar…
+                </div>
+              ) : (
+                <Satellite2DMap
+                  satellites={filteredSatellites}
+                  latestPositions={latestPositionsRef}
+                  onTrackSatellite={handleTrackSatellite}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="relative h-full w-full bg-black">
+              {loading ? (
+                <div className="absolute inset-0 flex items-center justify-center font-mono text-xs uppercase tracking-widest text-[#00e5ff]">
+                  Loading 3D Orbit Globe…
                 </div>
               ) : error ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-red-950/20 text-red-400 text-xs font-semibold p-4">
@@ -786,170 +753,583 @@ export default function IntelligenceDashboard() {
                 />
               )}
             </div>
+          )}
+        </div>
 
-            {/* Right Side: 2D Leaflet World Map (ESRI Satellite Tiles) */}
-            <div className="relative rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-slate-900">
-              <div className="absolute left-4 top-4 z-20 flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-lg">
-                <span className="flex h-2 w-2 rounded-full bg-[#ff3366] animate-pulse" />
-                <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-slate-300">
-                  2D Live Tracking Radar (Satellite imagery)
-                </span>
-              </div>
+        {/* Subtle Vignette & Contrast Gradients for Editorial Readability */}
+        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-black/85 via-black/40 to-transparent w-full md:w-3/5" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
 
-              {loading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#0d1117] font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                  Loading satellite tiles...
-                </div>
-              ) : error ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-950/20 text-red-400 text-xs font-semibold p-4">
-                  {error}
-                </div>
-              ) : (
-                <Satellite2DMap
-                  satellites={filteredSatellites}
-                  latestPositions={latestPositionsRef}
-                  onTrackSatellite={handleTrackSatellite}
-                />
-              )}
-            </div>
+        {/* ─────────────────────────────────────────────────────────────────────
+            EDITORIAL OVERLAY: Exact layout matching the Pluto reference image
+            Outline category badge + bold headline box + subtitle link
+            ───────────────────────────────────────────────────────────────────── */}
+        <div className="absolute left-6 lg:left-14 top-1/2 -translate-y-1/2 z-20 max-w-xl flex flex-col items-start pointer-events-auto">
+          
+          {/* Outline category box (like "Image of the day" in reference) */}
+          <div className="border border-white/30 bg-black/60 backdrop-blur-sm px-3 py-1.5 mb-3.5">
+            <span className="text-[10px] font-semibold tracking-[0.22em] text-zinc-300 uppercase">
+              {selectedSat ? `${selectedSat.orbitClass} Mission Focus` : "Live Orbit Propagation"}
+            </span>
           </div>
 
-          {/* Satellite Telemetry Details card */}
-          <div className="rounded-xl border border-slate-850 bg-[#0f1422] p-5 shadow-lg">
-            {!selectedSat ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center text-slate-500">
-                <Cpu className="h-8 w-8 mb-2 opacity-30 animate-pulse" />
-                <p className="text-xs uppercase tracking-wider">Select a satellite in the catalog list to activate telemetry</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                
-                {/* Catalog details */}
-                <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 pr-0 md:pr-4 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#ff3366] bg-[#ff3366]/10 px-2 py-0.5 rounded uppercase tracking-widest">
-                      Satellite Focus
-                    </span>
-                    <h2 className="text-base font-bold text-white mt-2 truncate">{selectedSat.name}</h2>
-                    <div className="grid grid-cols-2 gap-2 mt-3 font-mono text-[10px] text-slate-400">
-                      <div>NORAD ID:</div>
-                      <div className="text-white font-bold">{selectedSat.id}</div>
-                      <div>GROUP:</div>
-                      <div className="text-white font-bold truncate">{selectedSat.category.toUpperCase()}</div>
-                      <div>ORBIT:</div>
-                      <div className="text-[#00e5ff] font-bold">{selectedSat.orbitClass}</div>
-                    </div>
-                  </div>
-                  <div className="text-[9px] text-slate-400/70 border-t border-slate-800/40 pt-2 mt-4">
-                    Epoch Date:<br />
-                    <span className="font-mono text-slate-300">{new Date(selectedSat.epochDate).toUTCString()}</span>
-                  </div>
-                </div>
+          {/* Large headline box (like "New Pluto images from NASA's..." in reference) */}
+          <div className="border border-white/20 bg-black/75 backdrop-blur-md p-5 lg:p-6 mb-4 shadow-2xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-snug">
+              {selectedSat ? (
+                <>
+                  <span>{selectedSat.name}</span>
+                  <span className="text-zinc-400 font-light block text-lg md:text-xl mt-1">
+                    NORAD ID {selectedSat.id} : {selectedSat.category.toUpperCase()}
+                  </span>
+                </>
+              ) : (
+                "Realtime SGP4 Satellite Fleet Observation"
+              )}
+            </h1>
 
-                {/* Live values */}
-                <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 pr-0 md:pr-4 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#ffcc00] uppercase tracking-widest">
-                      Live Subpoint Position
-                    </span>
-                    {selectedTelemetry ? (
-                      <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 mt-3 font-mono text-[10px]">
-                        <div className="text-slate-400">LATITUDE:</div>
-                        <div className="text-white font-semibold text-right">{selectedTelemetry.lat.toFixed(5)}°</div>
-                        <div className="text-slate-400">LONGITUDE:</div>
-                        <div className="text-white font-semibold text-right">{selectedTelemetry.lon.toFixed(5)}°</div>
-                        <div className="text-slate-400">ALTITUDE:</div>
-                        <div className="text-[#00e5ff] font-bold text-right">{selectedTelemetry.alt.toFixed(2)} km</div>
-                        <div className="text-slate-400">VELOCITY:</div>
-                        <div className="text-[#ff3366] font-bold text-right">
-                          {Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500 mt-4 italic animate-pulse">Calculating vector telemetry...</div>
-                    )}
-                  </div>
-                  
-                  <div className="text-[10px] text-slate-400 mt-4 pt-2 border-t border-slate-800/40">
-                    TLE Epoch Age:<br />
-                    <span className={`font-bold ${epochAgeDays > 3 ? "text-red-400" : "text-emerald-400"}`}>
-                      {epochAgeDays.toFixed(2)} days
-                    </span>
-                    <span className="text-slate-500"> ({epochAgeDays > 3 ? "Stale" : "Fresh"})</span>
-                  </div>
+            {/* Telemetry Snapshot in Editorial Monospace */}
+            {selectedTelemetry && (
+              <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-zinc-300">
+                <div>
+                  <span className="text-zinc-400">ALT: </span>
+                  <span className="text-[#00e5ff] font-semibold">{selectedTelemetry.alt.toFixed(1)} km</span>
                 </div>
-
-                {/* ECI Vectors */}
-                <div className="border-b md:border-b-0 md:border-r border-slate-800 pb-4 md:pb-0 pr-0 md:pr-4 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      Inertial Frame (ECI)
-                    </span>
-                    {selectedTelemetry ? (
-                      <div className="grid grid-cols-2 gap-y-2 gap-x-2 mt-3 font-mono text-[10px]">
-                        <div className="text-slate-400">ECI X:</div>
-                        <div className="text-white text-right">{selectedTelemetry.px.toFixed(2)} km</div>
-                        <div className="text-slate-400">ECI Y:</div>
-                        <div className="text-white text-right">{selectedTelemetry.py.toFixed(2)} km</div>
-                        <div className="text-slate-400">ECI Z:</div>
-                        <div className="text-white text-right">{selectedTelemetry.pz.toFixed(2)} km</div>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500 mt-4 italic">Calculating vectors...</div>
-                    )}
-                  </div>
-                  <div className="text-[8px] text-slate-500 leading-normal mt-4">
-                    *ECI coordinates are referenced to True Equator of Date inertial frame.
-                  </div>
+                <span className="text-zinc-600">|</span>
+                <div>
+                  <span className="text-zinc-400">VEL: </span>
+                  <span className="text-white font-semibold">
+                    {Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h
+                  </span>
                 </div>
-
-                {/* Keplerian Elements */}
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#00e5ff] uppercase tracking-widest">
-                      Keplerian Orbital Elements
-                    </span>
-                    {orbitalElements ? (
-                      <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 mt-3 font-mono text-[10px]">
-                        <div className="text-slate-400">INCLINATION:</div>
-                        <div className="text-white text-right">{orbitalElements.inclination.toFixed(4)}°</div>
-                        <div className="text-slate-400">ECCENTRICITY:</div>
-                        <div className="text-white text-right">{orbitalElements.eccentricity.toFixed(7)}</div>
-                        <div className="text-slate-400">PERIOD:</div>
-                        <div className="text-white text-right">{orbitalElements.periodMin.toFixed(2)} min</div>
-                        <div className="text-slate-400">APOGEE ALT:</div>
-                        <div className="text-white text-right">{orbitalElements.apogeeAlt.toFixed(0)} km</div>
-                        <div className="text-slate-400">PERIGEE ALT:</div>
-                        <div className="text-white text-right">{orbitalElements.perigeeAlt.toFixed(0)} km</div>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500 mt-4 italic">Unavailable</div>
-                    )}
-                  </div>
-                  <div className="text-[8px] text-slate-500 leading-normal mt-4">
-                    *Derived from standard Mean Motion equations relative to WGS-84 spheroid.
-                  </div>
+                <span className="text-zinc-600">|</span>
+                <div>
+                  <span className="text-zinc-400">LAT/LON: </span>
+                  <span className="text-zinc-300">
+                    {selectedTelemetry.lat.toFixed(2)}°, {selectedTelemetry.lon.toFixed(2)}°
+                  </span>
                 </div>
-
               </div>
             )}
           </div>
 
-          {/* Mission Intelligence Details Panel (Image, agency, launch date, purpose, discoveries) */}
-          {selectedSat && (
-            <SatelliteInfoPanel
-              noradId={selectedSat.id}
-              satName={selectedSat.name}
-              category={selectedSat.category}
-              orbitalElements={orbitalElements}
-            />
-          )}
+          {/* Editorial Action Link with arrow (like "See these images →" in reference) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => {
+                const el = document.getElementById("dossier-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold tracking-wider text-zinc-200 hover:text-white group border-b border-transparent hover:border-white pb-0.5 transition"
+            >
+              Explore Mission Dossier <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+
+            <button
+              onClick={() => {
+                const el = document.getElementById("telemetry-section");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-[#00e5ff] ml-3 transition"
+            >
+              <Crosshair className="h-3 w-3" />
+              Inspect Vector Data
+            </button>
+          </div>
 
         </div>
 
-      </div>
+        {/* ─────────────────────────────────────────────────────────────────────
+            FLOATING NASA HUD: Viewport Modes, Camera Lock & Simulation Controls
+            ───────────────────────────────────────────────────────────────────── */}
+        <div className="absolute right-4 lg:right-8 top-4 z-20 flex flex-col items-end gap-2.5">
+          
+          {/* Visualization Mode Selector */}
+          <div className="flex items-center border border-zinc-800 bg-black/80 backdrop-blur-md p-1">
+            <button
+              onClick={() => setViewMode("3d")}
+              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+                viewMode === "3d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              3D Globe
+            </button>
+            <button
+              onClick={() => setViewMode("2d")}
+              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+                viewMode === "2d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              2D Radar
+            </button>
+            <button
+              onClick={() => setViewMode("split")}
+              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition ${
+                viewMode === "split" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Split View
+            </button>
+          </div>
 
-      
+          {/* Camera Lock Action */}
+          <button
+            onClick={() => setLockCamera(!lockCamera)}
+            className={`flex items-center gap-1.5 border px-3 py-1 text-[10px] font-mono uppercase tracking-wider transition backdrop-blur-md ${
+              lockCamera
+                ? "border-red-500 bg-red-500/10 text-red-400"
+                : "border-zinc-800 bg-black/80 text-zinc-300 hover:border-zinc-600 hover:text-white"
+            }`}
+          >
+            <Cpu className="h-3 w-3" />
+            {lockCamera ? "Camera Locked" : "Free Orbit Cam"}
+          </button>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────────────
+            FLOATING CLOCK & SPEED HUD (Bottom Right of Hero)
+            Preserving Clock Configuration, Timezone Options, Speed & Play/Pause
+            ───────────────────────────────────────────────────────────────────── */}
+        <div className="absolute right-4 lg:right-8 bottom-6 z-20 flex flex-col items-end gap-2">
+          
+          <div className="border border-zinc-800 bg-black/85 backdrop-blur-md p-3 max-w-sm w-full">
+            <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-zinc-800/80">
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
+                <Clock className="h-3 w-3 text-[#00e5ff]" />
+                Clock Configuration
+              </span>
+              <span className="text-[10px] font-mono font-bold text-[#00e5ff]">
+                {speed}x SPEED
+              </span>
+            </div>
+
+            {/* Timezone Selector */}
+            <div className="mb-2">
+              <select
+                value={selectedTz}
+                onChange={(e) => setSelectedTz(e.target.value)}
+                className="w-full h-7 border border-zinc-800 bg-zinc-900/80 px-2 text-[10px] font-mono text-zinc-200 focus:outline-none focus:border-zinc-500"
+              >
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz.id} value={tz.id}>
+                    {tz.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Formatted Timestamp */}
+            <div className="text-[11px] font-mono font-semibold text-white bg-zinc-950 border border-zinc-900 px-2.5 py-1 text-center truncate">
+              {formatClockTime(timeMs, selectedTz)}
+            </div>
+
+            {/* Play/Pause & Reset Controls */}
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={togglePlay}
+                className="flex-1 flex h-7 items-center justify-center gap-1.5 border border-zinc-700 bg-zinc-900 text-[10px] font-mono uppercase tracking-wider text-white hover:bg-zinc-800 transition"
+              >
+                {isPaused ? <Play className="h-3 w-3 text-emerald-400" /> : <Pause className="h-3 w-3 text-amber-400" />}
+                {isPaused ? "Resume" : "Pause"}
+              </button>
+              
+              <button
+                onClick={() => {
+                  setTimeMs(Date.now());
+                  setSpeed(1);
+                  setIsPaused(false);
+                }}
+                className="flex h-7 px-2.5 items-center justify-center border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
+                title="Reset to Real-Time"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </button>
+
+              {/* Speed Multipliers */}
+              <div className="flex items-center gap-1">
+                {[1, 10, 60, 300].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSpeed(s)}
+                    className={`h-7 px-1.5 border text-[9px] font-mono transition ${
+                      speed === s
+                        ? "border-[#00e5ff] bg-[#00e5ff]/20 text-[#00e5ff] font-bold"
+                        : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          3. NASA EDITORIAL STORY STRIP (Matching Lower Story Thumbnail in Reference)
+          Quick-select prominent flagship missions + fleet metrics
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <section className="w-full border-b border-zinc-850 bg-zinc-950 py-3 px-4 lg:px-8">
+        <div className="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-3">
+            <span className="border border-white/20 px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-400">
+              Flagship Missions
+            </span>
+            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+              Select key spacecraft to focus ephemeris:
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {CATALOG_SATELLITES.map((catSat) => {
+              const isSelected = selectedId === catSat.id;
+              return (
+                <button
+                  key={catSat.id}
+                  onClick={() => handleTrackSatellite(catSat.id)}
+                  className={`flex items-center gap-2 border px-3 py-1.5 text-left transition whitespace-nowrap ${
+                    isSelected
+                      ? "border-white bg-white text-black font-semibold"
+                      : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:text-white"
+                  }`}
+                >
+                  <span className="text-[10px] font-mono">{catSat.name}</span>
+                  <span className={`text-[8px] font-mono ${isSelected ? "text-zinc-800" : "text-zinc-500"}`}>
+                    {catSat.date}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          4. FLEET INVENTORY & OBSERVATION CATALOG SECTION
+          Minimal editorial side navigation / grid with search and category filtering
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <section id="fleet-catalog-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900">
+        
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+              Section 01 // Fleet Telemetry Catalog
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-white uppercase">
+              Space Machine Catalog &amp; Query Controls
+            </h2>
+          </div>
+
+          <div className="text-xs font-mono text-zinc-400">
+            SHOWING <span className="text-white font-bold">{displayedSatellites.length}</span> OF{" "}
+            <span className="text-white font-bold">{filteredSatellites.length}</span> SATELLITES
+          </div>
+        </div>
+
+        {/* Catalog Filters Toolbar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border border-zinc-850 bg-zinc-950 mb-6">
+          
+          {/* Group Selector */}
+          <div>
+            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+              Observation Fleet
+            </label>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+            >
+              {GROUPS.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Orbit Class Filter */}
+          <div>
+            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+              Orbit Regime Filter
+            </label>
+            <select
+              value={orbitClassFilter}
+              onChange={(e) => setOrbitClassFilter(e.target.value as any)}
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+            >
+              <option value="All">All Orbit Classes (LEO/MEO/GEO/HEO)</option>
+              <option value="LEO">LEO — Low Earth Orbit (&lt; 2,000 km)</option>
+              <option value="MEO">MEO — Medium Earth Orbit</option>
+              <option value="GEO">GEO — Geostationary Orbit (~35,786 km)</option>
+              <option value="HEO">HEO — High Elliptical Orbit</option>
+            </select>
+          </div>
+
+          {/* Search Query Filter */}
+          <div>
+            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+              Query Search Filter
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search name or NORAD…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-8 border border-zinc-800 bg-black pl-7 pr-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+              />
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-zinc-500" />
+            </div>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="block text-[9px] font-mono uppercase tracking-widest text-zinc-400 mb-1.5">
+              Category Tag
+            </label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as any)}
+              className="w-full h-8 border border-zinc-800 bg-black px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
+            >
+              <option value="All">All Categories</option>
+              <option value="Active">Active Constellations &amp; Stations</option>
+              <option value="Weather">Weather &amp; Climate</option>
+              <option value="GPS">Navigation (GPS/GNSS)</option>
+              <option value="Science">Science &amp; Telescopes</option>
+              <option value="Debris">Debris &amp; Inactive</option>
+            </select>
+          </div>
+
+        </div>
+
+        {/* Space Machines Catalog Grid: Minimal NASA Grid Styling */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 max-h-[360px] overflow-y-auto p-1 border border-zinc-850 bg-black scrollbar-thin scrollbar-thumb-zinc-800">
+          {loading ? (
+            <div className="col-span-full py-12 text-center font-mono text-xs text-zinc-500 uppercase tracking-widest">
+              Fetching orbital elements from CelesTrak…
+            </div>
+          ) : displayedSatellites.length === 0 ? (
+            <div className="col-span-full py-12 text-center font-mono text-xs text-zinc-500 uppercase tracking-widest">
+              No satellites match the specified query filters.
+            </div>
+          ) : (
+            displayedSatellites.map((sat) => {
+              const isSelected = selectedId === sat.id;
+              return (
+                <button
+                  key={sat.id}
+                  onClick={() => handleTrackSatellite(sat.id)}
+                  className={`flex flex-col justify-between p-3 text-left border transition ${
+                    isSelected
+                      ? "border-white bg-zinc-900 text-white shadow-[0_0_15px_rgba(255,255,255,0.06)]"
+                      : "border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:border-zinc-750 hover:text-zinc-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-xs truncate text-white">{sat.name}</span>
+                    <span className="text-[9px] font-mono font-bold text-[#00e5ff]">{sat.orbitClass}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500 mt-2">
+                    <span>NORAD {sat.id}</span>
+                    <span className="truncate max-w-[90px]">{sat.category}</span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          5. TELEMETRY & OBSERVATION COORDINATES (Section 02)
+          Editorial 4-Column Technical Data Architecture
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <section id="telemetry-section" className="mx-auto w-full px-4 lg:px-12 py-12 border-b border-zinc-900">
+        
+        <div className="mb-8">
+          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+            Section 02 // Live Kinematics
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white uppercase">
+            Orbital Parameters &amp; Inertial Coordinates
+          </h2>
+        </div>
+
+        {!selectedSat ? (
+          <div className="p-8 border border-zinc-850 bg-zinc-950 text-center text-zinc-500 font-mono text-xs uppercase tracking-widest">
+            Select a satellite above to inspect live vector telemetry
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Panel 1: Satellite Focus */}
+            <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
+              <div>
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-300 mb-3">
+                  Satellite Focus
+                </div>
+                <h3 className="text-base font-bold text-white truncate">{selectedSat.name}</h3>
+                
+                <div className="grid grid-cols-2 gap-y-2 mt-4 font-mono text-xs">
+                  <div className="text-zinc-400">NORAD ID:</div>
+                  <div className="text-white font-bold text-right">{selectedSat.id}</div>
+                  
+                  <div className="text-zinc-400">GROUP:</div>
+                  <div className="text-zinc-200 text-right truncate">{selectedSat.category.toUpperCase()}</div>
+                  
+                  <div className="text-zinc-400">REGIME:</div>
+                  <div className="text-[#00e5ff] font-bold text-right">{selectedSat.orbitClass}</div>
+                </div>
+              </div>
+
+              <div className="text-[9px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4">
+                Epoch Date:<br />
+                <span className="text-zinc-300">{new Date(selectedSat.epochDate).toUTCString()}</span>
+              </div>
+            </div>
+
+            {/* Panel 2: Live Subpoint Position */}
+            <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
+              <div>
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-amber-400 mb-3">
+                  Live Subpoint Position
+                </div>
+
+                {selectedTelemetry ? (
+                  <div className="grid grid-cols-2 gap-y-2 font-mono text-xs">
+                    <div className="text-zinc-400">LATITUDE:</div>
+                    <div className="text-white font-semibold text-right">{selectedTelemetry.lat.toFixed(5)}°</div>
+                    
+                    <div className="text-zinc-400">LONGITUDE:</div>
+                    <div className="text-white font-semibold text-right">{selectedTelemetry.lon.toFixed(5)}°</div>
+                    
+                    <div className="text-zinc-400">ALTITUDE:</div>
+                    <div className="text-[#00e5ff] font-bold text-right">{selectedTelemetry.alt.toFixed(2)} km</div>
+                    
+                    <div className="text-zinc-400">VELOCITY:</div>
+                    <div className="text-white font-bold text-right">
+                      {Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs font-mono text-zinc-400 italic py-4">Calculating vector telemetry…</div>
+                )}
+              </div>
+
+              <div className="text-[9px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4">
+                TLE Epoch Age:{" "}
+                <span className={epochAgeDays > 3 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                  {epochAgeDays.toFixed(2)} days
+                </span>
+                <span className="text-zinc-400"> ({epochAgeDays > 3 ? "Stale" : "Fresh"})</span>
+              </div>
+            </div>
+
+            {/* Panel 3: Inertial Frame (ECI) */}
+            <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
+              <div>
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-zinc-300 mb-3">
+                  Inertial Frame (ECI)
+                </div>
+
+                {selectedTelemetry ? (
+                  <div className="grid grid-cols-2 gap-y-2 font-mono text-xs">
+                    <div className="text-zinc-400">ECI X:</div>
+                    <div className="text-white text-right">{selectedTelemetry.px.toFixed(2)} km</div>
+                    
+                    <div className="text-zinc-400">ECI Y:</div>
+                    <div className="text-white text-right">{selectedTelemetry.py.toFixed(2)} km</div>
+                    
+                    <div className="text-zinc-400">ECI Z:</div>
+                    <div className="text-white text-right">{selectedTelemetry.pz.toFixed(2)} km</div>
+                  </div>
+                ) : (
+                  <div className="text-xs font-mono text-zinc-400 italic py-4">Calculating vectors…</div>
+                )}
+              </div>
+
+              <div className="text-[8px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed">
+                *ECI coordinates are referenced to True Equator of Date inertial frame.
+              </div>
+            </div>
+
+            {/* Panel 4: Keplerian Orbital Elements */}
+            <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
+              <div>
+                <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] font-mono uppercase tracking-widest text-[#00e5ff] mb-3">
+                  Keplerian Elements
+                </div>
+
+                {orbitalElements ? (
+                  <div className="grid grid-cols-2 gap-y-1.5 font-mono text-xs">
+                    <div className="text-zinc-400">INCLINATION:</div>
+                    <div className="text-white text-right">{orbitalElements.inclination.toFixed(4)}°</div>
+                    
+                    <div className="text-zinc-400">ECCENTRICITY:</div>
+                    <div className="text-white text-right">{orbitalElements.eccentricity.toFixed(7)}</div>
+                    
+                    <div className="text-zinc-400">PERIOD:</div>
+                    <div className="text-white text-right">{orbitalElements.periodMin.toFixed(2)} min</div>
+                    
+                    <div className="text-zinc-400">APOGEE ALT:</div>
+                    <div className="text-white text-right">{orbitalElements.apogeeAlt.toFixed(0)} km</div>
+                    
+                    <div className="text-zinc-400">PERIGEE ALT:</div>
+                    <div className="text-white text-right">{orbitalElements.perigeeAlt.toFixed(0)} km</div>
+                  </div>
+                ) : (
+                  <div className="text-xs font-mono text-zinc-400 italic py-4">Unavailable</div>
+                )}
+              </div>
+
+              <div className="text-[8px] font-mono text-zinc-400 border-t border-zinc-900 pt-3 mt-4 leading-relaxed">
+                *Derived from Mean Motion relative to WGS-84 spheroid.
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          6. MISSION INTELLIGENCE & TECHNICAL DOSSIER (Section 03)
+          Renders SatelliteInfoPanel with clean NASA-editorial design
+          ───────────────────────────────────────────────────────────────────────────── */}
+      <section id="dossier-section" className="mx-auto w-full px-4 lg:px-12 py-12">
+        
+        <div className="mb-8">
+          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
+            Section 03 // Scientific Dossier
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white uppercase">
+            Mission Intelligence, Specifications &amp; Discoveries
+          </h2>
+        </div>
+
+        {selectedSat ? (
+          <SatelliteInfoPanel
+            noradId={selectedSat.id}
+            satName={selectedSat.name}
+            category={selectedSat.category}
+            orbitalElements={orbitalElements}
+          />
+        ) : (
+          <div className="p-12 border border-zinc-850 bg-zinc-950 text-center text-zinc-500 font-mono text-xs uppercase tracking-widest">
+            Select an asset from the fleet catalog to view complete technical dossier
+          </div>
+        )}
+
+      </section>
+
     </div>
   );
 }
