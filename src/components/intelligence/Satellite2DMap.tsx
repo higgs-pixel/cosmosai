@@ -13,6 +13,7 @@ interface Satellite2DMapProps {
   latestPositions: React.RefObject<Float32Array | null>;
   showDebug?: boolean;
   onTrackSatellite?: (id: number) => void;
+  observer?: { lat: number; lon: number; name?: string } | null;
 }
 
 export default function Satellite2DMap({
@@ -22,6 +23,7 @@ export default function Satellite2DMap({
   latestPositions,
   showDebug = false,
   onTrackSatellite,
+  observer,
 }: Satellite2DMapProps) {
   const storeSelectedId = useOrbitalStore((s) => s.selectedSatelliteId);
   const selectedId = propSelectedId !== undefined ? propSelectedId : storeSelectedId;
@@ -64,6 +66,8 @@ const createSatDivIcon = (isSelected: boolean) => {
   const trackLayersRef = useRef<L.Polyline[]>([]);
   const footprintCircleRef = useRef<L.Circle | null>(null);
   const prevSelectedIdRef = useRef<number | null>(null);
+  const observerMarkerRef = useRef<L.Marker | null>(null);
+  const observerLineRef = useRef<L.Polyline | null>(null);
 
   const selectedSatrec = useOrbitalStore((s) => s.selectedSatrec);
   const timeMs = useOrbitalStore((s) => s.timeMs);
@@ -312,6 +316,85 @@ const createSatDivIcon = (isSelected: boolean) => {
     }
   }, [map, selectedSatrec, timeMs]);
 
+  // Observer GPS Pinpoint & Yellow Tracking Line Effect
+  useEffect(() => {
+    if (!map) return;
+
+    if (observer) {
+      const observerIcon = L.divIcon({
+        className: "observer-gps-custom-pin",
+        html: `
+          <div style="
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transform: translate(-50%, -50%);
+          ">
+            <div style="
+              position: absolute;
+              width: 22px;
+              height: 22px;
+              border-radius: 50%;
+              background: rgba(255, 215, 0, 0.25);
+              border: 1.5px solid #ffd700;
+              animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            "></div>
+            <div style="
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              background: #ffd700;
+              border: 2px solid #ffffff;
+              box-shadow: 0 0 10px #ffd700;
+            "></div>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+
+      if (!observerMarkerRef.current) {
+        observerMarkerRef.current = L.marker([observer.lat, observer.lon], { icon: observerIcon })
+          .addTo(map)
+          .bindTooltip("My GPS Location", { permanent: false, direction: "top" });
+      } else {
+        observerMarkerRef.current.setLatLng([observer.lat, observer.lon]);
+      }
+
+      if (!observerLineRef.current) {
+        observerLineRef.current = L.polyline([], {
+          color: "#ffd700",
+          weight: 2.5,
+          opacity: 0.95,
+          dashArray: "6, 6",
+        }).addTo(map);
+      }
+    } else {
+      if (observerMarkerRef.current) {
+        observerMarkerRef.current.remove();
+        observerMarkerRef.current = null;
+      }
+      if (observerLineRef.current) {
+        observerLineRef.current.remove();
+        observerLineRef.current = null;
+      }
+    }
+
+    return () => {
+      if (observerMarkerRef.current) {
+        observerMarkerRef.current.remove();
+        observerMarkerRef.current = null;
+      }
+      if (observerLineRef.current) {
+        observerLineRef.current.remove();
+        observerLineRef.current = null;
+      }
+    };
+  }, [map, observer]);
+
   // ── 5. High-efficiency 60 FPS rAF animation tick ──────────────────────────────
   useEffect(() => {
     let frameId: number;
@@ -364,6 +447,23 @@ const createSatDivIcon = (isSelected: boolean) => {
             setDebugLon(null);
           }
         }
+
+        // Update real-time yellow dotted line from GPS location to satellite subpoint
+        if (observerLineRef.current && observer) {
+          if (selectedLat !== null && selectedLon !== null) {
+            let targetLon = selectedLon;
+            const dLon = targetLon - observer.lon;
+            if (dLon > 180) targetLon -= 360;
+            else if (dLon < -180) targetLon += 360;
+            observerLineRef.current.setLatLngs([
+              [observer.lat, observer.lon],
+              [selectedLat, targetLon],
+            ]);
+            observerLineRef.current.setStyle({ opacity: 0.95 });
+          } else {
+            observerLineRef.current.setStyle({ opacity: 0 });
+          }
+        }
       }
 
       frameId = requestAnimationFrame(updateFrame);
@@ -371,7 +471,7 @@ const createSatDivIcon = (isSelected: boolean) => {
 
     updateFrame();
     return () => cancelAnimationFrame(frameId);
-  }, [satellites, selectedId, satIndexMap]);
+  }, [satellites, selectedId, satIndexMap, observer]);
 
   return (
     <div className="h-full w-full relative">

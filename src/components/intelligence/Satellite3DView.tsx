@@ -119,6 +119,92 @@ function SelectedOrbitTrack({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Yellow Dotted Track from Observer Location following path to Satellite
+// ─────────────────────────────────────────────────────────────────────────────
+function ObserverToSatelliteTrack({
+  observer,
+  satellites,
+  selectedSatId,
+}: {
+  observer: { lat: number; lon: number };
+  satellites: SatelliteData[];
+  selectedSatId: number | null;
+}) {
+  const effectiveId = selectedSatId ?? 25544;
+  const targetSat = useMemo(() => {
+    return (
+      satellites.find((s) => s.id === effectiveId) ||
+      satellites.find((s) => s.id === 25544) ||
+      satellites[0] ||
+      null
+    );
+  }, [satellites, effectiveId]);
+
+  const satrec = useMemo(() => {
+    if (!targetSat) return null;
+    try {
+      const sr = satellite.twoline2satrec(targetSat.line1, targetSat.line2);
+      if (sr && !sr.error) return sr;
+    } catch {
+      /* skip */
+    }
+    return null;
+  }, [targetSat]);
+
+  const [points, setPoints] = useState<THREE.Vector3[]>([]);
+
+  useFrame(() => {
+    if (!satrec) return;
+    const timeMs = useOrbitalStore.getState().timeMs;
+    const now = new Date(timeMs);
+    const gmst = satellite.gstime(now);
+
+    const pv = satellite.propagate(satrec, now);
+    const pos = pv?.position;
+    if (!pos || typeof pos === "boolean" || isNaN(pos.x)) return;
+
+    const gd = satellite.eciToGeodetic(pos as satellite.EciVec3<number>, gmst);
+    const satLat = satellite.degreesLat(gd.latitude);
+    let satLon = satellite.degreesLong(gd.longitude);
+    if (satLon > 180) satLon -= 360;
+    if (satLon < -180) satLon += 360;
+
+    const altKm = gd.height || 420;
+    const r = EARTH_RADIUS_3D * (1 + altKm / EARTH_RADIUS_KM);
+    const satPos = latLonToVector3(satLat, satLon, r);
+    const obsPos = latLonToVector3(observer.lat, observer.lon, EARTH_RADIUS_3D + 0.05);
+
+    // Arched points connecting observer to satellite
+    const pts: THREE.Vector3[] = [];
+    const segments = 24;
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const pt = obsPos.clone().lerp(satPos, t);
+      const arcLift = Math.sin(t * Math.PI) * 0.35;
+      pt.add(pt.clone().normalize().multiplyScalar(arcLift));
+      pts.push(pt);
+    }
+    setPoints(pts);
+  });
+
+  if (points.length < 2) return null;
+
+  return (
+    <Line
+      points={points}
+      color="#ffd700"
+      lineWidth={2.8}
+      dashed
+      dashScale={2}
+      dashSize={0.25}
+      gapSize={0.15}
+      transparent
+      opacity={0.95}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CameraController — Smooth GPU-direct tracking without React re-renders
 // ─────────────────────────────────────────────────────────────────────────────
 function CameraController({
@@ -716,16 +802,25 @@ function EarthScene({
 
         {/* Observer Ground Station Pin & Beacon */}
         {observer && (
-          <group position={latLonToVector3(observer.lat, observer.lon, EARTH_RADIUS_3D + 0.04)}>
+          <group position={latLonToVector3(observer.lat, observer.lon, EARTH_RADIUS_3D + 0.05)}>
             <mesh>
-              <sphereGeometry args={[0.08, 16, 16]} />
-              <meshBasicMaterial color="#ff3366" />
+              <sphereGeometry args={[0.09, 16, 16]} />
+              <meshBasicMaterial color="#ffd700" />
             </mesh>
-            <mesh>
-              <ringGeometry args={[0.11, 0.16, 24]} />
-              <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.8} />
+            <mesh rotation-x={Math.PI / 2}>
+              <ringGeometry args={[0.13, 0.20, 24]} />
+              <meshBasicMaterial color="#ffd700" side={THREE.DoubleSide} transparent opacity={0.85} />
             </mesh>
           </group>
+        )}
+
+        {/* Yellow Dotted Line from My Location Following Path to Satellite */}
+        {observer && (
+          <ObserverToSatelliteTrack
+            observer={observer}
+            satellites={satellites}
+            selectedSatId={effectiveId}
+          />
         )}
 
         {/* Background constellation satellites */}
@@ -861,34 +956,6 @@ function Satellite3DView({
 
   return (
     <div className="h-full w-full bg-[#03040a] relative isolate select-none">
-      {/* Top-Left Corner HUD Satellite Tracking & Telemetry Card */}
-      {selectedSatName && (
-        <div className="absolute left-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/90 backdrop-blur-md border border-[#ec4899]/80 px-3 py-2 rounded-xl shadow-[0_0_20px_rgba(236,72,153,0.35)] pointer-events-none select-none max-w-[240px]">
-          <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1">
-            <div className="flex items-center gap-1.5">
-              <span className="flex h-2 w-2 rounded-full bg-[#ec4899] animate-ping" />
-              <span className="font-mono text-[9px] font-bold text-[#ec4899] uppercase tracking-widest">
-                TRACKING
-              </span>
-            </div>
-            <span className="font-mono text-[8px] text-slate-400">ID #{activeSelectedId}</span>
-          </div>
-
-          <div className="font-mono text-[11px] font-bold text-white tracking-wide truncate">
-            {selectedSatName}
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-[9px] text-pink-300 pt-0.5">
-            <span className="bg-pink-950/70 border border-pink-500/30 px-1.5 py-0.5 rounded text-pink-200">
-              ALT: {selectedTelemetry.altKm} KM
-            </span>
-            <span className="bg-pink-950/70 border border-pink-500/30 px-1.5 py-0.5 rounded text-[#ec4899] font-bold">
-              VEL: {selectedTelemetry.velKms} KM/S
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Top-Right Corner HUD Satellite Hover Details Overlay */}
       {hoveredSat && (
         <div className="absolute right-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/95 border border-[#00e5ff]/60 px-3.5 py-2.5 rounded-lg shadow-[0_0_20px_rgba(0,229,255,0.25)] pointer-events-none select-none min-w-[170px]">

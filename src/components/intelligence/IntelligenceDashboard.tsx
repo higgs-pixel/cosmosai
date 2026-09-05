@@ -336,6 +336,38 @@ export default function IntelligenceDashboard() {
   const latestPositionsRef = useRef<Float32Array | null>(null);
 
   const [lockCamera, setLockCamera] = useState(false);
+  const [observerLocation, setObserverLocation] = useState<{ lat: number; lon: number; name?: string } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const handleGetGpsLocation = () => {
+    if (typeof window === "undefined") return;
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setObserverLocation({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          name: "My GPS Location",
+        });
+        setGpsLoading(false);
+      },
+      (err) => {
+        console.warn("Geolocation permission or timeout, using default observer location:", err);
+        // Fallback default coordinates (e.g. New Delhi 28.6139, 77.2090)
+        setObserverLocation({
+          lat: 28.6139,
+          lon: 77.2090,
+          name: "Observer (Default)",
+        });
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   // 1. Fetch TLE Data (Local Catalog vs CelesTrak Constellation groups)
   useEffect(() => {
@@ -623,6 +655,19 @@ export default function IntelligenceDashboard() {
             >
               Fleet Inventory ({filteredSatellites.length})
             </button>
+            <button
+              onClick={() => {
+                handleGetGpsLocation();
+                document.getElementById("hero-visual-area")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className={`flex items-center gap-1.5 transition uppercase text-[11px] tracking-widest ${
+                observerLocation ? "text-yellow-400 font-semibold" : "text-zinc-400 hover:text-white"
+              }`}
+              title="Acquire & Pinpoint GPS Location"
+            >
+              <MapPin className={`h-3 w-3 ${observerLocation ? "text-yellow-400 animate-pulse" : "text-zinc-400"}`} />
+              <span>{observerLocation ? "GPS Pinpointed" : "GPS Location"}</span>
+            </button>
           </nav>
 
           {/* Right Navigation Actions */}
@@ -670,6 +715,7 @@ export default function IntelligenceDashboard() {
                     latestPositions={latestPositionsRef}
                     lockCamera={lockCamera}
                     onTrackSatellite={handleTrackSatellite}
+                    observer={observerLocation || undefined}
                   />
                 )}
               </div>
@@ -683,6 +729,7 @@ export default function IntelligenceDashboard() {
                     satellites={filteredSatellites}
                     latestPositions={latestPositionsRef}
                     onTrackSatellite={handleTrackSatellite}
+                    observer={observerLocation}
                   />
                 )}
               </div>
@@ -698,6 +745,7 @@ export default function IntelligenceDashboard() {
                   satellites={filteredSatellites}
                   latestPositions={latestPositionsRef}
                   onTrackSatellite={handleTrackSatellite}
+                  observer={observerLocation}
                 />
               )}
             </div>
@@ -717,6 +765,7 @@ export default function IntelligenceDashboard() {
                   latestPositions={latestPositionsRef}
                   lockCamera={lockCamera}
                   onTrackSatellite={handleTrackSatellite}
+                  observer={observerLocation || undefined}
                 />
               )}
             </div>
@@ -811,32 +860,49 @@ export default function IntelligenceDashboard() {
             ───────────────────────────────────────────────────────────────────── */}
         <div className="absolute right-4 lg:right-8 top-4 z-20 flex flex-col items-end gap-2.5 font-sans">
           
-          {/* Visualization Mode Selector */}
-          <div className="flex items-center border border-zinc-800 bg-black/80 backdrop-blur-md p-1 font-sans">
+          <div className="flex items-center gap-2">
+            {/* GPS Location Tab */}
             <button
-              onClick={() => setViewMode("3d")}
-              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
-                viewMode === "3d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+              onClick={handleGetGpsLocation}
+              disabled={gpsLoading}
+              className={`flex items-center gap-1.5 border px-3 py-1 text-[10px] uppercase font-semibold tracking-wider transition backdrop-blur-md font-sans cursor-pointer ${
+                observerLocation
+                  ? "border-yellow-400 bg-yellow-400/20 text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.35)]"
+                  : "border-zinc-800 bg-black/80 text-zinc-300 hover:border-yellow-400/60 hover:text-yellow-400"
               }`}
+              title={observerLocation ? `Observer GPS: ${observerLocation.lat.toFixed(2)}°, ${observerLocation.lon.toFixed(2)}°` : "Pinpoint My GPS Location"}
             >
-              3D Globe
+              <MapPin className={`h-3 w-3 ${observerLocation ? "text-yellow-400 animate-pulse" : "text-zinc-400"}`} />
+              <span>{gpsLoading ? "Acquiring..." : observerLocation ? `GPS: ${observerLocation.lat.toFixed(2)}°, ${observerLocation.lon.toFixed(2)}°` : "GPS Location"}</span>
             </button>
-            <button
-              onClick={() => setViewMode("2d")}
-              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
-                viewMode === "2d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              2D Radar
-            </button>
-            <button
-              onClick={() => setViewMode("split")}
-              className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
-                viewMode === "split" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              Split View
-            </button>
+
+            {/* Visualization Mode Selector */}
+            <div className="flex items-center border border-zinc-800 bg-black/80 backdrop-blur-md p-1 font-sans">
+              <button
+                onClick={() => setViewMode("3d")}
+                className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
+                  viewMode === "3d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                3D Globe
+              </button>
+              <button
+                onClick={() => setViewMode("2d")}
+                className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
+                  viewMode === "2d" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                2D Radar
+              </button>
+              <button
+                onClick={() => setViewMode("split")}
+                className={`px-3 py-1 text-[10px] uppercase font-medium tracking-wider transition font-sans ${
+                  viewMode === "split" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Split View
+              </button>
+            </div>
           </div>
 
           {/* Camera Lock Action */}
@@ -854,9 +920,9 @@ export default function IntelligenceDashboard() {
         </div>
 
         {/* ─────────────────────────────────────────────────────────────────────
-            FLOATING CLOCK & SPEED HUD (Bottom Right of Hero)
+            FLOATING CLOCK & SPEED HUD (Bottom Right of Hero - Shifted Left for Zoom Controls)
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute right-4 lg:right-8 bottom-6 z-20 flex flex-col items-end gap-2 font-sans">
+        <div className="absolute right-16 lg:right-20 bottom-4 z-20 flex flex-col items-end gap-2 font-sans">
           
           <div className="border border-zinc-800 bg-black/85 backdrop-blur-md p-3.5 max-w-sm w-full font-sans">
             <div className="flex items-center justify-between gap-4 mb-2 pb-1.5 border-b border-zinc-800/80">
@@ -933,46 +999,6 @@ export default function IntelligenceDashboard() {
 
         </div>
 
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────────────────────
-          3. EDITORIAL STORY STRIP
-          ───────────────────────────────────────────────────────────────────────────── */}
-      <section className="w-full border-b border-zinc-850 bg-zinc-950 py-3 px-4 lg:px-8 font-sans">
-        <div className="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          
-          <div className="flex items-center gap-3">
-            <span className="border border-white/20 px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-400 font-semibold">
-              Flagship Missions
-            </span>
-            <span className="text-xs text-zinc-400 hidden sm:inline">
-              Select key spacecraft to focus ephemeris:
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {CATALOG_SATELLITES.map((catSat) => {
-              const isSelected = selectedId === catSat.id;
-              return (
-                <button
-                  key={catSat.id}
-                  onClick={() => handleTrackSatellite(catSat.id)}
-                  className={`flex items-center gap-2 border px-3 py-1.5 text-left transition whitespace-nowrap font-sans ${
-                    isSelected
-                      ? "border-white bg-white text-black font-semibold"
-                      : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-600 hover:text-white"
-                  }`}
-                >
-                  <span className="text-[11px] font-medium">{catSat.name}</span>
-                  <span className={`text-[9px] ${isSelected ? "text-zinc-800" : "text-zinc-500"}`}>
-                    {catSat.date}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-        </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
@@ -1090,8 +1116,11 @@ export default function IntelligenceDashboard() {
               return (
                 <button
                   key={sat.id}
-                  onClick={() => handleTrackSatellite(sat.id)}
-                  className={`flex flex-col justify-between p-3 text-left border transition font-sans ${
+                  onClick={() => {
+                    handleTrackSatellite(sat.id);
+                    document.getElementById("hero-visual-area")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`flex flex-col justify-between p-3 text-left border transition font-sans cursor-pointer ${
                     isSelected
                       ? "border-white bg-zinc-900 text-white shadow-[0_0_15px_rgba(255,255,255,0.06)]"
                       : "border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:border-zinc-750 hover:text-zinc-200"
