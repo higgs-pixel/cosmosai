@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useEffect, Suspense, useState } from "react";
+import { useMemo, useRef, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Line, useTexture, useGLTF } from "@react-three/drei";
+import { OrbitControls, Stars, Line, useTexture } from "@react-three/drei";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as satellite from "satellite.js";
 import { ObserverCoords, SatellitePass } from "./PassPredictor";
@@ -139,133 +139,21 @@ function SelectedSubpointConnector({ ecefPos }: { ecefPos: THREE.Vector3 | null 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Procedural Cloud Texture Generator (HTML5 Canvas Turbulence)
-// ─────────────────────────────────────────────────────────────────────────────
-function createProceduralCloudTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return new THREE.CanvasTexture(canvas);
-
-  ctx.fillStyle = "rgba(0, 0, 0, 0)";
-  ctx.fillRect(0, 0, 1024, 512);
-
-  // Soft atmospheric cloud masses
-  for (let i = 0; i < 350; i++) {
-    const x = Math.random() * 1024;
-    const latZone = (Math.random() - 0.5) * 2;
-    const y = 256 + latZone * 180;
-    const r = 25 + Math.random() * 60;
-    const alpha = 0.08 + Math.random() * 0.22;
-
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-    grad.addColorStop(0.6, `rgba(240, 248, 255, ${alpha * 0.5})`);
-    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Cyclonic spirals & storm belts
-  for (let c = 0; c < 8; c++) {
-    const cx = Math.random() * 1024;
-    const cy = 80 + Math.random() * 350;
-    const swirlRadius = 35 + Math.random() * 40;
-    for (let s = 0; s < 14; s++) {
-      const angle = (s / 14) * Math.PI * 2;
-      const dist = (s / 14) * swirlRadius;
-      const sx = cx + Math.cos(angle) * dist;
-      const sy = cy + Math.sin(angle) * dist;
-      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 18);
-      grad.addColorStop(0, "rgba(255, 255, 255, 0.28)");
-      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 18, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  return texture;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// NASA 3D Earth Model (From https://solarsystem.nasa.gov/gltf_embed/2393/)
-// ─────────────────────────────────────────────────────────────────────────────
-function NasaEarthModel({ radius = EARTH_RADIUS_3D }: { radius?: number }) {
-  const { scene } = useGLTF("/models/earth.glb");
-  const clonedScene = useMemo(() => scene.clone(), [scene]);
-  const scale = radius / 500;
-
-  return (
-    <primitive
-      object={clonedScene}
-      scale={[scale, scale, scale]}
-      rotation={[0, -Math.PI / 2, 0]}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Real Earth Daymap Mesh with Specular Oceans & Procedural Clouds
+// Real Earth Daymap Mesh (Using Drei useTexture, matching Satellite3DView)
 // ─────────────────────────────────────────────────────────────────────────────
 function EarthMesh({ texturePath }: { texturePath: string }) {
   const texture = useTexture(texturePath);
-  const cloudTex = useMemo(() => (typeof document !== "undefined" ? createProceduralCloudTexture() : null), []);
-  const cloudRef = useRef<THREE.Mesh>(null);
-
-  useFrame((_, delta) => {
-    if (cloudRef.current) {
-      cloudRef.current.rotation.y += delta * 0.015;
-    }
-  });
-
   return (
     <group>
-      {/* Official NASA 3D Earth GLTF Model (https://solarsystem.nasa.gov/gltf_embed/2393/) */}
-      <Suspense
-        fallback={
-          <mesh>
-            <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
-            <meshStandardMaterial map={texture} roughness={0.45} metalness={0.15} />
-          </mesh>
-        }
-      >
-        <NasaEarthModel radius={EARTH_RADIUS_3D} />
-      </Suspense>
-
-      {/* Procedural Atmospheric Cloud Layer */}
-      {cloudTex && (
-        <mesh ref={cloudRef}>
-          <sphereGeometry args={[EARTH_RADIUS_3D * 1.012, 64, 64]} />
-          <meshStandardMaterial
-            map={cloudTex}
-            transparent
-            opacity={0.82}
-            depthWrite={false}
-            blending={THREE.NormalBlending}
-          />
-        </mesh>
-      )}
-
-      {/* Inner Atmospheric Rim Glow */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.025, 48, 48]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.12} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
+        <meshStandardMaterial map={texture} roughness={0.7} metalness={0.15} />
       </mesh>
 
-      {/* Outer Rayleigh Scattering Exosphere */}
+      {/* Atmosphere Glow */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.06, 32, 32]} />
-        <meshBasicMaterial color="#38bdf8" transparent opacity={0.04} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.018, 32, 32]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.06} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -276,25 +164,14 @@ function FallbackEarthMesh() {
     <group>
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS_3D, 48, 48]} />
-        <meshStandardMaterial color="#0c2340" roughness={0.45} metalness={0.2} />
+        <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.025, 32, 32]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.12} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.018, 32, 32]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.06} side={THREE.BackSide} />
       </mesh>
     </group>
   );
-}
-
-export interface VisibleSatItem {
-  satId: number;
-  satName: string;
-  satLat: number;
-  satLon: number;
-  satAltKm: number;
-  elevationDeg: number;
-  isSunlit: boolean;
-  isNakedEyeVisible: boolean;
 }
 
 interface Observer3DViewProps {
@@ -310,62 +187,24 @@ interface Observer3DViewProps {
     line2?: string;
   } | null;
   timeMs?: number;
-  visibleSats?: VisibleSatItem[];
-  onSelectSat?: (id: number) => void;
 }
 
-function CameraAndControls({ observer }: { observer: ObserverCoords }) {
+function ObserverCameraFocus({ observer }: { observer: ObserverCoords }) {
   const { camera } = useThree();
-  const prevCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
-  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     const { lat, lon } = safeLatLon(observer?.lat, observer?.lon);
-    // Only re-orient camera if GPS coordinates genuinely change
-    if (
-      !prevCoordsRef.current ||
-      Math.abs(prevCoordsRef.current.lat - lat) > 0.0001 ||
-      Math.abs(prevCoordsRef.current.lon - lon) > 0.0001
-    ) {
-      prevCoordsRef.current = { lat, lon };
-      const vec = latLonToVector3(lat, lon, EARTH_RADIUS_3D * 2.35);
-      if (!isNaN(vec.x) && !isNaN(vec.y) && !isNaN(vec.z)) {
-        camera.position.copy(vec);
-        camera.lookAt(0, 0, 0);
-        if (controlsRef.current) {
-          controlsRef.current.target.set(0, 0, 0);
-          controlsRef.current.update();
-        }
-      }
+    const vec = latLonToVector3(lat, lon, EARTH_RADIUS_3D * 2.4);
+    if (!isNaN(vec.x) && !isNaN(vec.y) && !isNaN(vec.z)) {
+      camera.position.copy(vec);
+      camera.lookAt(0, 0, 0);
     }
-  }, [observer?.lat, observer?.lon, camera]);
+  }, [observer, camera]);
 
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      makeDefault
-      enableZoom={true}
-      zoomSpeed={1.2}
-      minDistance={4.4}
-      maxDistance={40}
-      enablePan={false}
-      enableRotate={true}
-      rotateSpeed={0.8}
-      enableDamping={true}
-      dampingFactor={0.08}
-    />
-  );
+  return null;
 }
 
-function ObserverScene({
-  observer,
-  selectedPass,
-  simPoint,
-  timeMs = Date.now(),
-  visibleSats,
-  onSelectSat,
-  onHoverSat,
-}: Observer3DViewProps & { onHoverSat: (sat: VisibleSatItem | null) => void }) {
+function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }: Observer3DViewProps) {
   const obsPos = useMemo(() => {
     const { lat, lon } = safeLatLon(observer?.lat, observer?.lon);
     return latLonToVector3(lat, lon, EARTH_RADIUS_3D + 0.02);
@@ -482,18 +321,11 @@ function ObserverScene({
           <EarthMesh texturePath="/textures/planets/2k_earth_daymap.jpg" />
         </Suspense>
 
-        {/* Observer GPS Pin with Pulsing Radar Target Ring */}
-        <group position={obsPos}>
-          <mesh>
-            <sphereGeometry args={[0.09, 16, 16]} />
-            <meshBasicMaterial color="#ff3366" />
-          </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.13, 0.20, 24]} />
-            <meshBasicMaterial color="#ff3366" side={THREE.DoubleSide} transparent opacity={0.8} />
-          </mesh>
-          <pointLight color="#ff3366" intensity={2.0} distance={1.5} />
-        </group>
+        {/* Observer GPS Pin */}
+        <mesh position={obsPos}>
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshBasicMaterial color="#ff3366" />
+        </mesh>
 
         {/* 3D Tracked Satellite Model & Subpoint Connector Line */}
         {satSimVec && (
@@ -503,63 +335,19 @@ function ObserverScene({
           </>
         )}
 
-        {/* Visible Satellite Fleet in 3D Orbit (Orbit Page Feature) */}
-        {visibleSats &&
-          visibleSats.map((sat) => {
-            if (simPoint?.satName === sat.satName) return null;
-            const r = get3DOrbitRadius(sat.satAltKm);
-            const pos = latLonToVector3(sat.satLat, sat.satLon, r);
-            const color = sat.isNakedEyeVisible ? "#00e5ff" : sat.isSunlit ? "#f59e0b" : "#94a3b8";
-
-            return (
-              <group
-                key={`sat-dot-${sat.satId}`}
-                position={pos}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onSelectSat) onSelectSat(sat.satId);
-                }}
-                onPointerOver={(e) => {
-                  e.stopPropagation();
-                  onHoverSat(sat);
-                }}
-                onPointerOut={() => onHoverSat(null)}
-              >
-                <mesh>
-                  <sphereGeometry args={[0.07, 12, 12]} />
-                  <meshBasicMaterial color={color} />
-                </mesh>
-                {sat.isNakedEyeVisible && (
-                  <mesh>
-                    <sphereGeometry args={[0.14, 12, 12]} />
-                    <meshBasicMaterial color="#00e5ff" transparent opacity={0.3} />
-                  </mesh>
-                )}
-              </group>
-            );
-          })}
-
         {/* Full 3D Orbital Trajectory Line (Electric Green #00ff88) */}
         {orbitPathPoints.length > 1 && (
           <Line points={orbitPathPoints} color="#00ff88" lineWidth={2.0} opacity={0.9} transparent />
         )}
       </group>
 
-      <CameraAndControls observer={observer} />
+      <ObserverCameraFocus observer={observer} />
+      <OrbitControls enableDamping dampingFactor={0.05} maxDistance={40} minDistance={4.8} />
     </>
   );
 }
 
-export default function Observer3DView({
-  observer,
-  selectedPass,
-  simPoint,
-  timeMs,
-  visibleSats,
-  onSelectSat,
-}: Observer3DViewProps) {
-  const [hoveredSat, setHoveredSat] = useState<VisibleSatItem | null>(null);
-
+export default function Observer3DView({ observer, selectedPass, simPoint, timeMs }: Observer3DViewProps) {
   return (
     <div className="h-full w-full min-h-[460px] bg-[#03040a] relative flex items-center justify-center isolate z-0">
       {/* Top-Left Corner HUD Satellite Tracking Badge (Matching Orbit Page) */}
@@ -575,24 +363,22 @@ export default function Observer3DView({
         </div>
       )}
 
-      {/* Top-Right Corner HUD Satellite Hover / Details Overlay (Matching Orbit Page) */}
-      {(hoveredSat || simPoint) && (
+      {/* Top-Right Corner HUD Satellite Hover Details Overlay Window (Matching Orbit Page) */}
+      {simPoint && (
         <div className="absolute right-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/95 border border-[#00e5ff]/60 px-3.5 py-2.5 rounded-lg shadow-[0_0_20px_rgba(0,229,255,0.25)] pointer-events-none select-none min-w-[170px]">
           <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 gap-3">
             <span className="font-mono text-[9px] font-bold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00e5ff] animate-pulse" />
-              {hoveredSat ? "HOVER TARGET" : "TARGET SATELLITE"}
+              TARGET SATELLITE
             </span>
-            <span className="font-mono text-[9px] font-bold text-[#00ff88]">
-              {hoveredSat ? `${hoveredSat.elevationDeg}° EL` : `${simPoint?.elDeg}° EL`}
-            </span>
+            <span className="font-mono text-[9px] font-bold text-[#00ff88]">{simPoint.elDeg}° EL</span>
           </div>
           <div className="font-mono text-[11px] font-bold text-white truncate max-w-[210px]">
-            {hoveredSat ? hoveredSat.satName : simPoint?.satName}
+            {simPoint.satName}
           </div>
           <div className="flex items-center justify-between font-mono text-[9px] text-slate-400 pt-0.5 gap-2">
             <span>OBS: <strong className="text-cyan-300">{observer?.name?.split(",")[0] || "GPS"}</strong></span>
-            <span>ALT: <strong className="text-cyan-300">{Math.round((hoveredSat ? hoveredSat.satAltKm : simPoint?.altKm) || 500)} km</strong></span>
+            <span>ALT: <strong className="text-cyan-300">{Math.round(simPoint.altKm || 500)} km</strong></span>
           </div>
         </div>
       )}
@@ -607,23 +393,11 @@ export default function Observer3DView({
           });
         }}
       >
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[15, 12, 15]} intensity={1.8} color="#ffffff" />
-        <directionalLight position={[-15, -8, -12]} intensity={0.7} color="#00e5ff" />
+        <ambientLight intensity={0.12} />
+        <directionalLight position={[15, 3, 10]} intensity={2.0} />
         <Stars radius={200} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1.5} />
-        <ObserverScene
-          observer={observer}
-          selectedPass={selectedPass}
-          simPoint={simPoint}
-          timeMs={timeMs}
-          visibleSats={visibleSats}
-          onSelectSat={onSelectSat}
-          onHoverSat={setHoveredSat}
-        />
+        <ObserverScene observer={observer} selectedPass={selectedPass} simPoint={simPoint} timeMs={timeMs} />
       </Canvas>
     </div>
   );
 }
-
-useGLTF.preload("/models/earth.glb");
-

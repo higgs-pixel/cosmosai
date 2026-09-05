@@ -200,8 +200,8 @@ function SkyDomeChart({
       </div>
 
       {/* Responsive SVG Polar Plot Chart Container */}
-      <div className="flex-1 w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-3 my-auto">
-        <div className="relative w-full max-w-[370px] aspect-square flex items-center justify-center select-none mx-auto my-auto">
+      <div className="flex-1 min-h-[440px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10 flex items-center justify-center p-2">
+        <div className="relative w-full h-full max-h-[410px] aspect-square flex items-center justify-center select-none">
           <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full h-full drop-shadow-[0_0_25px_rgba(0,0,0,0.9)]">
           {/* Background Radial Gradient */}
           <defs>
