@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useEffect, Suspense } from "react";
+import { useMemo, useRef, useEffect, Suspense, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Line, useTexture } from "@react-three/drei";
+import { OrbitControls, Stars, Line, useTexture, useGLTF } from "@react-three/drei";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as satellite from "satellite.js";
 import { ObserverCoords, SatellitePass } from "./PassPredictor";
@@ -197,6 +197,24 @@ function createProceduralCloudTexture(): THREE.CanvasTexture {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// NASA 3D Earth Model (From https://solarsystem.nasa.gov/gltf_embed/2393/)
+// ─────────────────────────────────────────────────────────────────────────────
+function NasaEarthModel({ radius = EARTH_RADIUS_3D }: { radius?: number }) {
+  const { scene } = useGLTF("/models/earth.glb");
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
+  const scale = radius / 500;
+
+  return (
+    <primitive
+      object={clonedScene}
+      scale={[scale, scale, scale]}
+      rotation={[0, -Math.PI / 2, 0]}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Real Earth Daymap Mesh with Specular Oceans & Procedural Clouds
 // ─────────────────────────────────────────────────────────────────────────────
 function EarthMesh({ texturePath }: { texturePath: string }) {
@@ -212,11 +230,17 @@ function EarthMesh({ texturePath }: { texturePath: string }) {
 
   return (
     <group>
-      {/* Real Earth Surface (Ocean Specular Gloss) */}
-      <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
-        <meshStandardMaterial map={texture} roughness={0.45} metalness={0.15} />
-      </mesh>
+      {/* Official NASA 3D Earth GLTF Model (https://solarsystem.nasa.gov/gltf_embed/2393/) */}
+      <Suspense
+        fallback={
+          <mesh>
+            <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
+            <meshStandardMaterial map={texture} roughness={0.45} metalness={0.15} />
+          </mesh>
+        }
+      >
+        <NasaEarthModel radius={EARTH_RADIUS_3D} />
+      </Suspense>
 
       {/* Procedural Atmospheric Cloud Layer */}
       {cloudTex && (
@@ -262,6 +286,17 @@ function FallbackEarthMesh() {
   );
 }
 
+export interface VisibleSatItem {
+  satId: number;
+  satName: string;
+  satLat: number;
+  satLon: number;
+  satAltKm: number;
+  elevationDeg: number;
+  isSunlit: boolean;
+  isNakedEyeVisible: boolean;
+}
+
 interface Observer3DViewProps {
   observer: ObserverCoords;
   selectedPass: SatellitePass | null;
@@ -275,6 +310,8 @@ interface Observer3DViewProps {
     line2?: string;
   } | null;
   timeMs?: number;
+  visibleSats?: VisibleSatItem[];
+  onSelectSat?: (id: number) => void;
 }
 
 function CameraAndControls({ observer }: { observer: ObserverCoords }) {
@@ -320,7 +357,15 @@ function CameraAndControls({ observer }: { observer: ObserverCoords }) {
   );
 }
 
-function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }: Observer3DViewProps) {
+function ObserverScene({
+  observer,
+  selectedPass,
+  simPoint,
+  timeMs = Date.now(),
+  visibleSats,
+  onSelectSat,
+  onHoverSat,
+}: Observer3DViewProps & { onHoverSat: (sat: VisibleSatItem | null) => void }) {
   const obsPos = useMemo(() => {
     const { lat, lon } = safeLatLon(observer?.lat, observer?.lon);
     return latLonToVector3(lat, lon, EARTH_RADIUS_3D + 0.02);
@@ -458,6 +503,42 @@ function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }
           </>
         )}
 
+        {/* Visible Satellite Fleet in 3D Orbit (Orbit Page Feature) */}
+        {visibleSats &&
+          visibleSats.map((sat) => {
+            if (simPoint?.satName === sat.satName) return null;
+            const r = get3DOrbitRadius(sat.satAltKm);
+            const pos = latLonToVector3(sat.satLat, sat.satLon, r);
+            const color = sat.isNakedEyeVisible ? "#00e5ff" : sat.isSunlit ? "#f59e0b" : "#94a3b8";
+
+            return (
+              <group
+                key={`sat-dot-${sat.satId}`}
+                position={pos}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelectSat) onSelectSat(sat.satId);
+                }}
+                onPointerOver={(e) => {
+                  e.stopPropagation();
+                  onHoverSat(sat);
+                }}
+                onPointerOut={() => onHoverSat(null)}
+              >
+                <mesh>
+                  <sphereGeometry args={[0.07, 12, 12]} />
+                  <meshBasicMaterial color={color} />
+                </mesh>
+                {sat.isNakedEyeVisible && (
+                  <mesh>
+                    <sphereGeometry args={[0.14, 12, 12]} />
+                    <meshBasicMaterial color="#00e5ff" transparent opacity={0.3} />
+                  </mesh>
+                )}
+              </group>
+            );
+          })}
+
         {/* Full 3D Orbital Trajectory Line (Electric Green #00ff88) */}
         {orbitPathPoints.length > 1 && (
           <Line points={orbitPathPoints} color="#00ff88" lineWidth={2.0} opacity={0.9} transparent />
@@ -469,7 +550,16 @@ function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }
   );
 }
 
-export default function Observer3DView({ observer, selectedPass, simPoint, timeMs }: Observer3DViewProps) {
+export default function Observer3DView({
+  observer,
+  selectedPass,
+  simPoint,
+  timeMs,
+  visibleSats,
+  onSelectSat,
+}: Observer3DViewProps) {
+  const [hoveredSat, setHoveredSat] = useState<VisibleSatItem | null>(null);
+
   return (
     <div className="h-full w-full min-h-[460px] bg-[#03040a] relative flex items-center justify-center isolate z-0">
       {/* Top-Left Corner HUD Satellite Tracking Badge (Matching Orbit Page) */}
@@ -485,22 +575,24 @@ export default function Observer3DView({ observer, selectedPass, simPoint, timeM
         </div>
       )}
 
-      {/* Top-Right Corner HUD Satellite Hover Details Overlay Window (Matching Orbit Page) */}
-      {simPoint && (
+      {/* Top-Right Corner HUD Satellite Hover / Details Overlay (Matching Orbit Page) */}
+      {(hoveredSat || simPoint) && (
         <div className="absolute right-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/95 border border-[#00e5ff]/60 px-3.5 py-2.5 rounded-lg shadow-[0_0_20px_rgba(0,229,255,0.25)] pointer-events-none select-none min-w-[170px]">
           <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 gap-3">
             <span className="font-mono text-[9px] font-bold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#00e5ff] animate-pulse" />
-              TARGET SATELLITE
+              {hoveredSat ? "HOVER TARGET" : "TARGET SATELLITE"}
             </span>
-            <span className="font-mono text-[9px] font-bold text-[#00ff88]">{simPoint.elDeg}° EL</span>
+            <span className="font-mono text-[9px] font-bold text-[#00ff88]">
+              {hoveredSat ? `${hoveredSat.elevationDeg}° EL` : `${simPoint?.elDeg}° EL`}
+            </span>
           </div>
           <div className="font-mono text-[11px] font-bold text-white truncate max-w-[210px]">
-            {simPoint.satName}
+            {hoveredSat ? hoveredSat.satName : simPoint?.satName}
           </div>
           <div className="flex items-center justify-between font-mono text-[9px] text-slate-400 pt-0.5 gap-2">
             <span>OBS: <strong className="text-cyan-300">{observer?.name?.split(",")[0] || "GPS"}</strong></span>
-            <span>ALT: <strong className="text-cyan-300">{Math.round(simPoint.altKm || 500)} km</strong></span>
+            <span>ALT: <strong className="text-cyan-300">{Math.round((hoveredSat ? hoveredSat.satAltKm : simPoint?.altKm) || 500)} km</strong></span>
           </div>
         </div>
       )}
@@ -519,8 +611,19 @@ export default function Observer3DView({ observer, selectedPass, simPoint, timeM
         <directionalLight position={[15, 12, 15]} intensity={1.8} color="#ffffff" />
         <directionalLight position={[-15, -8, -12]} intensity={0.7} color="#00e5ff" />
         <Stars radius={200} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1.5} />
-        <ObserverScene observer={observer} selectedPass={selectedPass} simPoint={simPoint} timeMs={timeMs} />
+        <ObserverScene
+          observer={observer}
+          selectedPass={selectedPass}
+          simPoint={simPoint}
+          timeMs={timeMs}
+          visibleSats={visibleSats}
+          onSelectSat={onSelectSat}
+          onHoverSat={setHoveredSat}
+        />
       </Canvas>
     </div>
   );
 }
+
+useGLTF.preload("/models/earth.glb");
+

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Line, useTexture, Html } from "@react-three/drei";
+import { OrbitControls, Stars, Line, useTexture, useGLTF, Html } from "@react-three/drei";
 import * as satellite from "satellite.js";
 import { useOrbitalStore, SatelliteData } from "./store";
 
@@ -27,20 +27,48 @@ export function updateEarthOrientation(earthGroup: THREE.Object3D, gmstRad: numb
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Earth mesh
+// NASA 3D Earth Model (From https://solarsystem.nasa.gov/gltf_embed/2393/)
+// ─────────────────────────────────────────────────────────────────────────────
+function NasaEarthModel({ radius = EARTH_RADIUS_3D }: { radius?: number }) {
+  const { scene } = useGLTF("/models/earth.glb");
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
+  const scale = radius / 500;
+
+  return (
+    <primitive
+      object={clonedScene}
+      scale={[scale, scale, scale]}
+      rotation={[0, -Math.PI / 2, 0]}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Earth mesh with official NASA 3D Earth model
 // ─────────────────────────────────────────────────────────────────────────────
 function EarthMesh({ texturePath }: { texturePath: string }) {
   const texture = useTexture(texturePath);
   return (
     <group>
-      <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
-        <meshStandardMaterial map={texture} roughness={0.7} metalness={0.15} />
-      </mesh>
+      {/* Official NASA 3D Earth GLTF Model */}
+      <Suspense
+        fallback={
+          <mesh>
+            <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
+            <meshStandardMaterial map={texture} roughness={0.45} metalness={0.15} />
+          </mesh>
+        }
+      >
+        <NasaEarthModel radius={EARTH_RADIUS_3D} />
+      </Suspense>
       {/* Atmosphere glow */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.018, 32, 32]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.06} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.025, 48, 48]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.12} side={THREE.BackSide} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.06, 32, 32]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.04} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -580,8 +608,9 @@ export default function Satellite3DView({
           });
         }}
       >
-        <ambientLight intensity={0.08} />
-        <directionalLight position={[15, 3, 10]} intensity={2.0} />
+        <ambientLight intensity={0.75} />
+        <directionalLight position={[15, 12, 15]} intensity={1.8} color="#ffffff" />
+        <directionalLight position={[-15, -8, -12]} intensity={0.7} color="#00e5ff" />
         <Stars radius={200} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1.5} />
 
         <EarthScene
@@ -595,3 +624,5 @@ export default function Satellite3DView({
     </div>
   );
 }
+
+useGLTF.preload("/models/earth.glb");

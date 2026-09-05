@@ -818,6 +818,8 @@ export default function TrackMySkyDashboard() {
                     observer={observer}
                     selectedPass={selectedPass}
                     timeMs={timeMs}
+                    visibleSats={visibilityResults}
+                    onSelectSat={handleSelectSat}
                     simPoint={selectedSat ? {
                       lat: selectedSat.satLat,
                       lon: selectedSat.satLon,

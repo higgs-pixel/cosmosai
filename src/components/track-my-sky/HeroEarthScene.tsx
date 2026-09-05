@@ -3,10 +3,27 @@
 import { useMemo, useRef, Suspense, memo } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, useTexture } from "@react-three/drei";
+import { OrbitControls, useTexture, useGLTF } from "@react-three/drei";
 
 const EARTH_RADIUS = 3.6;
 const tempLookTarget = new THREE.Vector3();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NASA 3D Earth Model (From https://solarsystem.nasa.gov/gltf_embed/2393/)
+// ─────────────────────────────────────────────────────────────────────────────
+function NasaEarthModel({ radius = EARTH_RADIUS }: { radius?: number }) {
+  const { scene } = useGLTF("/models/earth.glb");
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
+  const scale = radius / 500;
+
+  return (
+    <primitive
+      object={clonedScene}
+      scale={[scale, scale, scale]}
+      rotation={[0, -Math.PI / 2, 0]}
+    />
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // High-Resolution Procedural Cloud Texture Generator (HTML5 Canvas Turbulence)
@@ -88,15 +105,17 @@ function EarthGlobe() {
 
   return (
     <group ref={earthRef}>
-      {/* Real Earth Surface (Specular Ocean Reflections) */}
-      <mesh>
-        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-        <meshStandardMaterial
-          map={texture}
-          roughness={0.42}
-          metalness={0.15}
-        />
-      </mesh>
+      {/* Official NASA 3D Earth GLTF Model (https://solarsystem.nasa.gov/gltf_embed/2393/) */}
+      <Suspense
+        fallback={
+          <mesh>
+            <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+            <meshStandardMaterial map={texture} roughness={0.42} metalness={0.15} />
+          </mesh>
+        }
+      >
+        <NasaEarthModel radius={EARTH_RADIUS} />
+      </Suspense>
 
       {/* Dynamic 3D Cloud Layer */}
       {cloudTex && (
@@ -466,3 +485,6 @@ export const HeroEarthScene = memo(function HeroEarthScene() {
     </div>
   );
 });
+
+useGLTF.preload("/models/earth.glb");
+
