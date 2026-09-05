@@ -139,21 +139,109 @@ function SelectedSubpointConnector({ ecefPos }: { ecefPos: THREE.Vector3 | null 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Real Earth Daymap Mesh (Using Drei useTexture, matching Satellite3DView)
+// Procedural Cloud Texture Generator (HTML5 Canvas Turbulence)
+// ─────────────────────────────────────────────────────────────────────────────
+function createProceduralCloudTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0)";
+  ctx.fillRect(0, 0, 1024, 512);
+
+  // Soft atmospheric cloud masses
+  for (let i = 0; i < 350; i++) {
+    const x = Math.random() * 1024;
+    const latZone = (Math.random() - 0.5) * 2;
+    const y = 256 + latZone * 180;
+    const r = 25 + Math.random() * 60;
+    const alpha = 0.08 + Math.random() * 0.22;
+
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+    grad.addColorStop(0.6, `rgba(240, 248, 255, ${alpha * 0.5})`);
+    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cyclonic spirals & storm belts
+  for (let c = 0; c < 8; c++) {
+    const cx = Math.random() * 1024;
+    const cy = 80 + Math.random() * 350;
+    const swirlRadius = 35 + Math.random() * 40;
+    for (let s = 0; s < 14; s++) {
+      const angle = (s / 14) * Math.PI * 2;
+      const dist = (s / 14) * swirlRadius;
+      const sx = cx + Math.cos(angle) * dist;
+      const sy = cy + Math.sin(angle) * dist;
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 18);
+      grad.addColorStop(0, "rgba(255, 255, 255, 0.28)");
+      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Real Earth Daymap Mesh with Specular Oceans & Procedural Clouds
 // ─────────────────────────────────────────────────────────────────────────────
 function EarthMesh({ texturePath }: { texturePath: string }) {
   const texture = useTexture(texturePath);
+  const cloudTex = useMemo(() => (typeof document !== "undefined" ? createProceduralCloudTexture() : null), []);
+  const cloudRef = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (cloudRef.current) {
+      cloudRef.current.rotation.y += delta * 0.015;
+    }
+  });
+
   return (
     <group>
+      {/* Real Earth Surface (Ocean Specular Gloss) */}
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS_3D, 64, 64]} />
-        <meshStandardMaterial map={texture} roughness={0.7} metalness={0.15} />
+        <meshStandardMaterial map={texture} roughness={0.45} metalness={0.15} />
       </mesh>
 
-      {/* Atmosphere Glow */}
+      {/* Procedural Atmospheric Cloud Layer */}
+      {cloudTex && (
+        <mesh ref={cloudRef}>
+          <sphereGeometry args={[EARTH_RADIUS_3D * 1.012, 64, 64]} />
+          <meshStandardMaterial
+            map={cloudTex}
+            transparent
+            opacity={0.82}
+            depthWrite={false}
+            blending={THREE.NormalBlending}
+          />
+        </mesh>
+      )}
+
+      {/* Inner Atmospheric Rim Glow */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.018, 32, 32]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.06} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.025, 48, 48]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.12} side={THREE.BackSide} />
+      </mesh>
+
+      {/* Outer Rayleigh Scattering Exosphere */}
+      <mesh>
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.06, 32, 32]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.04} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -164,11 +252,11 @@ function FallbackEarthMesh() {
     <group>
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS_3D, 48, 48]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
+        <meshStandardMaterial color="#0c2340" roughness={0.45} metalness={0.2} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS_3D * 1.018, 32, 32]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.06} side={THREE.BackSide} />
+        <sphereGeometry args={[EARTH_RADIUS_3D * 1.025, 32, 32]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.12} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -189,19 +277,47 @@ interface Observer3DViewProps {
   timeMs?: number;
 }
 
-function ObserverCameraFocus({ observer }: { observer: ObserverCoords }) {
+function CameraAndControls({ observer }: { observer: ObserverCoords }) {
   const { camera } = useThree();
+  const prevCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
+  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     const { lat, lon } = safeLatLon(observer?.lat, observer?.lon);
-    const vec = latLonToVector3(lat, lon, EARTH_RADIUS_3D * 2.4);
-    if (!isNaN(vec.x) && !isNaN(vec.y) && !isNaN(vec.z)) {
-      camera.position.copy(vec);
-      camera.lookAt(0, 0, 0);
+    // Only re-orient camera if GPS coordinates genuinely change
+    if (
+      !prevCoordsRef.current ||
+      Math.abs(prevCoordsRef.current.lat - lat) > 0.0001 ||
+      Math.abs(prevCoordsRef.current.lon - lon) > 0.0001
+    ) {
+      prevCoordsRef.current = { lat, lon };
+      const vec = latLonToVector3(lat, lon, EARTH_RADIUS_3D * 2.35);
+      if (!isNaN(vec.x) && !isNaN(vec.y) && !isNaN(vec.z)) {
+        camera.position.copy(vec);
+        camera.lookAt(0, 0, 0);
+        if (controlsRef.current) {
+          controlsRef.current.target.set(0, 0, 0);
+          controlsRef.current.update();
+        }
+      }
     }
-  }, [observer, camera]);
+  }, [observer?.lat, observer?.lon, camera]);
 
-  return null;
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      makeDefault
+      enableZoom={true}
+      zoomSpeed={1.2}
+      minDistance={4.4}
+      maxDistance={40}
+      enablePan={false}
+      enableRotate={true}
+      rotateSpeed={0.8}
+      enableDamping={true}
+      dampingFactor={0.08}
+    />
+  );
 }
 
 function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }: Observer3DViewProps) {
@@ -321,11 +437,18 @@ function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }
           <EarthMesh texturePath="/textures/planets/2k_earth_daymap.jpg" />
         </Suspense>
 
-        {/* Observer GPS Pin */}
-        <mesh position={obsPos}>
-          <sphereGeometry args={[0.08, 16, 16]} />
-          <meshBasicMaterial color="#ff3366" />
-        </mesh>
+        {/* Observer GPS Pin with Pulsing Radar Target Ring */}
+        <group position={obsPos}>
+          <mesh>
+            <sphereGeometry args={[0.09, 16, 16]} />
+            <meshBasicMaterial color="#ff3366" />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.13, 0.20, 24]} />
+            <meshBasicMaterial color="#ff3366" side={THREE.DoubleSide} transparent opacity={0.8} />
+          </mesh>
+          <pointLight color="#ff3366" intensity={2.0} distance={1.5} />
+        </group>
 
         {/* 3D Tracked Satellite Model & Subpoint Connector Line */}
         {satSimVec && (
@@ -341,8 +464,7 @@ function ObserverScene({ observer, selectedPass, simPoint, timeMs = Date.now() }
         )}
       </group>
 
-      <ObserverCameraFocus observer={observer} />
-      <OrbitControls enableDamping dampingFactor={0.05} maxDistance={40} minDistance={4.8} />
+      <CameraAndControls observer={observer} />
     </>
   );
 }
@@ -393,8 +515,9 @@ export default function Observer3DView({ observer, selectedPass, simPoint, timeM
           });
         }}
       >
-        <ambientLight intensity={0.12} />
-        <directionalLight position={[15, 3, 10]} intensity={2.0} />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[15, 12, 15]} intensity={1.8} color="#ffffff" />
+        <directionalLight position={[-15, -8, -12]} intensity={0.7} color="#00e5ff" />
         <Stars radius={200} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1.5} />
         <ObserverScene observer={observer} selectedPass={selectedPass} simPoint={simPoint} timeMs={timeMs} />
       </Canvas>

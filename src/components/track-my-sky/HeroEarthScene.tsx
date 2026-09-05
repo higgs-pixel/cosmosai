@@ -1,52 +1,135 @@
 "use client";
 
-import { useMemo, useRef, Suspense } from "react";
+import { useMemo, useRef, Suspense, memo } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useTexture } from "@react-three/drei";
 
 const EARTH_RADIUS = 3.6;
+const tempLookTarget = new THREE.Vector3();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// High-Resolution Procedural Cloud Texture Generator (HTML5 Canvas Turbulence)
+// ─────────────────────────────────────────────────────────────────────────────
+function createProceduralCloudTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0)";
+  ctx.fillRect(0, 0, 1024, 512);
+
+  // Soft atmospheric cloud masses across equatorial & temperate bands
+  for (let i = 0; i < 400; i++) {
+    const x = Math.random() * 1024;
+    const latZone = (Math.random() - 0.5) * 2;
+    const y = 256 + latZone * 185;
+    const r = 25 + Math.random() * 65;
+    const alpha = 0.08 + Math.random() * 0.25;
+
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+    grad.addColorStop(0.6, `rgba(240, 248, 255, ${alpha * 0.5})`);
+    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cyclonic spirals & swirling storm systems
+  for (let c = 0; c < 10; c++) {
+    const cx = Math.random() * 1024;
+    const cy = 70 + Math.random() * 370;
+    const swirlRadius = 40 + Math.random() * 45;
+    for (let s = 0; s < 16; s++) {
+      const angle = (s / 16) * Math.PI * 2;
+      const dist = (s / 16) * swirlRadius;
+      const sx = cx + Math.cos(angle) * dist;
+      const sy = cy + Math.sin(angle) * dist;
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 22);
+      grad.addColorStop(0, "rgba(255, 255, 255, 0.32)");
+      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Real 3D Earth: Oceans, Land, Dynamic Procedural Clouds & Rayleigh Atmosphere
+// ─────────────────────────────────────────────────────────────────────────────
 function EarthGlobe() {
   const earthRef = useRef<THREE.Group>(null);
+  const cloudRef = useRef<THREE.Mesh>(null);
   const texture = useTexture("/textures/planets/2k_earth_daymap.jpg");
+  const cloudTex = useMemo(() => (typeof document !== "undefined" ? createProceduralCloudTexture() : null), []);
 
   useFrame((_, delta) => {
+    // Smooth planetary rotation
     if (earthRef.current) {
-      earthRef.current.rotation.y += delta * 0.035;
+      earthRef.current.rotation.y += delta * 0.032;
+    }
+    // Dynamic differential cloud drift (clouds rotate slightly faster)
+    if (cloudRef.current) {
+      cloudRef.current.rotation.y += delta * 0.045;
     }
   });
 
   return (
     <group ref={earthRef}>
-      {/* Earth Surface */}
+      {/* Real Earth Surface (Specular Ocean Reflections) */}
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
         <meshStandardMaterial
           map={texture}
-          roughness={0.75}
-          metalness={0.12}
+          roughness={0.42}
+          metalness={0.15}
         />
       </mesh>
 
-      {/* Atmospheric Rim Glow */}
+      {/* Dynamic 3D Cloud Layer */}
+      {cloudTex && (
+        <mesh ref={cloudRef}>
+          <sphereGeometry args={[EARTH_RADIUS * 1.014, 64, 64]} />
+          <meshStandardMaterial
+            map={cloudTex}
+            transparent
+            opacity={0.86}
+            depthWrite={false}
+            blending={THREE.NormalBlending}
+          />
+        </mesh>
+      )}
+
+      {/* Inner Atmospheric Rim Glow */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS * 1.025, 48, 48]} />
+        <sphereGeometry args={[EARTH_RADIUS * 1.028, 48, 48]} />
         <meshBasicMaterial
           color="#00e5ff"
           transparent
-          opacity={0.08}
+          opacity={0.12}
           side={THREE.BackSide}
         />
       </mesh>
 
-      {/* Outer Atmospheric Haze */}
+      {/* Outer Rayleigh Scattering Exosphere */}
       <mesh>
-        <sphereGeometry args={[EARTH_RADIUS * 1.06, 32, 32]} />
+        <sphereGeometry args={[EARTH_RADIUS * 1.065, 32, 32]} />
         <meshBasicMaterial
           color="#38bdf8"
           transparent
-          opacity={0.03}
+          opacity={0.04}
           side={THREE.BackSide}
         />
       </mesh>
@@ -59,21 +142,23 @@ function FallbackEarth() {
     <group>
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS, 32, 32]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.7} metalness={0.2} />
+        <meshStandardMaterial color="#0c2340" roughness={0.45} metalness={0.2} />
       </mesh>
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS * 1.025, 32, 32]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.08} side={THREE.BackSide} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.1} side={THREE.BackSide} />
       </mesh>
     </group>
   );
 }
 
-// Realistic 3D Satellite Spacecraft Model with Central Bus, Solar Panels & Dish Antenna
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentic 3D Satellite Spacecraft Model
+// ─────────────────────────────────────────────────────────────────────────────
 function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: string; scale?: number }) {
   return (
     <group scale={[scale, scale, scale]}>
-      {/* Central Equipment Bus (Gold/Beryllium Thermal Insulation) */}
+      {/* Central Equipment Bus (Gold Thermal Insulation) */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[0.12, 0.16, 0.12]} />
         <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.25} />
@@ -91,7 +176,6 @@ function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: 
           <coneGeometry args={[0.08, 0.035, 16, 1, true]} />
           <meshStandardMaterial color="#f8fafc" metalness={0.6} roughness={0.3} side={THREE.DoubleSide} />
         </mesh>
-        {/* Feed Horn */}
         <mesh position={[0, 0.03, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 0.04, 8]} />
           <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
@@ -110,12 +194,10 @@ function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: 
 
       {/* Left Dual Photovoltaic Solar Array Wings */}
       <group position={[-0.42, 0, 0]}>
-        {/* Solar Cell Panel */}
         <mesh>
           <boxGeometry args={[0.24, 0.11, 0.012]} />
           <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} />
         </mesh>
-        {/* Panel Frame */}
         <mesh>
           <boxGeometry args={[0.246, 0.116, 0.01]} />
           <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.3} />
@@ -124,12 +206,10 @@ function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: 
 
       {/* Right Dual Photovoltaic Solar Array Wings */}
       <group position={[0.42, 0, 0]}>
-        {/* Solar Cell Panel */}
         <mesh>
           <boxGeometry args={[0.24, 0.11, 0.012]} />
           <meshStandardMaterial color="#0284c7" metalness={0.7} roughness={0.2} />
         </mesh>
-        {/* Panel Frame */}
         <mesh>
           <boxGeometry args={[0.246, 0.116, 0.01]} />
           <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.3} />
@@ -137,7 +217,7 @@ function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: 
       </group>
 
       {/* Thruster Nozzle Aft */}
-      <mesh position={[0, -0.10, 0]} rotation={[Math.PI, 0, 0]}>
+      <mesh position={[0, -0.1, 0]} rotation={[Math.PI, 0, 0]}>
         <coneGeometry args={[0.035, 0.05, 12]} />
         <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.4} />
       </mesh>
@@ -148,14 +228,16 @@ function SatelliteSpacecraftModel({ color = "#00e5ff", scale = 1.0 }: { color?: 
         <meshBasicMaterial color={color} />
       </mesh>
       <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.10, 12, 12]} />
+        <sphereGeometry args={[0.1, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.2} />
       </mesh>
     </group>
   );
 }
 
-// Authentic ISS (International Space Station) Model with Modules, Truss & 4 Solar Arrays
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentic ISS (International Space Station) Model
+// ─────────────────────────────────────────────────────────────────────────────
 function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
   return (
     <group scale={[scale, scale, scale]}>
@@ -165,7 +247,7 @@ function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
         <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
       </mesh>
 
-      {/* Central Pressurized Modules Cluster (Zvezda / Destiny / Harmony) */}
+      {/* Central Pressurized Modules Cluster */}
       <group position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <mesh position={[0, 0, 0]}>
           <cylinderGeometry args={[0.04, 0.04, 0.28, 16]} />
@@ -178,7 +260,6 @@ function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
       </group>
 
       {/* 4 Giant Photovoltaic Solar Array Wings */}
-      {/* Port Outer Wing */}
       <group position={[-0.38, 0, 0]}>
         <mesh position={[0, 0.14, 0]}>
           <boxGeometry args={[0.13, 0.24, 0.01]} />
@@ -190,7 +271,6 @@ function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
         </mesh>
       </group>
 
-      {/* Starboard Outer Wing */}
       <group position={[0.38, 0, 0]}>
         <mesh position={[0, 0.14, 0]}>
           <boxGeometry args={[0.13, 0.24, 0.01]} />
@@ -225,7 +305,9 @@ function ISSSpaceStationModel({ scale = 1.0 }: { scale?: number }) {
   );
 }
 
-// 3D Orbital Trajectory Ring with Moving Satellite Craft
+// ─────────────────────────────────────────────────────────────────────────────
+// 3D Orbital Trajectory Ring with Moving Satellite (GC-Free 60FPS loop)
+// ─────────────────────────────────────────────────────────────────────────────
 function OrbitRingWithSatellite({
   radius,
   inclinationDeg,
@@ -245,8 +327,8 @@ function OrbitRingWithSatellite({
 }) {
   const satRef = useRef<THREE.Group>(null);
 
-  // Generate 3D ring points
-  const points = useMemo(() => {
+  // Generate 3D ring points once
+  const lineObj = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     const segments = 120;
     const incRad = (inclinationDeg * Math.PI) / 180;
@@ -258,12 +340,10 @@ function OrbitRingWithSatellite({
       const z = radius * Math.sin(theta) * Math.cos(incRad);
       pts.push(new THREE.Vector3(x, y, z));
     }
-    return pts;
-  }, [radius, inclinationDeg]);
-
-  const lineGeo = useMemo(() => {
-    return new THREE.BufferGeometry().setFromPoints(points);
-  }, [points]);
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 });
+    return new THREE.LineLoop(lineGeo, mat);
+  }, [radius, inclinationDeg, color]);
 
   useFrame(({ clock }) => {
     if (satRef.current) {
@@ -274,20 +354,17 @@ function OrbitRingWithSatellite({
       const z = radius * Math.sin(t) * Math.cos(incRad);
       satRef.current.position.set(x, y, z);
 
-      // Tangent velocity vector to orient satellite head-first along orbital track
+      // Tangent velocity vector using pre-allocated vector
       const dt = 0.05;
       const tNext = t + dt;
-      const nextX = radius * Math.cos(tNext);
-      const nextY = radius * Math.sin(tNext) * Math.sin(incRad);
-      const nextZ = radius * Math.sin(tNext) * Math.cos(incRad);
-      satRef.current.lookAt(nextX, nextY, nextZ);
+      tempLookTarget.set(
+        radius * Math.cos(tNext),
+        radius * Math.sin(tNext) * Math.sin(incRad),
+        radius * Math.sin(tNext) * Math.cos(incRad)
+      );
+      satRef.current.lookAt(tempLookTarget);
     }
   });
-
-  const lineObj = useMemo(() => {
-    const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 });
-    return new THREE.LineLoop(lineGeo, mat);
-  }, [lineGeo, color]);
 
   return (
     <group>
@@ -306,7 +383,11 @@ function OrbitRingWithSatellite({
   );
 }
 
-export function HeroEarthScene() {
+// ─────────────────────────────────────────────────────────────────────────────
+// HeroEarthScene wrapped in React.memo to completely decouple animation
+// from parent data changes and counter re-renders!
+// ─────────────────────────────────────────────────────────────────────────────
+export const HeroEarthScene = memo(function HeroEarthScene() {
   return (
     <div className="relative w-full h-full min-h-[420px] lg:min-h-[560px] pointer-events-auto">
       <Canvas
@@ -314,9 +395,9 @@ export function HeroEarthScene() {
         gl={{ antialias: true, powerPreference: "high-performance" }}
         className="w-full h-full"
       >
-        <ambientLight intensity={0.45} />
-        <directionalLight position={[12, 8, 10]} intensity={1.8} color="#ffffff" />
-        <directionalLight position={[-10, -5, -8]} intensity={0.25} color="#00e5ff" />
+        <ambientLight intensity={0.65} />
+        <directionalLight position={[15, 10, 12]} intensity={2.0} color="#ffffff" />
+        <directionalLight position={[-12, -6, -10]} intensity={0.5} color="#00e5ff" />
 
         <Suspense fallback={<FallbackEarth />}>
           <EarthGlobe />
@@ -365,13 +446,16 @@ export function HeroEarthScene() {
         />
 
         <OrbitControls
-          enableZoom={false}
+          enableZoom={true}
+          zoomSpeed={0.8}
+          minDistance={6}
+          maxDistance={18}
           enablePan={false}
           enableDamping
-          dampingFactor={0.05}
-          rotateSpeed={0.5}
+          dampingFactor={0.06}
+          rotateSpeed={0.6}
           autoRotate
-          autoRotateSpeed={0.4}
+          autoRotateSpeed={0.35}
           minPolarAngle={Math.PI / 4}
           maxPolarAngle={(Math.PI * 3) / 4}
         />
@@ -381,4 +465,4 @@ export function HeroEarthScene() {
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_45%,#02040a_85%)]" />
     </div>
   );
-}
+});

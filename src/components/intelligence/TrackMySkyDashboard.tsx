@@ -268,8 +268,8 @@ export default function TrackMySkyDashboard() {
 
   const mapSectionRef = useRef<HTMLDivElement>(null);
 
-  // View Mode for Map Displays: 'all' | 'polar' | '3d' | '2d' | 'stargaze'
-  const [activeMapView, setActiveMapView] = useState<"all" | "polar" | "3d" | "2d" | "stargaze">("all");
+  // View Mode for Map Displays: 'all' | 'polar' | '3d' | '2d'
+  const [activeMapView, setActiveMapView] = useState<"all" | "polar" | "3d" | "2d">("all");
   const [activeSection, setActiveSection] = useState("hero");
   const [tableSearch, setTableSearch] = useState("");
   const [tableFilter, setTableFilter] = useState<"all" | "visible" | "sunlit">("all");
@@ -659,11 +659,6 @@ export default function TrackMySkyDashboard() {
       <TrackMySkyNav
         observer={observer}
         formattedTime={formatClockTime(timeMs, selectedTz)}
-        onOpenPairModal={() => setShowPairModal(true)}
-        onOpenManual={() => {
-          const el = document.getElementById("glossary-modal-btn");
-          if (el) el.click();
-        }}
         onScrollToSection={scrollToSection}
         activeSection={activeSection}
       />
@@ -778,13 +773,6 @@ export default function TrackMySkyDashboard() {
               <MapIcon className="h-3.5 w-3.5" />
               <span>2D RADAR</span>
             </button>
-            <Link
-              href="/stargaze"
-              className="px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-cyan-400 text-black shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:opacity-90"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-black" />
-              <span>STAR GAZE</span>
-            </Link>
           </div>
         </GlassPanel>
 
@@ -884,18 +872,6 @@ export default function TrackMySkyDashboard() {
             </div>
           )}
 
-          {/* Star Gaze 3D Interactive Planetarium Sky Dome */}
-          {activeMapView === "stargaze" && (
-            <SpaceTechCard
-              moduleTag="PLANETARIUM // 3D STAR GAZE DOME"
-              statusText="3D STARFIELD"
-              statusColor="purple"
-              tilt={false}
-              className="col-span-full w-full p-5"
-            >
-              <StarGazeView observer={observer} />
-            </SpaceTechCard>
-          )}
         </div>
       </div>
 
