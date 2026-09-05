@@ -156,6 +156,207 @@ function MobileCameraSightReticle({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HUMAN EYE BINOCULAR FIELD OF VIEW GEOMETRY (200°-220° HORIZ × 130°-150° VERT)
+// ─────────────────────────────────────────────────────────────────────────────
+// The combined human binocular visual field spans 210° horizontally (±105°)
+// and 140° vertically (±70°), representing the exact natural human line of sight.
+function HumanBinocularSightField({
+  color,
+  opacity = 0.22,
+}: {
+  color: string;
+  opacity?: number;
+}) {
+  const radius = 240;
+  const hDeg = 210; // Combined binocular horizontal span (200° to 220°)
+  const vDeg = 140; // Combined binocular vertical span (130° to 150°)
+  const hRadHalf = ((hDeg / 2) * Math.PI) / 180; // 105° in radians
+  const vRadHalf = ((vDeg / 2) * Math.PI) / 180; // 70° in radians
+
+  const { canopyGeometry, frustumGeometry, perimeterPoints, binocularOverlapPoints, horizMeridian, vertMeridian } = useMemo(() => {
+    const apex = new THREE.Vector3(0, 2.2, 0);
+    const numSegments = 64;
+
+    // Outer perimeter boundary points (210° H × 140° V ellipse on sphere)
+    const perimPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= numSegments; i++) {
+      const u = (i / numSegments) * Math.PI * 2;
+      const th = hRadHalf * Math.sin(u);
+      const ph = vRadHalf * Math.cos(u);
+      const x = radius * Math.sin(th) * Math.cos(ph);
+      const y = radius * Math.sin(ph) + 2.2;
+      const z = radius * Math.cos(th) * Math.cos(ph);
+      perimPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Binocular central overlap loop (~120° H × 120° V)
+    const overlapPts: THREE.Vector3[] = [];
+    const stereoRad = (60 * Math.PI) / 180;
+    for (let i = 0; i <= 48; i++) {
+      const u = (i / 48) * Math.PI * 2;
+      const th = stereoRad * Math.sin(u);
+      const ph = stereoRad * Math.cos(u);
+      const x = radius * Math.sin(th) * Math.cos(ph);
+      const y = radius * Math.sin(ph) + 2.2;
+      const z = radius * Math.cos(th) * Math.cos(ph);
+      overlapPts.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Horizontal Meridian Arc (210° horizontal equator)
+    const hArc: THREE.Vector3[] = [];
+    for (let i = 0; i <= 36; i++) {
+      const t = -hRadHalf + (i / 36) * (hRadHalf * 2);
+      hArc.push(new THREE.Vector3(radius * Math.sin(t), 2.2, radius * Math.cos(t)));
+    }
+
+    // Vertical Meridian Arc (140° vertical prime meridian)
+    const vArc: THREE.Vector3[] = [];
+    for (let i = 0; i <= 36; i++) {
+      const t = -vRadHalf + (i / 36) * (vRadHalf * 2);
+      vArc.push(new THREE.Vector3(0, radius * Math.sin(t) + 2.2, radius * Math.cos(t)));
+    }
+
+    // Volumetric Frustum Walls (Triangle fan connecting apex to perimeter)
+    const frustumVerts: number[] = [];
+    for (let i = 0; i < numSegments; i++) {
+      const p1 = perimPts[i];
+      const p2 = perimPts[i + 1];
+      frustumVerts.push(apex.x, apex.y, apex.z);
+      frustumVerts.push(p1.x, p1.y, p1.z);
+      frustumVerts.push(p2.x, p2.y, p2.z);
+    }
+    const frustumGeo = new THREE.BufferGeometry();
+    frustumGeo.setAttribute("position", new THREE.Float32BufferAttribute(frustumVerts, 3));
+    frustumGeo.computeVertexNormals();
+
+    // Spherical Curved Canopy Surface (Lat/Lon grid over binocular ellipse)
+    const rings = 8;
+    const ringSegments = 48;
+    const canopyVerts: number[] = [];
+    const canopyIndices: number[] = [];
+
+    canopyVerts.push(0, 2.2, radius);
+
+    for (let rStep = 1; rStep <= rings; rStep++) {
+      const rFrac = rStep / rings;
+      for (let s = 0; s < ringSegments; s++) {
+        const u = (s / ringSegments) * Math.PI * 2;
+        const th = rFrac * hRadHalf * Math.sin(u);
+        const ph = rFrac * vRadHalf * Math.cos(u);
+        const x = radius * Math.sin(th) * Math.cos(ph);
+        const y = radius * Math.sin(ph) + 2.2;
+        const z = radius * Math.cos(th) * Math.cos(ph);
+        canopyVerts.push(x, y, z);
+      }
+    }
+
+    for (let s = 0; s < ringSegments; s++) {
+      const next = (s + 1) % ringSegments;
+      canopyIndices.push(0, s + 1, next + 1);
+    }
+
+    for (let rStep = 1; rStep < rings; rStep++) {
+      const curRingStart = 1 + (rStep - 1) * ringSegments;
+      const nextRingStart = 1 + rStep * ringSegments;
+      for (let s = 0; s < ringSegments; s++) {
+        const next = (s + 1) % ringSegments;
+        const c1 = curRingStart + s;
+        const c2 = curRingStart + next;
+        const n1 = nextRingStart + s;
+        const n2 = nextRingStart + next;
+        canopyIndices.push(c1, n1, c2);
+        canopyIndices.push(c2, n1, n2);
+      }
+    }
+
+    const canopyGeo = new THREE.BufferGeometry();
+    canopyGeo.setAttribute("position", new THREE.Float32BufferAttribute(canopyVerts, 3));
+    canopyGeo.setIndex(canopyIndices);
+    canopyGeo.computeVertexNormals();
+
+    return {
+      canopyGeometry: canopyGeo,
+      frustumGeometry: frustumGeo,
+      perimeterPoints: perimPts,
+      binocularOverlapPoints: overlapPts,
+      horizMeridian: hArc,
+      vertMeridian: vArc,
+    };
+  }, [radius, hRadHalf, vRadHalf]);
+
+  return (
+    <group>
+      {/* 1. Volumetric Human Field Frustum Walls */}
+      <mesh geometry={frustumGeometry}>
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={opacity * 0.75}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* 2. Spherical Front Canopy */}
+      <mesh geometry={canopyGeometry}>
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={opacity}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* 3. Outer Binocular Perimeter Boundary (210°H × 140°V) */}
+      <Line
+        points={perimeterPoints}
+        color={color}
+        lineWidth={2.8}
+        transparent
+        opacity={0.85}
+      />
+
+      {/* 4. Binocular Stereo Overlap Ring (Central 120° stereoscopic zone) */}
+      <Line
+        points={binocularOverlapPoints}
+        color={color}
+        lineWidth={1.5}
+        transparent
+        opacity={0.5}
+      />
+
+      {/* 5. Horizontal Meridian Arc (210° Equatorial Span) */}
+      <Line
+        points={horizMeridian}
+        color={color}
+        lineWidth={1.8}
+        transparent
+        opacity={0.65}
+      />
+
+      {/* 6. Vertical Meridian Arc (140° Vertical Span) */}
+      <Line
+        points={vertMeridian}
+        color={color}
+        lineWidth={1.8}
+        transparent
+        opacity={0.65}
+      />
+
+      {/* 7. Central Foveal Gaze Core Beam (Line of Sight Laser) */}
+      <Line
+        points={[new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(0, 2.2, 260)]}
+        color={color}
+        lineWidth={3.8}
+        transparent
+        opacity={0.95}
+      />
+    </group>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
 // ─────────────────────────────────────────────────────────────────────────────
 function ObserverGroundStation({
@@ -214,6 +415,8 @@ function ObserverGroundStation({
     }
   });
 
+  const sightColor = mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981";
+
   return (
     <group position={[0, 0, 0]}>
       {/* Base Pedestal */}
@@ -233,8 +436,8 @@ function ObserverGroundStation({
         <mesh position={[0, 2.2, 3.8]}>
           <sphereGeometry args={[0.95, 16, 16]} />
           <meshStandardMaterial
-            color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
-            emissive={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
+            color={sightColor}
+            emissive={sightColor}
             emissiveIntensity={4.5}
           />
         </mesh>
@@ -244,24 +447,10 @@ function ObserverGroundStation({
           <meshStandardMaterial color="#090d16" roughness={0.3} metalness={0.9} />
         </mesh>
 
-        {/* 3D Volumetric Sight Cone */}
-        <mesh position={[0, 2.2, 120]} rotation={[-Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[38, 240, 32, 1, true]} />
-          <meshBasicMaterial
-            color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
-            transparent
-            opacity={mobileOrientation ? 0.35 : targetSat ? 0.38 : 0.18}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Precision Sight Laser Core Beam */}
-        <Line
-          points={[new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(0, 2.2, 260)]}
-          color={mobileOrientation ? "#06b6d4" : targetSat ? "#f59e0b" : "#10b981"}
-          lineWidth={4.2}
-          transparent
-          opacity={0.95}
+        {/* HUMAN EYE BINOCULAR LINE OF SIGHT (210°H × 140°V) */}
+        <HumanBinocularSightField
+          color={sightColor}
+          opacity={mobileOrientation ? 0.32 : targetSat ? 0.35 : 0.18}
         />
       </group>
 
@@ -282,15 +471,24 @@ function ObserverGroundStation({
         <meshBasicMaterial color={targetSat ? "#f59e0b" : "#10b981"} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
 
-
-      {/* Precision Satellite Lock Badge — only when a satellite is being tracked */}
-      {targetSat && !mobileOrientation && (
-        <Html center position={[0, 8.5, 0]} className="pointer-events-none select-none">
-          <div className="px-3.5 py-1 rounded-full text-[10px] font-mono font-black shadow-2xl border backdrop-blur-md whitespace-nowrap bg-amber-950/90 border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.8)] animate-pulse">
-            🎯 PRECISION LOCK: {targetSat.name}
-          </div>
-        </Html>
-      )}
+      {/* Floating Field of View & Orientation Badge */}
+      <Html center position={[0, 9.5, 0]} className="pointer-events-none select-none">
+        <div className={`px-3.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-2xl border backdrop-blur-md whitespace-nowrap transition ${
+          mobileOrientation
+            ? "bg-cyan-950/95 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.6)]"
+            : targetSat
+            ? "bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]"
+            : "bg-emerald-950/95 border-emerald-500/60 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]"
+        }`}>
+          <span>
+            {mobileOrientation
+              ? `📱 PHONE SIGHT: ${mobileOrientation.heading}° AZ | ${mobileOrientation.pitch}° EL • HUMAN FOV (210°H × 140°V)`
+              : targetSat
+              ? `🎯 SIGHT LOCKED: ${targetSat.name} • HUMAN FOV (210°H × 140°V)`
+              : "👁️ BOT SIGHT: HUMAN EYE FIELD (210°H × 140°V)"}
+          </span>
+        </div>
+      </Html>
     </group>
   );
 }
