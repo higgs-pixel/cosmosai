@@ -780,14 +780,114 @@ export function parseTleText(text: string, defaultCategory: string = "Active"): 
 
       let category = defaultCategory;
       const upperName = name.toUpperCase();
-      if (upperName.includes("ISS") || upperName.includes("TIANGONG") || upperName.includes("CSS")) {
+
+      // 1. Space Stations & Crew / Cargo Vehicles
+      if (
+        upperName.includes("ISS") ||
+        upperName.includes("ZARYA") ||
+        upperName.includes("TIANGONG") ||
+        upperName.includes("CSS") ||
+        upperName.includes("TIANHE") ||
+        upperName.includes("WENTIAN") ||
+        upperName.includes("MENGTIAN") ||
+        upperName.includes("POISK") ||
+        upperName.includes("NAUKA") ||
+        upperName.includes("DRAGON") ||
+        upperName.includes("PROGRESS") ||
+        upperName.includes("CYGNUS") ||
+        upperName.includes("SHENZHOU") ||
+        upperName.includes("TIANZHOU") ||
+        upperName.includes("SZ-") ||
+        upperName.includes("SOYUZ MS")
+      ) {
         category = "Space Station";
-      } else if (upperName.includes("HUBBLE") || upperName.includes("HST") || upperName.includes("FERMI") || upperName.includes("SWIFT") || upperName.includes("JAMES WEBB") || upperName.includes("JWST")) {
-        category = "Science";
-      } else if (upperName.includes("NOAA") || upperName.includes("GOES") || upperName.includes("METEOSAT") || upperName.includes("TERRA") || upperName.includes("AQUA") || upperName.includes("LANDSAT")) {
-        category = "Weather";
-      } else if (upperName.includes("GPS") || upperName.includes("GALILEO") || upperName.includes("BEIDOU") || upperName.includes("GLONASS")) {
+      }
+      // 2. Spent Rocket Bodies & Upper Stages (High-reflectivity visual targets)
+      else if (
+        upperName.includes("R/B") ||
+        upperName.includes("DEB") ||
+        upperName.includes("CENTAUR") ||
+        upperName.includes("AGENA") ||
+        upperName.includes("TRANSTAGE") ||
+        upperName.includes("DELTA 1") ||
+        upperName.includes("DELTA 2") ||
+        upperName.includes("TITAN") ||
+        upperName.includes("ARIANE") ||
+        upperName.includes("FREGAT") ||
+        upperName.includes("CZ-") ||
+        upperName.includes("H-2A") ||
+        upperName.includes("GSLV") ||
+        upperName.includes("SL-")
+      ) {
+        category = "Booster";
+      }
+      // 3. Communications Constellations & Spacecraft
+      else if (
+        upperName.includes("SPACEMOBILE") ||
+        upperName.includes("STARLINK") ||
+        upperName.includes("ONEWEB") ||
+        upperName.includes("IRIDIUM") ||
+        upperName.includes("GLOBALSTAR") ||
+        upperName.includes("MOLNIYA") ||
+        upperName.includes("RADUGA") ||
+        upperName.includes("GORIZONT") ||
+        upperName.includes("INTELSAT") ||
+        upperName.includes("INMARSAT") ||
+        upperName.includes("TELSTAR") ||
+        upperName.includes("TDRS")
+      ) {
+        category = "Comms";
+      }
+      // 4. GPS & Global Navigation Systems
+      else if (
+        upperName.includes("GPS") ||
+        upperName.includes("NAVSTAR") ||
+        upperName.includes("GLONASS") ||
+        upperName.includes("GALILEO") ||
+        upperName.includes("BEIDOU") ||
+        upperName.includes("QZSS") ||
+        upperName.includes("IRNSS") ||
+        upperName.includes("NAVIC")
+      ) {
         category = "GPS";
+      }
+      // 5. Earth Observation, Climate & Weather Satellites
+      else if (
+        upperName.includes("ENVISAT") ||
+        upperName.includes("SEASAT") ||
+        upperName.includes("TERRA") ||
+        upperName.includes("AQUA") ||
+        upperName.includes("LANDSAT") ||
+        upperName.includes("SENTINEL") ||
+        upperName.includes("ERS-") ||
+        upperName.includes("ALOS") ||
+        upperName.includes("RESURS") ||
+        upperName.includes("CARTOSAT") ||
+        upperName.includes("RISAT") ||
+        upperName.includes("OKEAN") ||
+        upperName.includes("SAOCOM") ||
+        upperName.includes("COSMO-SKYMED") ||
+        upperName.includes("YAOGAN") ||
+        upperName.includes("HELIOS") ||
+        upperName.includes("ORBVIEW") ||
+        upperName.includes("SEASTAR") ||
+        upperName.includes("MIDORI") ||
+        upperName.includes("ADEOS") ||
+        upperName.includes("SPOT") ||
+        upperName.includes("NOAA") ||
+        upperName.includes("GOES") ||
+        upperName.includes("METEOSAT") ||
+        upperName.includes("METOP") ||
+        upperName.includes("SUOMI") ||
+        upperName.includes("JPSS") ||
+        upperName.includes("FENGYUN") ||
+        upperName.includes("HIMAWARI")
+      ) {
+        category = "Earth Obs";
+      }
+      // 6. Science, Astrophysics, Space Telescopes & Geodetic Research
+      else {
+        category = "Science";
       }
 
       const meanMotion = parseFloat(line2.substring(52, 63).trim());

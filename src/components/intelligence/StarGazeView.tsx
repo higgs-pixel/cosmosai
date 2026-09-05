@@ -817,78 +817,160 @@ export function getSatelliteCategoryStyle(category?: string, name?: string) {
   const cat = (category || "").toLowerCase();
   const n = (name || "").toLowerCase();
 
-  if (cat.includes("station") || n.includes("iss") || n.includes("tiangong") || n.includes("css")) {
+  // 1. Space Station & Crew / Cargo Modules
+  if (
+    cat.includes("station") ||
+    n.includes("iss") ||
+    n.includes("zarya") ||
+    n.includes("tiangong") ||
+    n.includes("css") ||
+    n.includes("tianhe") ||
+    n.includes("wentian") ||
+    n.includes("mengtian") ||
+    n.includes("poisk") ||
+    n.includes("nauka") ||
+    n.includes("dragon") ||
+    n.includes("progress") ||
+    n.includes("cygnus") ||
+    n.includes("shenzhou") ||
+    n.includes("tianzhou") ||
+    n.includes("sz-") ||
+    n.includes("soyuz ms")
+  ) {
     return {
       label: "Space Station",
       colorHex: "#00f0ff",
       dotClass: "bg-cyan-400 border-slate-950",
-      badgeClass: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
-      glowColor: "rgba(0, 240, 255, 0.4)",
+      badgeClass: "bg-cyan-500/15 text-cyan-300 border-cyan-500/40",
+      glowColor: "rgba(0, 240, 255, 0.5)",
     };
   }
+
+  // 2. Spent Rocket Bodies & Upper Stages (High-reflectivity visual targets)
+  if (
+    cat.includes("booster") ||
+    cat.includes("rocket") ||
+    n.includes("r/b") ||
+    n.includes("deb") ||
+    n.includes("centaur") ||
+    n.includes("agena") ||
+    n.includes("transtage") ||
+    n.includes("delta") ||
+    n.includes("titan") ||
+    n.includes("ariane") ||
+    n.includes("fregat") ||
+    n.includes("cz-") ||
+    n.includes("h-2a") ||
+    n.includes("gslv") ||
+    n.includes("sl-")
+  ) {
+    return {
+      label: "Rocket Booster",
+      colorHex: "#fb7185",
+      dotClass: "bg-rose-400 border-slate-950",
+      badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/40",
+      glowColor: "rgba(251, 113, 133, 0.5)",
+    };
+  }
+
+  // 3. GPS & Navigation
   if (
     cat.includes("gps") ||
     cat.includes("nav") ||
     n.includes("gps") ||
     n.includes("glonass") ||
     n.includes("galileo") ||
-    n.includes("beidou")
+    n.includes("beidou") ||
+    n.includes("navstar") ||
+    n.includes("qzss") ||
+    n.includes("irnss") ||
+    n.includes("navic")
   ) {
     return {
       label: "GPS / Nav",
       colorHex: "#ffb700",
       dotClass: "bg-amber-400 border-slate-950",
-      badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-      glowColor: "rgba(255, 183, 0, 0.4)",
+      badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+      glowColor: "rgba(255, 183, 0, 0.5)",
     };
   }
+
+  // 4. Earth Observation & Weather Satellites
   if (
-    cat.includes("observation") ||
+    cat.includes("obs") ||
     cat.includes("weather") ||
-    n.includes("insat") ||
+    n.includes("envisat") ||
+    n.includes("seasat") ||
+    n.includes("terra") ||
+    n.includes("aqua") ||
     n.includes("landsat") ||
     n.includes("sentinel") ||
-    n.includes("goes")
+    n.includes("ers-") ||
+    n.includes("alos") ||
+    n.includes("resurs") ||
+    n.includes("cartosat") ||
+    n.includes("risat") ||
+    n.includes("okean") ||
+    n.includes("saocom") ||
+    n.includes("cosmo-skymed") ||
+    n.includes("yaogan") ||
+    n.includes("helios") ||
+    n.includes("orbview") ||
+    n.includes("seastar") ||
+    n.includes("midori") ||
+    n.includes("adeos") ||
+    n.includes("spot") ||
+    n.includes("noaa") ||
+    n.includes("goes") ||
+    n.includes("meteosat") ||
+    n.includes("metop") ||
+    n.includes("suomi") ||
+    n.includes("jpss") ||
+    n.includes("fengyun") ||
+    n.includes("himawari") ||
+    n.includes("insat")
   ) {
     return {
       label: "Earth Obs",
       colorHex: "#cbd5e1",
       dotClass: "bg-slate-300 border-slate-950",
-      badgeClass: "bg-slate-500/15 text-slate-300 border-slate-500/40",
-      glowColor: "rgba(203, 213, 225, 0.4)",
+      badgeClass: "bg-slate-500/15 text-slate-200 border-slate-400/40",
+      glowColor: "rgba(203, 213, 225, 0.5)",
     };
   }
+
+  // 5. Communications Constellations & Spacecraft
   if (
-    cat.includes("science") ||
-    cat.includes("astro") ||
-    n.includes("hubble") ||
-    n.includes("jwst") ||
-    n.includes("astrosat") ||
-    n.includes("chandra")
+    cat.includes("comm") ||
+    n.includes("spacemobile") ||
+    n.includes("starlink") ||
+    n.includes("oneweb") ||
+    n.includes("iridium") ||
+    n.includes("globalstar") ||
+    n.includes("molniya") ||
+    n.includes("raduga") ||
+    n.includes("gorizont") ||
+    n.includes("intelsat") ||
+    n.includes("inmarsat") ||
+    n.includes("telstar") ||
+    n.includes("tdrs")
   ) {
-    return {
-      label: "Science",
-      colorHex: "#a855f7",
-      dotClass: "bg-purple-400 border-slate-950",
-      badgeClass: "bg-purple-500/10 text-purple-400 border-purple-500/30",
-      glowColor: "rgba(168, 85, 247, 0.4)",
-    };
-  }
-  if (cat.includes("communication") || n.includes("starlink") || n.includes("oneweb") || n.includes("iridium")) {
     return {
       label: "Comms",
       colorHex: "#10b981",
       dotClass: "bg-emerald-400 border-slate-950",
-      badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-      glowColor: "rgba(16, 185, 129, 0.4)",
+      badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+      glowColor: "rgba(16, 185, 129, 0.5)",
     };
   }
+
+  // 6. Science, Astronomy, Telescopes & Geodetic Research
   return {
-    label: "Telemetry",
-    colorHex: "#38bdf8",
-    dotClass: "bg-sky-400 border-slate-950",
-    badgeClass: "bg-sky-500/10 text-sky-400 border-sky-500/30",
-    glowColor: "rgba(56, 189, 248, 0.4)",
+    label: "Science",
+    colorHex: "#c084fc",
+    dotClass: "bg-purple-400 border-slate-950",
+    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+    glowColor: "rgba(192, 132, 252, 0.5)",
   };
 }
 
@@ -1306,6 +1388,9 @@ function Planisphere2DRadar({
         </span>
         <span className="flex items-center gap-1 text-emerald-400 font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 border border-slate-950" /> Comms
+        </span>
+        <span className="flex items-center gap-1 text-rose-400 font-bold">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 border border-slate-950" /> Booster
         </span>
       </div>
     </div>
