@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, memo } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Line, useTexture } from "@react-three/drei";
@@ -115,7 +115,7 @@ function SelectedOrbitTrack({
   }, [satrec, orbitTimeBucket]);
 
   if (points.length < 2) return null;
-  return <Line points={points} color="#00ff88" lineWidth={2.2} opacity={0.9} transparent />;
+  return <Line points={points} color="#ec4899" lineWidth={2.4} opacity={0.95} transparent />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ function TrackedSatelliteCurrentLocation({
   const subpointRef = useRef<THREE.Group>(null);
   const connectorLine = useMemo(() => {
     const geom = new THREE.BufferGeometry();
-    const mat = new THREE.LineBasicMaterial({ color: "#00ff88", transparent: true, opacity: 0.75 });
+    const mat = new THREE.LineBasicMaterial({ color: "#ec4899", transparent: true, opacity: 0.85 });
     return new THREE.Line(geom, mat);
   }, []);
 
@@ -343,23 +343,23 @@ function TrackedSatelliteCurrentLocation({
       <group ref={subpointRef}>
         <mesh>
           <sphereGeometry args={[0.07, 16, 16]} />
-          <meshBasicMaterial color="#00ff88" />
+          <meshBasicMaterial color="#ec4899" />
         </mesh>
         <mesh rotation-x={Math.PI / 2}>
           <ringGeometry args={[0.10, 0.17, 24]} />
-          <meshBasicMaterial color="#00ff88" side={THREE.DoubleSide} transparent opacity={0.65} />
+          <meshBasicMaterial color="#ec4899" side={THREE.DoubleSide} transparent opacity={0.75} />
         </mesh>
       </group>
 
       {/* Satellite Main Body & Holographic Reticle */}
       <group ref={satGroupRef}>
-        {/* Sleek Spacecraft 3D Model with High-Contrast Finish */}
+        {/* Sleek Spacecraft 3D Model with High-Contrast Pink Finish */}
         <group ref={modelRef} scale={[1.35, 1.35, 1.35]}>
           <mesh geometry={sat3DGeometry}>
             <meshStandardMaterial
-              color="#00ff88"
-              emissive="#00e5ff"
-              emissiveIntensity={0.8}
+              color="#ec4899"
+              emissive="#f43f5e"
+              emissiveIntensity={0.9}
               roughness={0.2}
               metalness={0.85}
             />
@@ -373,15 +373,15 @@ function TrackedSatelliteCurrentLocation({
 
         {/* Pulsing Locator Reticle Rings */}
         <group ref={reticleRef}>
-          {/* Outer Holographic Reticle Ring */}
+          {/* Outer Holographic Reticle Ring in Pink */}
           <mesh>
             <ringGeometry args={[0.34, 0.38, 32]} />
-            <meshBasicMaterial color="#00ff88" side={THREE.DoubleSide} transparent opacity={0.85} />
+            <meshBasicMaterial color="#ec4899" side={THREE.DoubleSide} transparent opacity={0.9} />
           </mesh>
-          {/* Inner Cyan Radar Accent Ring */}
+          {/* Inner Light Pink Radar Accent Ring */}
           <mesh>
             <ringGeometry args={[0.22, 0.25, 24]} />
-            <meshBasicMaterial color="#00e5ff" side={THREE.DoubleSide} transparent opacity={0.65} />
+            <meshBasicMaterial color="#f472b6" side={THREE.DoubleSide} transparent opacity={0.7} />
           </mesh>
         </group>
       </group>
@@ -784,7 +784,7 @@ export interface Satellite3DViewProps {
   observer?: { lat: number; lon: number; name?: string };
 }
 
-export default function Satellite3DView({
+function Satellite3DView({
   satellites,
   selectedSatId,
   latestPositions,
@@ -863,11 +863,11 @@ export default function Satellite3DView({
     <div className="h-full w-full bg-[#03040a] relative isolate select-none">
       {/* Top-Left Corner HUD Satellite Tracking & Telemetry Card */}
       {selectedSatName && (
-        <div className="absolute left-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/90 backdrop-blur-md border border-[#00ff88]/80 px-3 py-2 rounded-xl shadow-[0_0_20px_rgba(0,255,136,0.3)] pointer-events-none select-none max-w-[240px]">
+        <div className="absolute left-4 top-4 z-20 flex flex-col gap-1 bg-slate-950/90 backdrop-blur-md border border-[#ec4899]/80 px-3 py-2 rounded-xl shadow-[0_0_20px_rgba(236,72,153,0.35)] pointer-events-none select-none max-w-[240px]">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1">
             <div className="flex items-center gap-1.5">
-              <span className="flex h-2 w-2 rounded-full bg-[#00ff88] animate-ping" />
-              <span className="font-mono text-[9px] font-bold text-[#00ff88] uppercase tracking-widest">
+              <span className="flex h-2 w-2 rounded-full bg-[#ec4899] animate-ping" />
+              <span className="font-mono text-[9px] font-bold text-[#ec4899] uppercase tracking-widest">
                 TRACKING
               </span>
             </div>
@@ -878,11 +878,11 @@ export default function Satellite3DView({
             {selectedSatName}
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-[9px] text-[#00e5ff] pt-0.5">
-            <span className="bg-cyan-950/70 border border-cyan-500/30 px-1.5 py-0.5 rounded">
+          <div className="flex items-center gap-2 font-mono text-[9px] text-pink-300 pt-0.5">
+            <span className="bg-pink-950/70 border border-pink-500/30 px-1.5 py-0.5 rounded text-pink-200">
               ALT: {selectedTelemetry.altKm} KM
             </span>
-            <span className="bg-emerald-950/70 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[#00ff88]">
+            <span className="bg-pink-950/70 border border-pink-500/30 px-1.5 py-0.5 rounded text-[#ec4899] font-bold">
               VEL: {selectedTelemetry.velKms} KM/S
             </span>
           </div>
@@ -939,6 +939,7 @@ export default function Satellite3DView({
 
       <Canvas
         camera={{ position: [0, 10, 18], fov: 45 }}
+        dpr={[1, 1.5]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         style={{ touchAction: "none" }}
         onCreated={({ gl }) => {
@@ -971,3 +972,5 @@ export default function Satellite3DView({
     </div>
   );
 }
+
+export default memo(Satellite3DView);

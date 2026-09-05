@@ -360,17 +360,22 @@ export default function TrackMySkyDashboard() {
     };
   }, [satellitesList]);
 
-  // 2. Continuous SGP4 propagation request loop for 3D globe satellites
+  // 2. Continuous SGP4 propagation request loop for 3D globe satellites (Paced at ~30Hz to prevent IPC message flooding)
   useEffect(() => {
     let frameId: number;
-    const loop = () => {
+    let lastPropagateTime = 0;
+
+    const loop = (now: number) => {
       if (workerRef.current && satellitesList.length > 0 && !isWorkerBusyRef.current) {
-        const currentTime = useOrbitalStore.getState().timeMs;
-        isWorkerBusyRef.current = true;
-        workerRef.current.postMessage({
-          type: "propagate",
-          timeMs: currentTime,
-        });
+        if (now - lastPropagateTime >= 33) {
+          lastPropagateTime = now;
+          const currentTime = useOrbitalStore.getState().timeMs;
+          isWorkerBusyRef.current = true;
+          workerRef.current.postMessage({
+            type: "propagate",
+            timeMs: currentTime,
+          });
+        }
       }
       frameId = requestAnimationFrame(loop);
     };
@@ -414,8 +419,13 @@ export default function TrackMySkyDashboard() {
         tick(delta);
       }
 
-      // Throttle React state re-renders to ~4Hz (250ms) so 2D Radar, Polar Dome, and UI don't thrash the CPU
-      if (now - lastUiTickRef.current >= 250) {
+      // Throttle React state re-renders:
+      // In 1x-5x simulation, 1000ms (1 Hz) provides responsive telemetry while eliminating CPU thrashing.
+      // In fast-forward (>5x), 500ms keeps time-scrubbing fluid.
+      const currentSpeed = useOrbitalStore.getState().speed;
+      const throttleInterval = currentSpeed > 5 ? 500 : 1000;
+
+      if (now - lastUiTickRef.current >= throttleInterval) {
         lastUiTickRef.current = now;
         setUiTimeMs(useOrbitalStore.getState().timeMs);
       }

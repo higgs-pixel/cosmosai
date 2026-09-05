@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -35,8 +35,8 @@ function getRelativeTimeStr(targetTimeMs: number): string {
   return remMins > 0 ? `IN ${diffHours}h ${remMins}m` : `IN ${diffHours}h`;
 }
 
-// Interactive 3D Holographic Pass Card with Mouse Tilt Physics
-function Pass3DCard({
+// Interactive 3D Holographic Pass Card with Mouse Tilt Physics (RAF + DOM Direct for 60fps)
+const Pass3DCard = memo(function Pass3DCard({
   pass,
   isSelected,
   isActiveCenter,
@@ -47,9 +47,9 @@ function Pass3DCard({
   isActiveCenter: boolean;
   onSelect: () => void;
 }) {
-  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
-  const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const glareRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current || !isActiveCenter) return;
@@ -58,13 +58,28 @@ function Pass3DCard({
     const y = (e.clientY - rect.top) / rect.height;
     const rotateY = (x - 0.5) * 16;
     const rotateX = (0.5 - y) * 16;
-    setTilt({ rotateX, rotateY });
-    setGlare({ x: x * 100, y: y * 100, opacity: 0.25 });
+    const glareX = x * 100;
+    const glareY = y * 100;
+
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = requestAnimationFrame(() => {
+      if (cardRef.current) {
+        cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      }
+      if (glareRef.current) {
+        glareRef.current.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(0,229,255,0.25), transparent 60%)`;
+      }
+    });
   };
 
   const handleMouseLeave = () => {
-    setTilt({ rotateX: 0, rotateY: 0 });
-    setGlare({ x: 50, y: 50, opacity: 0 });
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    if (cardRef.current) {
+      cardRef.current.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg)";
+    }
+    if (glareRef.current) {
+      glareRef.current.style.background = "none";
+    }
   };
 
   const relativeTime = getRelativeTimeStr(pass.startTimeMs);
@@ -78,12 +93,14 @@ function Pass3DCard({
       onClick={onSelect}
       style={{
         transformStyle: "preserve-3d",
-        transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
+        transform: "perspective(1000px) rotateX(0deg) rotateY(0deg)",
+        transition: "transform 0.1s ease-out, border-color 0.2s, box-shadow 0.2s",
+        willChange: "transform",
       }}
       className={`
         relative w-[340px] sm:w-[380px] h-[380px] rounded-3xl p-5
         bg-[#050914]/90 backdrop-blur-2xl
-        border transition-all duration-200 cursor-pointer select-none flex flex-col justify-between
+        border cursor-pointer select-none flex flex-col justify-between
         ${
           isSelected
             ? "border-cyan-400 shadow-[0_0_40px_rgba(0,229,255,0.3)] ring-1 ring-cyan-400"
@@ -95,10 +112,9 @@ function Pass3DCard({
     >
       {/* Dynamic Specular Glare Reflection */}
       <div
+        ref={glareRef}
         className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(circle at ${glare.x}% ${glare.y}%, rgba(0,229,255,${glare.opacity}), transparent 60%)`,
-        }}
+        style={{ background: "none" }}
       />
 
       {/* Laser-etched HUD corner brackets */}
@@ -249,7 +265,7 @@ function Pass3DCard({
       </div>
     </div>
   );
-}
+});
 
 export function Passes3DCarousel({
   passes,
@@ -451,14 +467,14 @@ export function Passes3DCarousel({
                   opacity,
                 }}
                 transition={{
-                  type: "spring",
-                  stiffness: 220,
-                  damping: 24,
+                  duration: 0.28,
+                  ease: [0.25, 1, 0.5, 1],
                 }}
                 style={{
                   position: "absolute",
                   zIndex,
                   transformStyle: "preserve-3d",
+                  willChange: "transform, opacity",
                 }}
               >
                 <Pass3DCard
