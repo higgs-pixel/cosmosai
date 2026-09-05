@@ -24,6 +24,15 @@ import { TrackMySkyNav } from "@/components/track-my-sky/TrackMySkyNav";
 import { TrackMySkyHero } from "@/components/track-my-sky/TrackMySkyHero";
 import { ObservatoryCommandConsole } from "@/components/track-my-sky/ObservatoryCommandConsole";
 import { UpcomingPassesTimeline } from "@/components/track-my-sky/UpcomingPassesTimeline";
+import { CinematicNav } from "@/components/track-my-sky/CinematicNav";
+import { CinematicHero } from "@/components/track-my-sky/CinematicHero";
+import { LiveOrbitSection } from "@/components/track-my-sky/LiveOrbitSection";
+import { ObserverMapSection } from "@/components/track-my-sky/ObserverMapSection";
+import { SatelliteIntelligenceSection } from "@/components/track-my-sky/SatelliteIntelligenceSection";
+import { UpcomingPassesHorizontalTimeline } from "@/components/track-my-sky/UpcomingPassesHorizontalTimeline";
+import { CinematicAnalyticsSection } from "@/components/track-my-sky/CinematicAnalyticsSection";
+import { SatelliteCatalogSection } from "@/components/track-my-sky/SatelliteCatalogSection";
+import { MissionDossierSection } from "@/components/track-my-sky/MissionDossierSection";
 import { GlassPanel } from "@/components/glass/GlassPanel";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassButton } from "@/components/glass/GlassButton";
@@ -131,6 +140,16 @@ async function fetchReverseGeocodeName(lat: number, lon: number): Promise<string
     }
   }
   return `GPS (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+}
+
+function getRelativeTimeStr(targetTimeMs: number): string {
+  const diffMs = targetTimeMs - Date.now();
+  if (diffMs <= 0) return "ACTIVE NOW";
+  const diffMins = Math.round(diffMs / 60000);
+  if (diffMins < 60) return `IN ${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  const remMins = diffMins % 60;
+  return remMins > 0 ? `IN ${diffHours}h ${remMins}m` : `IN ${diffHours}h`;
 }
 
 function formatClockTime(timeMs: number, tzId: string): string {
@@ -271,6 +290,7 @@ export default function TrackMySkyDashboard() {
   const [timeframeFilter, setTimeframeFilter] = useState<"1h" | "6h" | "24h">("6h");
   const [selectedTz, setSelectedTz] = useState("IST");
   const [selectedPass, setSelectedPass] = useState<SatellitePass | null>(null);
+  const [showControlsDrawer, setShowControlsDrawer] = useState(false);
 
   const mapSectionRef = useRef<HTMLDivElement>(null);
 
@@ -795,420 +815,169 @@ export default function TrackMySkyDashboard() {
   const pairMobileUrl = typeof window !== "undefined" ? `${window.location.origin}/orbit/pair-mobile?session=${sessionId}` : "";
 
   return (
-    <div className="flex flex-col w-full text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
-      {/* 1. Spatial Liquid Glass Navigation Bar */}
-      <TrackMySkyNav
-        observer={observer}
-        formattedTime={formatClockTime(uiTimeMs, selectedTz)}
-        onOpenPairModal={() => setShowPairModal(true)}
-        onOpenManual={() => {
-          const el = document.getElementById("glossary-modal-btn");
-          if (el) el.click();
-        }}
+    <div className="flex flex-col w-full text-slate-100 font-sans selection:bg-cyan-500 selection:text-black bg-black">
+      {/* 00 — Minimal Floating Cinematic Navigation */}
+      <CinematicNav
         onScrollToSection={scrollToSection}
         activeSection={activeSection}
+        onOpenControls={() => setShowControlsDrawer((prev) => !prev)}
       />
 
-      {/* 2. Hero Section: 3D Earth Globe & Editorial Telemetry HUD */}
+      {/* 01 — CINEMATIC HERO */}
       <div id="hero" className="w-full">
-        <TrackMySkyHero
+        <CinematicHero
           observer={observer}
           visibleCount={visibilityResults.length}
           nakedEyeCount={nakedEyeCount}
           sunlitCount={sunlitCount}
-          activeSatName={selectedSat?.satName || "ISS (ZARYA)"}
-          activeSatAltKm={selectedSat?.satAltKm || 418}
-          activeSatElDeg={selectedSat ? Math.round(selectedSat.elevationDeg * 10) / 10 : 45.2}
-          activeSatAzDeg={selectedSat ? Math.round(selectedSat.azimuthDeg * 10) / 10 : 178}
-          onDetectGps={detectUserLocation}
-          onScrollToSection={scrollToSection}
+          activeSatName={selectedSat?.satName}
+          activeSatAltKm={selectedSat?.satAltKm}
+          activeSatElDeg={selectedSat ? Math.round(selectedSat.elevationDeg * 10) / 10 : undefined}
+          nextPassName={upcomingPasses[0]?.satName}
+          nextPassTimeStr={upcomingPasses[0] ? getRelativeTimeStr(upcomingPasses[0].startTimeMs) : undefined}
+          nextPassMaxEl={upcomingPasses[0]?.maxElevationDeg}
+          onExploreClick={() => scrollToSection("live-orbit")}
         />
       </div>
 
-      {/* 3. Observatory Command Console: Ground Station & Simulation Controls */}
-      <div id="console-section" className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-6">
-        <ObservatoryCommandConsole
-          observer={observer}
-          presetCities={PRESET_CITIES}
-          onSelectPresetCity={(city) => {
-            setObserver({
-              ...city,
-              accuracyRadiusMeters: 10,
-              source: "manual",
-            });
-            setCustomLat(city.lat.toFixed(6));
-            setCustomLon(city.lon.toFixed(6));
-            setCustomAlt(String(city.altMeters));
-            setGpsStatus("success");
-          }}
-          onDetectGps={detectUserLocation}
-          gpsStatus={gpsStatus}
-          customLat={customLat}
-          customLon={customLon}
-          customAlt={customAlt}
-          onCustomLatChange={setCustomLat}
-          onCustomLonChange={setCustomLon}
-          onCustomAltChange={setCustomAlt}
-          onApplyCustomCoords={handleApplyCustomCoords}
-          isPaused={isPaused}
-          onTogglePlay={togglePlay}
-          onLiveSync={handleLiveSync}
-          speed={speed}
-          onSetSpeed={setSpeed}
-          skyCatalogGroup={skyCatalogGroup}
-          onSetSkyCatalogGroup={setSkyCatalogGroup}
-          selectedTz={selectedTz}
-          onSelectTz={setSelectedTz}
-          timezoneOptions={TIMEZONE_OPTIONS}
-          totalSats={satellitesList.length}
-          loadingSats={loadingSats}
-          formattedClock={formatClockTime(uiTimeMs, selectedTz)}
-          timeMs={uiTimeMs}
-          sliderBaseTime={sliderBaseTime}
-          onTimeScrubberChange={(val) => {
-            setTimeMs(val);
-            setUiTimeMs(val);
-          }}
-          twilight={twilight}
-          aboveHorizonCount={visibilityResults.length}
-          nakedEyeCount={nakedEyeCount}
-        />
-      </div>
-
-      {/* 4. Orbital Observation Viewports (Polar Sky Dome, 3D Globe, 2D Radar) */}
-      <div id="viewports-section" ref={mapSectionRef} className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-10 flex flex-col gap-6">
-        {/* Spatial View Switcher HUD Bar */}
-        <GlassPanel level={1} className="p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-400">
-              <Layers className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="text-xs font-mono font-bold tracking-widest uppercase text-white flex items-center gap-2">
-                <span>ORBITAL OBSERVATION VIEWPORTS</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono">
-                Multispectral topocentric tracking &bull; 360° Polar Dome, 3D Orbital Globe &bull; 2D Ground Track
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => setActiveMapView("all")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${activeMapView === "all" ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]" : "text-slate-400 hover:text-white bg-slate-900/60 border border-slate-800"}`}
-            >
-              <span>ALL VIEWPORTS</span>
-            </button>
-            <button
-              onClick={() => setActiveMapView("polar")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${activeMapView === "polar" ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]" : "text-slate-400 hover:text-white bg-slate-900/60 border border-slate-800"}`}
-            >
-              <Compass className="h-3.5 w-3.5" />
-              <span>POLAR SKY</span>
-            </button>
-            <button
-              onClick={() => setActiveMapView("3d")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${activeMapView === "3d" ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]" : "text-slate-400 hover:text-white bg-slate-900/60 border border-slate-800"}`}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              <span>3D GLOBE</span>
-            </button>
-            <button
-              onClick={() => setActiveMapView("2d")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${activeMapView === "2d" ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,229,255,0.4)]" : "text-slate-400 hover:text-white bg-slate-900/60 border border-slate-800"}`}
-            >
-              <MapIcon className="h-3.5 w-3.5" />
-              <span>2D RADAR</span>
-            </button>
-          </div>
-        </GlassPanel>
-
-        {/* Viewports Grid */}
-        <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3" : "max-w-5xl mx-auto"} gap-6 w-full items-stretch`}>
-          {/* Polar Sky Dome SVG Chart */}
-          {(activeMapView === "all" || activeMapView === "polar") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
-              <SkyDomeChart
-                visibleSats={visibilityResults}
-                allEvaluatedSats={allEvaluatedSats}
-                twilight={twilight}
-                observer={{ ...observer, name: observer.name || "Observer Site" }}
-                timeMs={uiTimeMs}
-                selectedSatId={selectedSatId}
-                onSelectSat={(id) => handleSelectSat(id)}
-              />
-            </div>
-          )}
-
-          {/* Interactive 3D Simulation Globe (Orbit Page Engine) */}
-          {(activeMapView === "all" || activeMapView === "3d") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
-              <SpaceTechCard
-                moduleTag="VIEWPORT-3D // ORBITAL SPATIAL GLOBE"
-                statusText="SGP4 PROPAGATING"
-                statusColor="cyan"
-                tilt={false}
-                className="h-full p-5 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-cyan-400" />
-                    <span>3D Orbital Globe &amp; Trajectory</span>
-                  </h2>
-                  <GlassBadge tone="cyan" dot={true}>
-                    {observer.name}
-                  </GlassBadge>
-                </div>
-
-                <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
-                  <Satellite3DView
-                    satellites={satellitesList}
-                    selectedSatId={selectedSatId}
-                    latestPositions={latestPositionsRef}
-                    lockCamera={false}
-                    observer={observer}
-                    onTrackSatellite={(id) => {
-                      handleSelectSat(id);
-                    }}
-                  />
-                </div>
-              </SpaceTechCard>
-            </div>
-          )}
-
-          {/* Observer-Centered 2D Live Leaflet Radar Map */}
-          {(activeMapView === "all" || activeMapView === "2d") && (
-            <div className={`w-full ${activeMapView === "all" ? "h-[620px]" : "h-[660px]"}`}>
-              <SpaceTechCard
-                moduleTag="VIEWPORT-2D // LEAFLET RADAR FOOTPRINT"
-                statusText="GROUND TRACK ONLINE"
-                statusColor="emerald"
-                tilt={false}
-                className="h-full p-5 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3 mb-3 shrink-0">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                    <MapIcon className="h-4 w-4 text-emerald-400" />
-                    <span>2D Live Ground Track Radar</span>
-                  </h2>
-                  <GlassBadge tone="emerald" dot={true}>
-                    Footprint Coverage
-                  </GlassBadge>
-                </div>
-
-                <div className="flex-1 min-h-[460px] h-full w-full rounded-2xl overflow-hidden bg-black/60 relative border border-white/10">
-                  <Observer2DMap
-                    observer={observer}
-                    selectedPass={selectedPass}
-                    timeMs={uiTimeMs}
-                    simPoint={selectedSat ? {
-                      lat: selectedSat.satLat,
-                      lon: selectedSat.satLon,
-                      satName: selectedSat.satName,
-                      elDeg: selectedSat.elevationDeg,
-                      line1: selectedSat.line1,
-                      line2: selectedSat.line2,
-                    } : null}
-                  />
-                </div>
-              </SpaceTechCard>
-            </div>
-          )}
-
-          {/* Star Gaze 3D Interactive Planetarium Sky Dome */}
-          {activeMapView === "stargaze" && (
-            <SpaceTechCard
-              moduleTag="PLANETARIUM // 3D STAR GAZE DOME"
-              statusText="3D STARFIELD"
-              statusColor="purple"
-              tilt={false}
-              className="col-span-full w-full p-5"
-            >
-              <StarGazeView observer={observer} />
-            </SpaceTechCard>
-          )}
+      {/* Drawer / Collapsible Observatory Command Console */}
+      {showControlsDrawer && (
+        <div id="console-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 md:px-12 pt-8">
+          <ObservatoryCommandConsole
+            observer={observer}
+            presetCities={PRESET_CITIES}
+            onSelectPresetCity={(city) => {
+              setObserver({
+                ...city,
+                accuracyRadiusMeters: 10,
+                source: "manual",
+              });
+              setCustomLat(city.lat.toFixed(6));
+              setCustomLon(city.lon.toFixed(6));
+              setCustomAlt(String(city.altMeters));
+              setGpsStatus("success");
+            }}
+            onDetectGps={detectUserLocation}
+            gpsStatus={gpsStatus}
+            customLat={customLat}
+            customLon={customLon}
+            customAlt={customAlt}
+            onCustomLatChange={setCustomLat}
+            onCustomLonChange={setCustomLon}
+            onCustomAltChange={setCustomAlt}
+            onApplyCustomCoords={handleApplyCustomCoords}
+            isPaused={isPaused}
+            onTogglePlay={togglePlay}
+            onLiveSync={handleLiveSync}
+            speed={speed}
+            onSetSpeed={setSpeed}
+            skyCatalogGroup={skyCatalogGroup}
+            onSetSkyCatalogGroup={setSkyCatalogGroup}
+            selectedTz={selectedTz}
+            onSelectTz={setSelectedTz}
+            timezoneOptions={TIMEZONE_OPTIONS}
+            totalSats={satellitesList.length}
+            loadingSats={loadingSats}
+            formattedClock={formatClockTime(uiTimeMs, selectedTz)}
+            timeMs={uiTimeMs}
+            sliderBaseTime={sliderBaseTime}
+            onTimeScrubberChange={(val) => {
+              setTimeMs(val);
+              setUiTimeMs(val);
+            }}
+            twilight={twilight}
+            aboveHorizonCount={visibilityResults.length}
+            nakedEyeCount={nakedEyeCount}
+          />
         </div>
-      </div>
+      )}
 
-      {/* 5. Spatial Upcoming Passes Timeline Flow */}
-      <div id="passes-section" className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-10">
-        <UpcomingPassesTimeline
-          passes={upcomingPasses}
-          selectedPass={selectedPass}
-          onSelectPass={(pass) => {
-            setSelectedPass(pass);
-            handleSelectSat(pass.noradId);
-          }}
-          onSelectSatId={handleSelectSat}
-          onlyVisible={onlyVisible}
-          onToggleOnlyVisible={setOnlyVisible}
-          timeframeFilter={timeframeFilter}
-          onSetTimeframeFilter={setTimeframeFilter}
-        />
-      </div>
+      {/* 02 — LIVE ORBIT / SKY EXPERIENCE */}
+      <LiveOrbitSection
+        satellites={satellitesList}
+        selectedSatId={selectedSatId}
+        selectedSat={selectedSat}
+        latestPositionsRef={latestPositionsRef}
+        observer={observer}
+        visibilityResults={visibilityResults}
+        allEvaluatedSats={allEvaluatedSats}
+        twilight={twilight}
+        uiTimeMs={uiTimeMs}
+        isPaused={isPaused}
+        speed={speed}
+        formattedClock={formatClockTime(uiTimeMs, selectedTz)}
+        onTogglePlay={togglePlay}
+        onLiveSync={handleLiveSync}
+        onSetSpeed={setSpeed}
+        onSelectSat={handleSelectSat}
+      />
 
-      {/* 6. Orbital Analytics & Telemetry Charts */}
-      <div id="analytics-section" className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-10">
-        <SkyPassAnalytics
-          selectedSat={selectedSat}
-          visibleSats={visibilityResults}
-          observer={observer}
-          timeMs={uiTimeMs}
-          selectedPass={selectedPass}
-        />
-      </div>
+      {/* 03 — OBSERVER MAP */}
+      <ObserverMapSection
+        observer={observer}
+        selectedSat={selectedSat}
+        selectedPass={selectedPass}
+        uiTimeMs={uiTimeMs}
+        presetCities={PRESET_CITIES}
+        gpsStatus={gpsStatus}
+        customLat={customLat}
+        customLon={customLon}
+        onSelectPresetCity={(city) => {
+          setObserver({
+            name: city.name || "Observatory Station",
+            lat: city.lat,
+            lon: city.lon,
+            altMeters: city.altMeters ?? 180,
+            accuracyRadiusMeters: 10,
+            source: "manual",
+          });
+          setCustomLat(city.lat.toFixed(6));
+          setCustomLon(city.lon.toFixed(6));
+          setCustomAlt(String(city.altMeters ?? 180));
+          setGpsStatus("success");
+        }}
+        onDetectGps={detectUserLocation}
+        onCustomLatChange={setCustomLat}
+        onCustomLonChange={setCustomLon}
+        onApplyCustomCoords={handleApplyCustomCoords}
+      />
 
-      {/* 7. Overhead Fleet Telemetry Matrix */}
-      <div id="fleet-table-section" className="w-full max-w-[1720px] mx-auto px-4 md:px-6 pt-10 pb-16">
-        <SpaceTechCard
-          moduleTag="TACTICAL // ORBITAL FLEET COMMAND MATRIX"
-          statusText={`${filteredVisibleSats.length} TARGETS IN RANGE`}
-          statusColor="cyan"
-          tilt={false}
-          className="p-5 sm:p-6 space-y-4"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-400">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <span>ORBITAL FLEET TELEMETRY MATRIX</span>
-                  <GlassBadge tone="cyan">
-                    {visibilityResults.length} OVERHEAD
-                  </GlassBadge>
-                </h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  Topocentric azimuth, elevation, slant range and visual magnitude computed via SGP4 propagation.
-                </p>
-              </div>
-            </div>
+      {/* 04 — SATELLITE INTELLIGENCE */}
+      <SatelliteIntelligenceSection selectedSat={selectedSat} />
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Tactical Search input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="SEARCH FLEET (NAME / NORAD)…"
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                  className="h-9 w-52 sm:w-64 pl-9 pr-3 rounded-xl bg-slate-950/90 border border-cyan-500/30 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
-                />
-              </div>
+      {/* 05 — UPCOMING PASSES */}
+      <UpcomingPassesHorizontalTimeline
+        passes={upcomingPasses}
+        selectedPass={selectedPass}
+        onSelectPass={(pass) => {
+          setSelectedPass(pass);
+          handleSelectSat(pass.noradId);
+        }}
+        onSelectSatId={handleSelectSat}
+        onlyVisible={onlyVisible}
+        onToggleOnlyVisible={setOnlyVisible}
+        timeframeFilter={timeframeFilter}
+        onSetTimeframeFilter={setTimeframeFilter}
+      />
 
-              {/* Filter pills */}
-              <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 p-1 rounded-xl">
-                <button
-                  onClick={() => setTableFilter("all")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${tableFilter === "all" ? "bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
-                >
-                  ALL ({visibilityResults.length})
-                </button>
-                <button
-                  onClick={() => setTableFilter("visible")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 cursor-pointer ${tableFilter === "visible" ? "bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
-                >
-                  NAKED-EYE ({nakedEyeCount})
-                </button>
-                <button
-                  onClick={() => setTableFilter("sunlit")}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${tableFilter === "sunlit" ? "bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)] font-black" : "text-slate-400 hover:text-white"}`}
-                >
-                  SUNLIT ({sunlitCount})
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* 06 — ANALYTICS */}
+      <CinematicAnalyticsSection
+        selectedSat={selectedSat}
+        visibleSats={visibilityResults}
+        observer={observer}
+        timeMs={uiTimeMs}
+        selectedPass={selectedPass}
+      />
 
-          <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/80">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="p-3.5">Satellite / Target</th>
-                  <th className="p-3.5">NORAD ID</th>
-                  <th className="p-3.5">Optical Status</th>
-                  <th className="p-3.5">Elevation</th>
-                  <th className="p-3.5">Azimuth</th>
-                  <th className="p-3.5">Est. Visual Mag</th>
-                  <th className="p-3.5">Slant Range</th>
-                  <th className="p-3.5">Illumination</th>
-                  <th className="p-3.5 text-right">Target Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredVisibleSats.map((sat) => {
-                  const isSelected = selectedSatId === sat.satId;
-                  return (
-                    <tr
-                      key={`fleet-${sat.satId}`}
-                      onClick={() => handleSelectSat(sat.satId)}
-                      className={`cursor-pointer transition-colors duration-150 hover:bg-cyan-500/[0.08] ${isSelected ? "bg-cyan-500/15 border-l-2 border-cyan-400 shadow-[inset_0_0_20px_rgba(0,229,255,0.08)]" : ""}`}
-                    >
-                      <td className="p-3.5 font-bold text-white flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${sat.isNakedEyeVisible ? "bg-emerald-400 shadow-[0_0_8px_#10b981]" : sat.isSunlit ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]" : "bg-slate-500"}`} />
-                        <span className="truncate max-w-[180px] sm:max-w-none">{sat.satName}</span>
-                      </td>
-                      <td className="p-3.5 text-slate-400 font-mono">{sat.satId}</td>
-                      <td className="p-3.5">
-                        <GlassBadge tone={sat.isNakedEyeVisible ? "emerald" : sat.isSunlit ? "amber" : "slate"}>
-                          {sat.statusLabel}
-                        </GlassBadge>
-                      </td>
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-white">{sat.elevationDeg}°</span>
-                          <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden shrink-0 hidden sm:block">
-                            <div
-                              className={`h-full rounded-full ${sat.elevationDeg > 45 ? "bg-emerald-400" : "bg-cyan-400"}`}
-                              style={{ width: `${Math.min(100, Math.max(5, Math.round((sat.elevationDeg / 90) * 100)))}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3.5 text-slate-300">{sat.azimuthDeg}°</td>
-                      <td className="p-3.5 font-bold text-cyan-400">
-                        {sat.estimatedMagnitude > 0 ? `+${sat.estimatedMagnitude}` : sat.estimatedMagnitude} mᵥ
-                      </td>
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-300">{sat.slantRangeKm} km</span>
-                          <div className="w-14 h-1.5 rounded-full bg-slate-800 overflow-hidden shrink-0 hidden sm:block">
-                            <div
-                              className="h-full bg-cyan-400 rounded-full"
-                              style={{ width: `${Math.min(100, Math.max(10, Math.round((1 - (sat.slantRangeKm - 300) / 2500) * 100)))}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3.5 text-slate-400">{sat.isSunlit ? "Sunlit" : "Umbral Shadow"}</td>
-                      <td className="p-3.5 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectSat(sat.satId);
-                          }}
-                          className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider flex items-center gap-1.5 transition ml-auto ${
-                            isSelected
-                              ? "bg-cyan-500 text-black shadow-[0_0_12px_rgba(0,229,255,0.4)] font-black"
-                              : "bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 border border-cyan-500/40"
-                          }`}
-                        >
-                          <Crosshair className={`h-3 w-3 ${isSelected ? "animate-spin" : ""}`} />
-                          <span>{isSelected ? "LOCKED" : "AIM RETICLE"}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </SpaceTechCard>
-      </div>
+      {/* 07 — SATELLITE CATALOG */}
+      <SatelliteCatalogSection
+        visibleSats={visibilityResults}
+        selectedSatId={selectedSatId}
+        onSelectSat={handleSelectSat}
+      />
+
+      {/* 08 — MISSION / SATELLITE DOSSIER */}
+      <MissionDossierSection selectedSat={selectedSat} />
 
       {/* 8. Mobile Companion Pairing Modal */}
       {showPairModal && (
