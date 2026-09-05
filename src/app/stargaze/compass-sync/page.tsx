@@ -211,24 +211,32 @@ export default function MobileCompassSyncPage() {
         normRoll = computed.roll;
       }
 
-      // Apply smooth Exponential Moving Average (EMA) filter to eradicate sensor noise
+      // Apply smooth Exponential Moving Average (EMA) filter with deadband to eradicate sensor shake
       if (smoothedHeadingRef.current === null) {
         smoothedHeadingRef.current = normHeading;
       } else {
         const diff = (normHeading - smoothedHeadingRef.current + 540) % 360 - 180;
-        smoothedHeadingRef.current = (smoothedHeadingRef.current + diff * 0.42 + 360) % 360;
+        if (Math.abs(diff) > 0.35) {
+          smoothedHeadingRef.current = (smoothedHeadingRef.current + diff * 0.24 + 360) % 360;
+        }
       }
 
       if (smoothedPitchRef.current === null) {
         smoothedPitchRef.current = normElevation;
       } else {
-        smoothedPitchRef.current += (normElevation - smoothedPitchRef.current) * 0.42;
+        const pDiff = normElevation - smoothedPitchRef.current;
+        if (Math.abs(pDiff) > 0.25) {
+          smoothedPitchRef.current += pDiff * 0.24;
+        }
       }
 
       if (smoothedRollRef.current === null) {
         smoothedRollRef.current = normRoll;
       } else {
-        smoothedRollRef.current += (normRoll - smoothedRollRef.current) * 0.42;
+        const rDiff = normRoll - smoothedRollRef.current;
+        if (Math.abs(rDiff) > 0.3) {
+          smoothedRollRef.current += rDiff * 0.24;
+        }
       }
 
       const smoothH = Number(smoothedHeadingRef.current.toFixed(1));

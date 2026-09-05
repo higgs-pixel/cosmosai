@@ -330,24 +330,6 @@ function HumanPrimaryGazeField({
         <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.95} />
       </mesh>
 
-      {/* Degree Markers on Golden Rectangle Canopy */}
-      <Html center position={[0, radius * Math.sin(upRad) + 4.5, radius * Math.cos(upRad)]} className="pointer-events-none select-none">
-        <div className="px-2 py-0.5 rounded bg-amber-950/90 border border-amber-400 text-amber-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
-          ▲ +10° Upward Golden Field
-        </div>
-      </Html>
-
-      <Html center position={[0, radius * Math.sin(downRad) - 4.5, radius * Math.cos(downRad)]} className="pointer-events-none select-none">
-        <div className="px-2 py-0.5 rounded bg-amber-950/90 border border-amber-400 text-amber-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
-          ▼ -10° Downward Golden Field
-        </div>
-      </Html>
-
-      <Html center position={[0, 2.2 - 4.5, radius]} className="pointer-events-none select-none">
-        <div className="px-2 py-0.5 rounded bg-cyan-950/90 border border-cyan-400 text-cyan-200 text-[8px] font-mono font-black shadow-lg uppercase whitespace-nowrap">
-          ⚡ Blue Line of Sight (Bot Axis)
-        </div>
-      </Html>
     </group>
   );
 }
@@ -572,19 +554,33 @@ function ObserverGroundStation({
     const dampFactor = 1 - Math.exp(-7.5 * Math.min(delta, 0.1));
 
     if (mobileOrientation) {
-      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH-ROLL MAPPING)
+      // MOBILE COMPASS SENSOR DRIVEN LINE OF SIGHT (EXACT EULER YAW-PITCH MAPPING — ZERO ROLL)
+      // Roll is locked to 0 so the telescope dome & golden rectangle stay horizon-level
+      // and NEVER tumble/spin sideways like a rolling ball!
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
-      const rollRad = ((mobileOrientation.roll || 0) * Math.PI) / 180;
 
-      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, -rollRad, "YXZ");
+      const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
       if (!isInitialized.current) {
         currentQuat.current.copy(targetQuat);
         isInitialized.current = true;
       } else {
-        currentQuat.current.slerp(targetQuat, dampFactor);
+        // Antipodal check: always take shortest spherical geodesic arc to prevent 360° ball flipping
+        if (currentQuat.current.dot(targetQuat) < 0) {
+          targetQuat.x = -targetQuat.x;
+          targetQuat.y = -targetQuat.y;
+          targetQuat.z = -targetQuat.z;
+          targetQuat.w = -targetQuat.w;
+        }
+
+        // Noise deadband: suppress micro-jitter (< 0.25°) to eliminate shaking
+        const angleDiff = currentQuat.current.angleTo(targetQuat);
+        if (angleDiff > 0.004) {
+          const dampFactor = 1 - Math.exp(-6.0 * Math.min(delta, 0.1));
+          currentQuat.current.slerp(targetQuat, dampFactor);
+        }
       }
       domeRef.current.quaternion.copy(currentQuat.current);
     } else if (targetSat) {
@@ -606,20 +602,37 @@ function ObserverGroundStation({
         currentQuat.current.copy(targetQuat);
         isInitialized.current = true;
       } else {
+        if (currentQuat.current.dot(targetQuat) < 0) {
+          targetQuat.x = -targetQuat.x;
+          targetQuat.y = -targetQuat.y;
+          targetQuat.z = -targetQuat.z;
+          targetQuat.w = -targetQuat.w;
+        }
+        const dampFactor = 1 - Math.exp(-5.0 * Math.min(delta, 0.1));
         currentQuat.current.slerp(targetQuat, dampFactor);
       }
       domeRef.current.quaternion.copy(currentQuat.current);
     } else {
-      // DEFAULT NORTH SIGHT ALIGNMENT (Azimuth 0° North, 15° elevation pitch)
-      const idleAz = Math.sin(t * 0.4) * 3;
-      const azRad = (idleAz * Math.PI) / 180;
+      // DEFAULT NORTH SIGHT ALIGNMENT (Solid, stable North at 0° azimuth, 15° elevation pitch — ZERO WOBBLE)
+      const azRad = 0;
       const elRad = (15 * Math.PI) / 180;
 
       const targetEuler = new THREE.Euler(-elRad, Math.PI - azRad, 0, "YXZ");
       const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-      const idleDamp = 1 - Math.exp(-3.0 * Math.min(delta, 0.1));
-      currentQuat.current.slerp(targetQuat, idleDamp);
+      if (!isInitialized.current) {
+        currentQuat.current.copy(targetQuat);
+        isInitialized.current = true;
+      } else {
+        if (currentQuat.current.dot(targetQuat) < 0) {
+          targetQuat.x = -targetQuat.x;
+          targetQuat.y = -targetQuat.y;
+          targetQuat.z = -targetQuat.z;
+          targetQuat.w = -targetQuat.w;
+        }
+        const idleDamp = 1 - Math.exp(-3.0 * Math.min(delta, 0.1));
+        currentQuat.current.slerp(targetQuat, idleDamp);
+      }
       domeRef.current.quaternion.copy(currentQuat.current);
     }
   });
