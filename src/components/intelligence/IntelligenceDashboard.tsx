@@ -698,7 +698,7 @@ export default function IntelligenceDashboard() {
           ───────────────────────────────────────────────────────────────────────────── */}
       <section
         id="hero-visual-area"
-        className="relative w-full h-[78vh] min-h-[640px] max-h-[920px] bg-black overflow-hidden border-b border-zinc-900"
+        className="relative w-full h-screen min-h-screen bg-black overflow-hidden border-b border-zinc-900"
       >
         {/* Background Visual Layer: 3D Orbit Globe & 2D Radar Canvas */}
         <div className="absolute inset-0 z-0">
@@ -780,7 +780,7 @@ export default function IntelligenceDashboard() {
             EDITORIAL OVERLAY: Exact layout matching the Pluto reference image
             Outline category badge + bold headline box + subtitle link
             ───────────────────────────────────────────────────────────────────── */}
-        <div className="absolute left-6 lg:left-14 top-1/2 -translate-y-1/2 z-20 max-w-xl flex flex-col items-start pointer-events-auto font-sans">
+        <div className="absolute left-6 lg:left-14 bottom-16 z-20 max-w-xl flex flex-col items-start pointer-events-auto font-sans">
           
           {/* Outline category box */}
           <div className="border border-white/30 bg-black/60 backdrop-blur-sm px-3 py-1.5 mb-3.5">
