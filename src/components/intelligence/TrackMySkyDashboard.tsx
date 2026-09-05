@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   MapPin, Compass, Navigation, Eye, Sparkles, Clock, Globe,
-  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon, Crosshair, ArrowRight
+  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon, Crosshair, ArrowRight, BookOpen
 } from "lucide-react";
 import * as satellite from "satellite.js";
 import { useOrbitalStore, SatelliteData } from "./store";
@@ -820,7 +820,7 @@ export default function TrackMySkyDashboard() {
       />
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          2. CINEMATIC HERO: 3D EARTH GLOBE & PLUTO-STYLE EDITORIAL OVERLAY
+          2. CINEMATIC HERO: 3D CELESTIAL OBSERVATORY & PLUTO-STYLE EDITORIAL OVERLAY
           Dominant planetary visual with bordered headline box & action link
           ───────────────────────────────────────────────────────────────────────────── */}
       <div id="hero" className="w-full">
@@ -843,177 +843,239 @@ export default function TrackMySkyDashboard() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          3. MISSION / SATELLITE INFORMATION BLOCK (Section 01)
-          Two-column editorial technical layout: Focus, Live Subpoint, ECI, Keplerian Elements
+          3. MISSION FOCUS & SCIENTIFIC KINEMATICS (Section 01)
+          EDITORIAL TWO-COLUMN LAYOUT: Narrative Profile (Left) + Scientific Spec Sheet (Right)
+          Completely replaces the old 4 small cards!
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="satellite-info-section" className="mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900 font-sans">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <section id="satellite-info-section" className="mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8 py-16 border-b border-zinc-900 font-sans">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
             <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
-              Section 01 // Mission Focus &amp; Live Kinematics
+              Section 01 // Scientific Kinematics &amp; Mission Profile
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans">
               Orbital Parameters &amp; Inertial Coordinates
             </h2>
-            <p className="text-xs text-zinc-400 font-sans mt-1">
-              Astrometric state vectors and Keplerian orbital elements propagated in real time.
+            <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1 max-w-2xl">
+              High-precision topocentric astrometry, WGS-84 geodetic vector propagation, and mean motion Keplerian elements.
             </p>
           </div>
 
-          <div className="text-xs text-zinc-400 font-sans">
-            ACTIVE TARGET: <span className="text-white font-bold">{selectedSat?.satName || selectedRawSat?.name || "ISS (ZARYA)"}</span>
+          <div className="text-xs font-mono text-zinc-400 border border-zinc-800 bg-zinc-950 px-3 py-1.5 self-start md:self-end">
+            TRACKING NORAD: <span className="text-white font-bold">{selectedSat?.satId || selectedRawSat?.id || 25544}</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 font-sans">
-          {/* Panel 1: Satellite Focus */}
-          <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
-            <div>
-              <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold mb-3 font-sans">
-                Satellite Focus
+        {/* Editorial Two-Column Structure */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* COLUMN 1: Editorial Mission Narrative Profile (5 Columns) */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 border border-white/20 bg-black px-2.5 py-1 text-[10px] uppercase font-bold tracking-widest text-zinc-300 font-sans">
+                <span>{selectedRawSat?.category?.toUpperCase() || "SPACE EXPLORATION"}</span>
+                <span className="text-zinc-600">&bull;</span>
+                <span className="text-[#00e5ff]">{selectedRawSat?.orbitClass || "LEO"} REGIME</span>
               </div>
-              <h3 className="text-base font-bold text-white truncate font-sans">
-                {selectedSat?.satName || selectedRawSat?.name || "Target"}
+
+              <h3 className="text-3xl font-black text-white uppercase tracking-tight font-sans">
+                {selectedSat?.satName || selectedRawSat?.name || "Target Mission"}
               </h3>
 
-              <div className="grid grid-cols-2 gap-y-2.5 mt-4 text-xs font-sans">
-                <div className="text-zinc-500">NORAD ID:</div>
-                <div className="text-white font-semibold text-right">{selectedSat?.satId || selectedRawSat?.id || 25544}</div>
+              <p className="text-sm text-zinc-300 leading-relaxed font-sans">
+                Real-time orbital propagation relative to topocentric horizon of <strong className="text-white">{(observer.name || "Observer Site").split(",")[0]}</strong>.
+                Spacecraft is currently <span className={selectedSat?.isSunlit ? "text-amber-400 font-semibold" : "text-zinc-400 font-semibold"}>
+                  {selectedSat?.isSunlit ? "illuminated by solar rays outside Earth umbra" : "in Earth umbral shadow"}
+                </span>.
+              </p>
+            </div>
 
-                <div className="text-zinc-500">CATEGORY:</div>
-                <div className="text-zinc-200 text-right truncate font-medium">
-                  {selectedRawSat?.category?.toUpperCase() || "ACTIVE"}
-                </div>
-
-                <div className="text-zinc-500">REGIME:</div>
-                <div className="text-[#00e5ff] font-bold text-right">
-                  {selectedRawSat?.orbitClass || (selectedSat && selectedSat.satAltKm < 2000 ? "LEO" : "GEO")}
-                </div>
-
-                <div className="text-zinc-500">ILLUMINATION:</div>
-                <div className="text-right font-medium text-amber-400">
-                  {selectedSat?.isSunlit ? "Sunlit" : "Umbra Shadow"}
-                </div>
+            {/* Editorial Metadata Table */}
+            <div className="border-t border-b border-zinc-900 py-4 divide-y divide-zinc-900/80 text-xs font-sans">
+              <div className="flex items-center justify-between py-2">
+                <span className="text-zinc-500 uppercase text-[11px]">NORAD Catalog ID</span>
+                <span className="text-white font-mono font-bold">{selectedSat?.satId || selectedRawSat?.id || 25544}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-zinc-500 uppercase text-[11px]">Target Classification</span>
+                <span className="text-zinc-200 font-medium">{selectedRawSat?.category || "Active Spacecraft"}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-zinc-500 uppercase text-[11px]">Orbit Regime</span>
+                <span className="text-[#00e5ff] font-bold">{selectedRawSat?.orbitClass || "Low Earth Orbit"}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-zinc-500 uppercase text-[11px]">Solar Lighting State</span>
+                <span className={`font-semibold ${selectedSat?.isSunlit ? "text-amber-400" : "text-zinc-400"}`}>
+                  {selectedSat?.isSunlit ? "Sunlit Outside Umbra" : "In Umbral Eclipse"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-zinc-500 uppercase text-[11px]">TLE Epoch Freshness</span>
+                <span className="font-mono text-zinc-300">
+                  {epochAgeDays.toFixed(2)} days ({epochAgeDays > 3 ? "Stale" : "Fresh Ephemeris"})
+                </span>
               </div>
             </div>
 
-            <div className="text-[10px] text-zinc-500 border-t border-zinc-900 pt-3 mt-4 font-sans">
-              Epoch Date:<br />
-              <span className="text-zinc-300">
-                {selectedRawSat?.epochDate ? new Date(selectedRawSat.epochDate).toUTCString() : "Live Ephemeris"}
-              </span>
-            </div>
+            {/* Jump to Dossier Action Link */}
+            <button
+              onClick={() => scrollToSection("dossier-section")}
+              className="inline-flex items-center gap-2 text-xs uppercase font-bold tracking-widest text-zinc-300 hover:text-white border-b border-zinc-700 hover:border-white pb-1 transition cursor-pointer"
+            >
+              <span>Explore Complete Aerospace Engineering Dossier</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
 
-          {/* Panel 2: Live Subpoint Position */}
-          <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
-            <div>
-              <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-amber-400 font-semibold mb-3 font-sans">
-                Live Subpoint Position
-              </div>
+          {/* COLUMN 2: Scientific Telemetry & Keplerian Spec Sheet (7 Columns) */}
+          <div className="lg:col-span-7 border border-zinc-850 bg-black p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <span className="text-[10px] font-sans uppercase tracking-[0.2em] text-[#00e5ff] font-bold">
+                Scientific Telemetry &amp; Astrometric Elements
+              </span>
+              <span className="text-[10px] text-zinc-500 font-mono">True Equator / Mean Equinox (TEME)</span>
+            </div>
 
-              {selectedTelemetry ? (
-                <div className="grid grid-cols-2 gap-y-2.5 text-xs font-sans">
-                  <div className="text-zinc-500">LATITUDE:</div>
-                  <div className="text-white font-semibold text-right">{selectedTelemetry.lat.toFixed(4)}°</div>
-
-                  <div className="text-zinc-500">LONGITUDE:</div>
-                  <div className="text-white font-semibold text-right">{selectedTelemetry.lon.toFixed(4)}°</div>
-
-                  <div className="text-zinc-500">ALTITUDE:</div>
-                  <div className="text-[#00e5ff] font-bold text-right">{selectedTelemetry.alt.toFixed(1)} km</div>
-
-                  <div className="text-zinc-500">VELOCITY:</div>
-                  <div className="text-white font-bold text-right">
-                    {Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h
+            {/* Scientific Data Matrix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs font-sans">
+              
+              {/* Group 1: Subpoint Geodetics */}
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold border-b border-zinc-900 pb-1">
+                  1. Geodetic Subpoint (WGS-84)
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Subpoint Latitude:</span>
+                    <span className="text-white font-mono font-bold">
+                      {selectedTelemetry ? `${selectedTelemetry.lat.toFixed(4)}°` : "Calculating…"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Subpoint Longitude:</span>
+                    <span className="text-white font-mono font-bold">
+                      {selectedTelemetry ? `${selectedTelemetry.lon.toFixed(4)}°` : "Calculating…"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">True Altitude:</span>
+                    <span className="text-[#00e5ff] font-mono font-bold">
+                      {selectedTelemetry ? `${selectedTelemetry.alt.toFixed(1)} km` : "Calculating…"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Orbital Velocity:</span>
+                    <span className="text-white font-mono font-bold">
+                      {selectedTelemetry ? `${Math.round(selectedTelemetry.vel * 3600).toLocaleString()} km/h` : "Calculating…"}
+                    </span>
                   </div>
                 </div>
-              ) : (
-                <div className="text-xs text-zinc-500 italic py-4 font-sans">Propagating telemetry vectors…</div>
-              )}
-            </div>
-
-            <div className="text-[10px] text-zinc-500 border-t border-zinc-900 pt-3 mt-4 font-sans">
-              TLE Epoch Age:{" "}
-              <span className={epochAgeDays > 3 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
-                {epochAgeDays.toFixed(2)} days
-              </span>
-              <span className="text-zinc-500"> ({epochAgeDays > 3 ? "Stale" : "Fresh"})</span>
-            </div>
-          </div>
-
-          {/* Panel 3: Inertial Frame ECI */}
-          <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
-            <div>
-              <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold mb-3 font-sans">
-                Inertial Frame (ECI)
               </div>
 
-              {selectedTelemetry ? (
-                <div className="grid grid-cols-2 gap-y-2.5 text-xs font-sans">
-                  <div className="text-zinc-500">ECI X:</div>
-                  <div className="text-white text-right font-medium">{selectedTelemetry.px.toFixed(1)} km</div>
-
-                  <div className="text-zinc-500">ECI Y:</div>
-                  <div className="text-white text-right font-medium">{selectedTelemetry.py.toFixed(1)} km</div>
-
-                  <div className="text-zinc-500">ECI Z:</div>
-                  <div className="text-white text-right font-medium">{selectedTelemetry.pz.toFixed(1)} km</div>
-
-                  <div className="text-zinc-500">SLANT RANGE:</div>
-                  <div className="text-zinc-200 text-right font-medium">{selectedSat?.slantRangeKm ?? 520} km</div>
+              {/* Group 2: Topocentric & Slant Range */}
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold border-b border-zinc-900 pb-1">
+                  2. Topocentric Coordinates
                 </div>
-              ) : (
-                <div className="text-xs text-zinc-500 italic py-4 font-sans">Computing inertial vectors…</div>
-              )}
-            </div>
-
-            <div className="text-[9px] text-zinc-500 border-t border-zinc-900 pt-3 mt-4 leading-relaxed font-sans">
-              *Referenced to True Equator of Date (TEME) inertial frame.
-            </div>
-          </div>
-
-          {/* Panel 4: Keplerian Orbital Elements */}
-          <div className="border border-zinc-850 bg-zinc-950 p-5 flex flex-col justify-between">
-            <div>
-              <div className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#00e5ff] font-semibold mb-3 font-sans">
-                Keplerian Elements
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Observer Elevation:</span>
+                    <span className="text-white font-mono font-bold">{selectedSat?.elevationDeg ? `${selectedSat.elevationDeg.toFixed(1)}°` : "45.0°"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Observer Azimuth:</span>
+                    <span className="text-white font-mono font-bold">{selectedSat?.azimuthDeg ? `${selectedSat.azimuthDeg.toFixed(1)}°` : "180.0°"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Slant Range:</span>
+                    <span className="text-white font-mono font-bold">{selectedSat?.slantRangeKm ? `${selectedSat.slantRangeKm} km` : "540 km"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Visual Magnitude:</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {selectedSat && selectedSat.estimatedMagnitude > 0 ? `+${selectedSat.estimatedMagnitude}` : selectedSat?.estimatedMagnitude ?? -1.8} mᵥ
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {orbitalElements ? (
-                <div className="grid grid-cols-2 gap-y-2 text-xs font-sans">
-                  <div className="text-zinc-500">INCLINATION:</div>
-                  <div className="text-white text-right font-medium">{orbitalElements.inclination.toFixed(3)}°</div>
-
-                  <div className="text-zinc-500">ECCENTRICITY:</div>
-                  <div className="text-white text-right font-medium">{orbitalElements.eccentricity.toFixed(6)}</div>
-
-                  <div className="text-zinc-500">PERIOD:</div>
-                  <div className="text-white text-right font-medium">{orbitalElements.periodMin.toFixed(2)} min</div>
-
-                  <div className="text-zinc-500">APOGEE ALT:</div>
-                  <div className="text-white text-right font-medium">{orbitalElements.apogeeAlt.toFixed(0)} km</div>
-
-                  <div className="text-zinc-500">PERIGEE ALT:</div>
-                  <div className="text-white text-right font-medium">{orbitalElements.perigeeAlt.toFixed(0)} km</div>
+              {/* Group 3: Inertial Frame (TEME) */}
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold border-b border-zinc-900 pb-1">
+                  3. Inertial Frame Coordinates (ECI)
                 </div>
-              ) : (
-                <div className="text-xs text-zinc-500 italic py-4 font-sans">Elements pending propagation…</div>
-              )}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">ECI X:</span>
+                    <span className="text-zinc-200 font-mono">
+                      {selectedTelemetry ? `${selectedTelemetry.px.toFixed(1)} km` : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">ECI Y:</span>
+                    <span className="text-zinc-200 font-mono">
+                      {selectedTelemetry ? `${selectedTelemetry.py.toFixed(1)} km` : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">ECI Z:</span>
+                    <span className="text-zinc-200 font-mono">
+                      {selectedTelemetry ? `${selectedTelemetry.pz.toFixed(1)} km` : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 4: Keplerian Orbital Elements */}
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold border-b border-zinc-900 pb-1">
+                  4. Keplerian Orbital Elements
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Inclination:</span>
+                    <span className="text-white font-mono font-bold">
+                      {orbitalElements ? `${orbitalElements.inclination.toFixed(3)}°` : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Eccentricity:</span>
+                    <span className="text-white font-mono font-bold">
+                      {orbitalElements ? orbitalElements.eccentricity.toFixed(6) : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Orbital Period:</span>
+                    <span className="text-white font-mono font-bold">
+                      {orbitalElements ? `${orbitalElements.periodMin.toFixed(2)} min` : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Apogee / Perigee Alt:</span>
+                    <span className="text-[#00e5ff] font-mono font-bold">
+                      {orbitalElements ? `${orbitalElements.apogeeAlt.toFixed(0)} / ${orbitalElements.perigeeAlt.toFixed(0)} km` : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            <div className="text-[9px] text-zinc-500 border-t border-zinc-900 pt-3 mt-4 leading-relaxed font-sans">
-              *Derived from Mean Motion relative to WGS-84 spheroid.
+            <div className="pt-3 border-t border-zinc-900 text-[10px] text-zinc-500 font-mono flex items-center justify-between">
+              <span>*SGP4/SDP4 Analytical Orbital Mechanics Propagator</span>
+              <span>WGS-84 Reference Spheroid</span>
             </div>
           </div>
+
         </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          4. OBSERVATORY COMMAND CONSOLE (Section 02)
-          Ground station astrometry & temporal propagation controls
+          4. OBSERVATORY GEODETIC & PROPAGATION WORKBENCH (Section 02)
+          Horizontal astrometry bar: Ground station coordinates, auto GPS, temporal scrubber
           ───────────────────────────────────────────────────────────────────────────── */}
-      <div id="console-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-8 border-b border-zinc-900">
+      <div id="console-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900">
         <ObservatoryCommandConsole
           observer={observer}
           presetCities={PRESET_CITIES}
@@ -1063,20 +1125,20 @@ export default function TrackMySkyDashboard() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          5. ORBITAL OBSERVATION VIEWPORTS (Section 03)
-          Polar Sky Dome, 3D Orbital Globe, 2D Radar, Star Gaze Dome
+          5. PRIMARY OBSERVATORY VIEWPORT THEATER (Section 03)
+          Grand, wide-screen exhibition: Polar Sky Dome, 3D Globe, 2D Radar, Planetarium
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="viewports-section" ref={mapSectionRef} className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <section id="viewports-section" ref={mapSectionRef} className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 border-b border-zinc-900">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
             <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
-              Section 03 // Topocentric Viewports
+              Section 03 // Topocentric Viewport Theater
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
-              Orbital Observation Viewports
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans">
+              Observatory Viewport Exhibition
             </h2>
-            <p className="text-xs text-zinc-400 font-sans mt-1">
-              Topocentric multispectral tracking: 360° Polar Horizon Dome, 3D Orbit Globe, and 2D Ground Track.
+            <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
+              Interactive 360° Polar Horizon Dome, 3D Orbit Trajectory Globe, and 2D Leaflet Ground Track.
             </p>
           </div>
 
@@ -1129,7 +1191,7 @@ export default function TrackMySkyDashboard() {
           </div>
         </div>
 
-        {/* Viewports Grid */}
+        {/* Viewports Exhibition Container */}
         <div className={`grid grid-cols-1 ${activeMapView === "all" ? "xl:grid-cols-3" : "max-w-5xl mx-auto"} gap-6 w-full items-stretch`}>
           {/* Polar Sky Dome SVG Chart */}
           {(activeMapView === "all" || activeMapView === "polar") && (
@@ -1218,7 +1280,7 @@ export default function TrackMySkyDashboard() {
           6. UPCOMING SATELLITE PASSES TIMELINE (Section 04)
           Editorial Pass Predictions & 3D Carousel
           ───────────────────────────────────────────────────────────────────────────── */}
-      <div id="passes-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-8 border-b border-zinc-900">
+      <div id="passes-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900">
         <UpcomingPassesTimeline
           passes={upcomingPasses}
           selectedPass={selectedPass}
@@ -1235,10 +1297,10 @@ export default function TrackMySkyDashboard() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          7. ORBITAL ANALYTICS & TELEMETRY CHARTS (Section 05)
+          7. ORBITAL ASTROMETRY & PASS ANALYTICS (Section 05)
           Elevation profiles, sky illumination curves & topocentric parameters
           ───────────────────────────────────────────────────────────────────────────── */}
-      <div id="analytics-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-8 border-b border-zinc-900">
+      <div id="analytics-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900">
         <SkyPassAnalytics
           selectedSat={selectedSat}
           visibleSats={visibilityResults}
@@ -1249,21 +1311,21 @@ export default function TrackMySkyDashboard() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          8. FLEET TELEMETRY MATRIX & SPACE MACHINE CATALOG (Section 06)
-          Searchable editorial table with query filters and Aim Reticle target action
+          8. SCIENTIFIC FLEET DIRECTORY INDEX & CATALOG (Section 06)
+          Searchable editorial directory with query filters and Aim Reticle tracking
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="fleet-table-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-zinc-900">
-        <div className="border border-zinc-850 bg-black p-6 space-y-6">
+      <section id="fleet-table-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 border-b border-zinc-900">
+        <div className="border border-zinc-850 bg-black p-6 sm:p-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-900 pb-4">
             <div>
               <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
-                Section 06 // Fleet Telemetry Matrix
+                Section 06 // Scientific Fleet Directory
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans flex items-center gap-3">
-                <span>Overhead Fleet Telemetry Matrix</span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans flex items-center gap-3">
+                <span>Overhead Fleet Telemetry Directory</span>
                 <span className="text-xs text-zinc-400 font-normal">({visibilityResults.length} ASSETS OVERHEAD)</span>
               </h2>
-              <p className="text-xs text-zinc-400 font-sans mt-1">
+              <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
                 Topocentric azimuth, elevation, slant range and visual magnitude computed via SGP4 propagation.
               </p>
             </div>
@@ -1401,17 +1463,17 @@ export default function TrackMySkyDashboard() {
 
       {/* ─────────────────────────────────────────────────────────────────────────────
           9. MISSION INTELLIGENCE & TECHNICAL DOSSIER (Section 07)
-          Scientific dossier with full spacecraft specifications, mass, power, discoveries
+          Comprehensive scientific dossier with full spacecraft specifications, mass, power, discoveries
           ───────────────────────────────────────────────────────────────────────────── */}
-      <section id="dossier-section" className="mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
+      <section id="dossier-section" className="mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8 py-16">
+        <div className="mb-10">
           <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
-            Section 07 // Scientific Dossier
+            Section 07 // Scientific Dossier &amp; Specifications
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white uppercase font-sans">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans">
             Mission Intelligence, Specifications &amp; Discoveries
           </h2>
-          <p className="text-xs text-zinc-400 font-sans mt-1">
+          <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
             Comprehensive aerospace engineering specifications, payload instrument profiles, and scientific milestones.
           </p>
         </div>
