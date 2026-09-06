@@ -9,6 +9,8 @@ import {
   Search,
   Smartphone,
   ChevronDown,
+  BookOpen,
+  FileText,
 } from "lucide-react";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
@@ -17,6 +19,7 @@ interface TrackMySkyNavProps {
   formattedTime: string;
   onOpenPairModal?: () => void;
   onOpenManual?: () => void;
+  onOpenKnowledge?: (tab: "glossary" | "docs") => void;
   onScrollToSection: (id: string) => void;
   activeSection?: string;
   searchQuery?: string;
@@ -28,6 +31,7 @@ export function TrackMySkyNav({
   formattedTime,
   onOpenPairModal,
   onOpenManual,
+  onOpenKnowledge,
   onScrollToSection,
   activeSection = "hero",
   searchQuery = "",
@@ -75,7 +79,7 @@ export function TrackMySkyNav({
 
             <div className="flex items-center gap-3">
               <span className="text-base sm:text-lg font-black tracking-[0.2em] text-white uppercase font-sans select-none">
-                COSMOS
+                COSMOS AI
               </span>
               <span className="h-4 w-px bg-zinc-800 hidden sm:block" />
               <span className="text-[10px] tracking-[0.25em] text-zinc-400 uppercase font-semibold font-sans hidden sm:block">
@@ -127,6 +131,29 @@ export function TrackMySkyNav({
               </button>
             )}
 
+            {/* Knowledge Base: Glossary & Docs in Upper Navigation Bar */}
+            {onOpenKnowledge && (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-zinc-850">
+                <button
+                  onClick={() => onOpenKnowledge("glossary")}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-950/80 border border-zinc-850 hover:border-cyan-500/40 text-zinc-300 hover:text-cyan-300 transition-colors uppercase text-[11px] tracking-wider font-semibold cursor-pointer"
+                  title="Open Astronomical Glossary"
+                >
+                  <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline">Glossary</span>
+                </button>
+
+                <button
+                  onClick={() => onOpenKnowledge("docs")}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-950/80 border border-zinc-850 hover:border-cyan-500/40 text-zinc-300 hover:text-cyan-300 transition-colors uppercase text-[11px] tracking-wider font-semibold cursor-pointer"
+                  title="Open Mission Documentation & Astrometry Guide"
+                >
+                  <FileText className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline">Docs</span>
+                </button>
+              </div>
+            )}
+
             {/* Observatory Clock */}
             <div className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-zinc-300 pl-2 border-l border-zinc-800">
               <Clock className="h-3 w-3 text-zinc-500" />
@@ -155,14 +182,32 @@ export function TrackMySkyNav({
             );
           })}
 
-          {onOpenManual && (
+          {onOpenKnowledge ? (
+            <div className="ml-auto flex items-center gap-4 shrink-0">
+              <button
+                onClick={() => onOpenKnowledge("glossary")}
+                className="flex items-center gap-1 text-[11px] uppercase tracking-[0.15em] font-medium text-zinc-400 hover:text-cyan-300 transition cursor-pointer"
+              >
+                <BookOpen className="h-3 w-3 text-cyan-400" />
+                <span>Glossary</span>
+              </button>
+
+              <button
+                onClick={() => onOpenKnowledge("docs")}
+                className="flex items-center gap-1 text-[11px] uppercase tracking-[0.15em] font-medium text-zinc-400 hover:text-cyan-300 transition cursor-pointer"
+              >
+                <FileText className="h-3 w-3 text-cyan-400" />
+                <span>Docs &amp; Guide</span>
+              </button>
+            </div>
+          ) : onOpenManual ? (
             <button
               onClick={onOpenManual}
               className="ml-auto flex items-center gap-1 shrink-0 text-[10px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
             >
-              <span>Glossary &amp; Docs</span>
+              <span>Guide &amp; Glossary</span>
             </button>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>

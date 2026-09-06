@@ -151,10 +151,13 @@ function ObserverToSatelliteTrack({
     return null;
   }, [targetSat]);
 
-  const [points, setPoints] = useState<THREE.Vector3[]>([]);
+  const segments = 24;
+  const linePositions = useMemo(() => new Float32Array((segments + 1) * 3), [segments]);
+  const lineGeoRef = useRef<THREE.BufferGeometry>(null);
+  const lineRef = useRef<any>(null);
 
   useFrame(() => {
-    if (!satrec) return;
+    if (!satrec || !lineGeoRef.current) return;
     const timeMs = useOrbitalStore.getState().timeMs;
     const now = new Date(timeMs);
     const gmst = satellite.gstime(now);
@@ -174,33 +177,42 @@ function ObserverToSatelliteTrack({
     const satPos = latLonToVector3(satLat, satLon, r);
     const obsPos = latLonToVector3(observer.lat, observer.lon, EARTH_RADIUS_3D + 0.05);
 
-    // Arched points connecting observer to satellite
-    const pts: THREE.Vector3[] = [];
-    const segments = 24;
     for (let i = 0; i <= segments; i++) {
       const t = i / segments;
       const pt = obsPos.clone().lerp(satPos, t);
       const arcLift = Math.sin(t * Math.PI) * 0.35;
       pt.add(pt.clone().normalize().multiplyScalar(arcLift));
-      pts.push(pt);
+      const idx = i * 3;
+      linePositions[idx] = pt.x;
+      linePositions[idx + 1] = pt.y;
+      linePositions[idx + 2] = pt.z;
     }
-    setPoints(pts);
+
+    const posAttr = lineGeoRef.current.getAttribute("position");
+    if (posAttr) {
+      posAttr.needsUpdate = true;
+    }
+    if (lineRef.current) {
+      lineRef.current.computeLineDistances();
+    }
   });
 
-  if (points.length < 2) return null;
-
   return (
-    <Line
-      points={points}
-      color="#ffd700"
-      lineWidth={2.8}
-      dashed
-      dashScale={2}
-      dashSize={0.25}
-      gapSize={0.15}
-      transparent
-      opacity={0.95}
-    />
+    <line ref={lineRef}>
+      <bufferGeometry ref={lineGeoRef}>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[linePositions, 3]}
+        />
+      </bufferGeometry>
+      <lineDashedMaterial
+        color="#ffd700"
+        dashSize={0.25}
+        gapSize={0.15}
+        transparent
+        opacity={0.95}
+      />
+    </line>
   );
 }
 
@@ -531,6 +543,9 @@ function SatellitesInstancedMesh({
     return map;
   }, [satellites]);
 
+  const lastBufferRef = useRef<Float32Array | null>(null);
+  const lastSelectedIdRef = useRef<number | null>(null);
+
   useFrame(({ gl }) => {
     // Guard: bail if WebGL context has been lost
     if (!gl || !gl.domElement || gl.domElement.classList.contains("webgl-context-lost")) return;
@@ -540,6 +555,16 @@ function SatellitesInstancedMesh({
     if (!mesh) return;
 
     const positions = latestPositions?.current;
+
+    // High-performance optimization: If worker buffer and selected ID haven't changed,
+    // skip the 1,206 matrix transformations and GPU uploads completely!
+    if (positions && positions === lastBufferRef.current && selectedId === lastSelectedIdRef.current) {
+      return;
+    }
+    if (positions) {
+      lastBufferRef.current = positions;
+      lastSelectedIdRef.current = selectedId;
+    }
 
     // Fallback if worker positions buffer not yet ready: propagate locally
     if (!positions) {

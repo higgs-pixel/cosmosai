@@ -92,9 +92,9 @@ export function TrackMySkyHero({
         {/* Top Floating Editorial Metadata */}
         <div className="pt-4 max-w-xl">
           <div className="flex items-center gap-3 text-[10px] font-sans uppercase tracking-[0.25em] text-zinc-400">
-            <span className="text-zinc-200 font-bold">NASA / SGP4 ASTRONOMICAL EPHEMERIS</span>
-            <span className="text-zinc-700">&bull;</span>
-            <span>TOPOCENTRIC SKY OBSERVATORY</span>
+            {/* <span className="text-zinc-200 font-bold">NASA / SGP4 ASTRONOMICAL EPHEMERIS</span>
+            <span className="text-zinc-700">&bull;</span> */}
+            <span className="text-zinc-200 font-bold">TOPOCENTRIC SKY OBSERVATORY</span>
           </div>
         </div>
 

@@ -245,10 +245,18 @@ export default function TrackMySkyDashboard() {
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [showPairModal, setShowPairModal] = useState(false);
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false);
+  const [knowledgeActiveTab, setKnowledgeActiveTab] = useState<"glossary" | "docs">("glossary");
   const [selectedSatId, setSelectedSatId] = useState<number | null>(25544);
+  const selectedSatIdRef = useRef(selectedSatId);
+  useEffect(() => {
+    selectedSatIdRef.current = selectedSatId;
+  }, [selectedSatId]);
 
   // Time & Pass Filters
   const [onlyVisible, setOnlyVisible] = useState(false);
+  const onlyVisibleRef = useRef(onlyVisible);
+  const rawPassesRef = useRef<SatellitePass[]>([]);
   const [timeframeFilter, setTimeframeFilter] = useState<"1h" | "6h" | "24h">("6h");
   const [selectedTz, setSelectedTz] = useState("IST");
   const [selectedPass, setSelectedPass] = useState<SatellitePass | null>(null);
@@ -314,15 +322,30 @@ export default function TrackMySkyDashboard() {
 
       worker.onmessage = (e) => {
         isWorkerBusyRef.current = false;
-        const { type, buffer, results, selectedTelemetry, satellites: loadedSats } = e.data;
+        const { type, buffer, results, selectedTelemetry, satellites: loadedSats, passes } = e.data;
         if (type === "positions") {
           latestPositionsRef.current = buffer;
+        } else if (type === "unified_tick") {
+          latestPositionsRef.current = buffer;
+          startTransition(() => {
+            if (Array.isArray(results)) {
+              setWorkerVisibilityResults(results);
+            }
+            if (selectedTelemetry) {
+              setWorkerSelectedTelemetry(selectedTelemetry);
+            }
+          });
         } else if (type === "visibility_results" && Array.isArray(results)) {
           startTransition(() => {
             setWorkerVisibilityResults(results);
             if (selectedTelemetry) {
               setWorkerSelectedTelemetry(selectedTelemetry);
             }
+          });
+        } else if (type === "passes_predicted" && Array.isArray(passes)) {
+          rawPassesRef.current = passes;
+          startTransition(() => {
+            setUpcomingPasses(onlyVisibleRef.current ? passes.filter((p: SatellitePass) => p.isVisibleToEye) : passes);
           });
         } else if (type === "catalog_loaded" && Array.isArray(loadedSats)) {
           startTransition(() => {
@@ -342,6 +365,14 @@ export default function TrackMySkyDashboard() {
     };
   }, []);
 
+  // Instant in-memory filter when onlyVisible is toggled (no worker recreation or reload)
+  useEffect(() => {
+    onlyVisibleRef.current = onlyVisible;
+    if (rawPassesRef.current.length > 0) {
+      setUpcomingPasses(onlyVisible ? rawPassesRef.current.filter((p) => p.isVisibleToEye) : rawPassesRef.current);
+    }
+  }, [onlyVisible]);
+
   // Synchronize satellitesList with Web Worker on updates
   useEffect(() => {
     if (workerRef.current && satellitesList.length > 0) {
@@ -349,42 +380,19 @@ export default function TrackMySkyDashboard() {
     }
   }, [satellitesList]);
 
-  // Continuous SGP4 propagation loop for 3D globe satellites
-  useEffect(() => {
-    let frameId: number;
-    let lastPropagateTime = 0;
-
-    const loop = (now: number) => {
-      if (workerRef.current && satellitesList.length > 0 && !isWorkerBusyRef.current) {
-        if (now - lastPropagateTime >= 500) {
-          lastPropagateTime = now;
-          const currentTime = useOrbitalStore.getState().timeMs;
-          isWorkerBusyRef.current = true;
-          workerRef.current.postMessage({
-            type: "propagate",
-            timeMs: currentTime,
-          });
-        }
-      }
-      frameId = requestAnimationFrame(loop);
-    };
-    frameId = requestAnimationFrame(loop);
-
-    return () => cancelAnimationFrame(frameId);
-  }, [satellitesList]);
-
-  // High-performance background Web Worker evaluation for ALL above-horizon satellites + live telemetry
-  // Completely offloads SGP4 look-angles and shadow calculations from the main thread (<4ms in worker)
-  // Ensures 100% of satellites above horizon are tracked live with zero main-thread lag!
+  // High-performance background Web Worker evaluation for ALL satellites + live telemetry
+  // Unifies 3D positions buffer propagation and observer topocentric visibility in a single background worker pass
+  // Offloads 100% of SGP4 calculations from main thread, ensuring rock-solid 60 FPS animation
   useEffect(() => {
     if (!workerRef.current || satellitesList.length === 0) return;
 
     let timer: NodeJS.Timeout;
-    const requestVisibility = () => {
+    const runWorkerTick = () => {
       if (workerRef.current && !isWorkerBusyRef.current) {
         const currentTime = useOrbitalStore.getState().timeMs;
+        isWorkerBusyRef.current = true;
         workerRef.current.postMessage({
-          type: "evaluate_visibility",
+          type: "propagate_and_evaluate",
           timeMs: currentTime,
           selectedSatId: selectedSatId ?? 25544,
           observer: {
@@ -396,8 +404,8 @@ export default function TrackMySkyDashboard() {
       }
     };
 
-    requestVisibility();
-    timer = setInterval(requestVisibility, 1000);
+    runWorkerTick();
+    timer = setInterval(runWorkerTick, 600);
 
     return () => clearInterval(timer);
   }, [satellitesList, selectedSatId, observer.lat, observer.lon, observer.altMeters]);
@@ -492,11 +500,11 @@ export default function TrackMySkyDashboard() {
             workerRef.current.postMessage({
               type: "evaluate_visibility",
               timeMs: useOrbitalStore.getState().timeMs,
-              selectedSatId: selectedSatId ?? 25544,
+              selectedSatId: selectedSatIdRef.current ?? 25544,
               observer: {
-                lat: observer.lat,
-                lon: observer.lon,
-                altMeters: observer.altMeters || 180,
+                lat: observerRef.current.lat,
+                lon: observerRef.current.lon,
+                altMeters: observerRef.current.altMeters || 180,
               },
             });
           }
@@ -522,7 +530,7 @@ export default function TrackMySkyDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [skyCatalogGroup, observer.lat, observer.lon, observer.altMeters, selectedSatId]);
+  }, [skyCatalogGroup]);
 
   // Geolocation Tier 1: Companion Mobile Polling
   useEffect(() => {
@@ -633,7 +641,9 @@ export default function TrackMySkyDashboard() {
 
   const satrecCatalog = useMemo(() => {
     if (!satellitesList || satellitesList.length === 0) return [];
+    // Only parse a small initial set for immediate UI fallback before background worker returns
     return satellitesList
+      .slice(0, 25)
       .map((sat) => {
         try {
           const satrec = satellite.twoline2satrec(sat.line1, sat.line2);
@@ -735,7 +745,7 @@ export default function TrackMySkyDashboard() {
     ]);
     const priorityList = satellitesList.filter((s) => priorityIds.has(s.id));
     const regularList = satellitesList.filter((s) => !priorityIds.has(s.id));
-    return [...priorityList, ...regularList].slice(0, 75);
+    return [...priorityList, ...regularList].slice(0, 100);
   }, [satellitesList]);
 
   // Keplerian elements from TLE Line 2
@@ -781,44 +791,47 @@ export default function TrackMySkyDashboard() {
     return diff / (24 * 60 * 60 * 1000);
   }, [selectedRawSat, uiTimeMs]);
 
-  // Upcoming Satellite Pass Predictions Engine
+  // Upcoming Satellite Pass Predictions Engine (100% offloaded to background Web Worker)
   const passCalcBucket = useMemo(() => Math.floor(uiTimeMs / (15 * 60_000)), [uiTimeMs]);
-  const [upcomingPasses, setUpcomingPasses] = useState<SatellitePass[]>([]);
+  const [upcomingPasses, setUpcomingPasses] = useState<SatellitePass[]>(() => {
+    try {
+      const initial = predictUpcomingPasses(DEFAULT_SATELLITE_CATALOG.slice(0, 35), observer, Date.now(), 6);
+      rawPassesRef.current = initial;
+      return initial;
+    } catch {
+      return [];
+    }
+  });
+  const passRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (loadingSats || candidateSatellites.length === 0) {
-      setUpcomingPasses([]);
-      return;
-    }
+    if (candidateSatellites.length === 0) return;
 
-    let cancelled = false;
-    const runPassPrediction = () => {
-      const hours = timeframeFilter === "1h" ? 1 : timeframeFilter === "6h" ? 6 : 24;
-      const passes = predictUpcomingPasses(candidateSatellites, observer, passCalcBucket * (15 * 60_000), hours);
-      if (!cancelled) {
-        startTransition(() => {
-          setUpcomingPasses(onlyVisible ? passes.filter((p) => p.isVisibleToEye) : passes);
-        });
-      }
-    };
+    const hours = timeframeFilter === "1h" ? 1 : timeframeFilter === "6h" ? 6 : 24;
+    const startTime = passCalcBucket * (15 * 60_000);
+    const reqId = ++passRequestIdRef.current;
 
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      const idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(
-        runPassPrediction,
-        { timeout: 150 }
-      );
-      return () => {
-        cancelled = true;
-        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
-      };
+    if (workerRef.current) {
+      // Offload 100% of pass prediction calculation to the Web Worker thread
+      workerRef.current.postMessage({
+        type: "predict_passes",
+        candidateSats: candidateSatellites,
+        observer: {
+          lat: observer.lat,
+          lon: observer.lon,
+          altMeters: observer.altMeters || 180,
+        },
+        startTimeMs: startTime,
+        lookaheadHours: hours,
+        requestId: reqId,
+      });
     } else {
-      const timer = setTimeout(runPassPrediction, 0);
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
+      // Fallback only if worker not supported
+      const passes = predictUpcomingPasses(candidateSatellites, observer, startTime, hours);
+      rawPassesRef.current = passes;
+      setUpcomingPasses(onlyVisibleRef.current ? passes.filter((p) => p.isVisibleToEye) : passes);
     }
-  }, [candidateSatellites, observer, timeframeFilter, passCalcBucket, onlyVisible, loadingSats]);
+  }, [candidateSatellites, observer.lat, observer.lon, observer.altMeters, timeframeFilter, passCalcBucket]);
 
   const nakedEyeCount = useMemo(() => visibilityResults.filter((s) => s.isNakedEyeVisible).length, [visibilityResults]);
   const sunlitCount = useMemo(() => visibilityResults.filter((s) => s.isSunlit).length, [visibilityResults]);
@@ -834,9 +847,9 @@ export default function TrackMySkyDashboard() {
         observer={observer}
         formattedTime={formatClockTime(uiTimeMs, selectedTz)}
         onOpenPairModal={() => setShowPairModal(true)}
-        onOpenManual={() => {
-          const el = document.getElementById("glossary-modal-btn");
-          if (el) el.click();
+        onOpenKnowledge={(tab) => {
+          setKnowledgeActiveTab(tab);
+          setIsKnowledgeModalOpen(true);
         }}
         onScrollToSection={scrollToSection}
         activeSection={activeSection}
@@ -1205,15 +1218,15 @@ export default function TrackMySkyDashboard() {
               <MapIcon className="h-3 w-3" />
               <span>2D Radar</span>
             </button>
-            <button
-              onClick={() => setActiveMapView("stargaze")}
-              className={`px-3 py-1.5 text-[11px] font-semibold transition cursor-pointer uppercase flex items-center gap-1.5 ${
-                activeMapView === "stargaze" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
-              }`}
+            <Link
+              href="/stargaze"
+              className="px-3 py-1.5 text-[11px] font-semibold transition cursor-pointer uppercase flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent hover:border-zinc-800"
+              title="Launch Fullscreen 3D Planetarium Observatory (/stargaze)"
             >
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="h-3 w-3 text-[#00e5ff]" />
               <span>Planetarium</span>
-            </button>
+              <ExternalLink className="h-2.5 w-2.5 opacity-60 ml-0.5" />
+            </Link>
           </div>
         </div>
 
@@ -1530,8 +1543,13 @@ export default function TrackMySkyDashboard() {
         </div>
       )}
 
-      {/* Floating Stargazer Help Desk Assistant & Glossary */}
-      <SkyGlossaryModal />
+      {/* Astrometry Knowledge Base & Mission Documentation Modal (Triggered from Navigation Bar) */}
+      <SkyGlossaryModal
+        isOpen={isKnowledgeModalOpen}
+        onClose={() => setIsKnowledgeModalOpen(false)}
+        activeTab={knowledgeActiveTab}
+        onTabChange={setKnowledgeActiveTab}
+      />
     </div>
   );
 }

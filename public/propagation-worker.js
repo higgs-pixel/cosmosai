@@ -441,5 +441,461 @@ self.onmessage = function(e) {
       selectedTelemetry: selectedTelemetry,
       timeMs: vTimeMs
     });
+  } else if (msg.type === 'predict_passes') {
+    var pCandidateSats = msg.candidateSats || [];
+    var pObserver = msg.observer;
+    var pStartTimeMs = msg.startTimeMs || Date.now();
+    var pLookaheadHours = msg.lookaheadHours || 6;
+    var pRequestId = msg.requestId || 0;
+
+    // Use passed candidate sats, or find from satellites catalog if empty
+    var satsToEvaluate = [];
+    if (pCandidateSats.length > 0) {
+      for (var cs = 0; cs < pCandidateSats.length; cs++) {
+        var csId = pCandidateSats[cs].id;
+        var existing = null;
+        for (var si = 0; si < satellites.length; si++) {
+          if (satellites[si].id === csId) {
+            existing = satellites[si];
+            break;
+          }
+        }
+        if (existing) {
+          satsToEvaluate.push(existing);
+        } else {
+          satsToEvaluate.push(pCandidateSats[cs]);
+        }
+      }
+    } else {
+      satsToEvaluate = satellites.slice(0, 75);
+    }
+
+    var computedPasses = predictUpcomingPassesWorker(satsToEvaluate, pObserver, pStartTimeMs, pLookaheadHours);
+
+    self.postMessage({
+      type: 'passes_predicted',
+      passes: computedPasses,
+      requestId: pRequestId
+    });
+  } else if (msg.type === 'propagate_and_evaluate') {
+    var peTimeMs = msg.timeMs || Date.now();
+    var peDate = new Date(peTimeMs);
+    var peGmst = satellite.gstime(peDate);
+    var peObserver = msg.observer;
+    var peTargetId = msg.selectedSatId || 25544;
+
+    // Buffer for 3D globe [id, x, y, z, lat, lon, alt, velocity]
+    var peBuffer = new Float32Array(satellites.length * 8);
+
+    var hasObs = peObserver && typeof peObserver.lat === 'number' && typeof peObserver.lon === 'number';
+    var peObsGd = null;
+    var peObsX = 0, peObsY = 0, peObsZ = 0, peZenX = 0, peZenY = 0, peZenZ = 0;
+    var peSunX = 0, peSunY = 0, peSunZ = 0, peIsDark = false;
+    var PE_R_EARTH = 6378.137;
+
+    if (hasObs) {
+      var peObsLatRad = (peObserver.lat * Math.PI) / 180;
+      var peObsLonRad = (peObserver.lon * Math.PI) / 180;
+      var peObsAltKm = (peObserver.altMeters || 0) / 1000;
+      peObsGd = { latitude: peObsLatRad, longitude: peObsLonRad, height: peObsAltKm };
+
+      var peCosLat = Math.cos(peObsLatRad);
+      var peSinLat = Math.sin(peObsLatRad);
+      var peCosLon = Math.cos(peObsLonRad);
+      var peSinLon = Math.sin(peObsLonRad);
+      var peA = 6378.137;
+      var peF = 1 / 298.257223563;
+      var peE2 = 2 * peF - peF * peF;
+      var peN = peA / Math.sqrt(1 - peE2 * peSinLat * peSinLat);
+      peObsX = (peN + peObsAltKm) * peCosLat * peCosLon;
+      peObsY = (peN + peObsAltKm) * peCosLat * peSinLon;
+      peObsZ = (peN * (1 - peE2) + peObsAltKm) * peSinLat;
+
+      peZenX = peCosLat * peCosLon;
+      peZenY = peCosLat * peSinLon;
+      peZenZ = peSinLat;
+
+      var peYearDay = Math.floor((peDate.getTime() - new Date(Date.UTC(peDate.getUTCFullYear(), 0, 0)).getTime()) / (24 * 3600 * 1000));
+      var peMeanAnomaly = ((357.529 + 0.98560028 * peYearDay) * Math.PI) / 180;
+      var peSunLon = ((280.459 + 0.98564736 * peYearDay + 1.915 * Math.sin(peMeanAnomaly)) * Math.PI) / 180;
+      var peObliq = (23.439 * Math.PI) / 180;
+      peSunX = Math.cos(peSunLon);
+      peSunY = Math.cos(peObliq) * Math.sin(peSunLon);
+      peSunZ = Math.sin(peObliq) * Math.sin(peSunLon);
+
+      var peCosGmst = Math.cos(peGmst);
+      var peSinGmst = Math.sin(peGmst);
+      var peSunEcfX = peSunX * peCosGmst + peSunY * peSinGmst;
+      var peSunEcfY = -peSunX * peSinGmst + peSunY * peCosGmst;
+      var peSunEcfZ = peSunZ;
+      var peSunDotZen = peSunEcfX * peZenX + peSunEcfY * peZenY + peSunEcfZ * peZenZ;
+      var peSunAlt = Math.asin(Math.max(-1, Math.min(1, peSunDotZen))) * (180 / Math.PI);
+      peIsDark = peSunAlt < -6;
+    }
+
+    var peAboveHorizon = [];
+    var peSelectedTelemetry = null;
+
+    for (var m = 0; m < satellites.length; m++) {
+      var satObj = satellites[m];
+      var bufIdx = m * 8;
+      peBuffer[bufIdx] = satObj.id;
+
+      try {
+        var pv = satellite.propagate(satObj.satrec, peDate);
+        var pEci = pv ? pv.position : null;
+        var vEci = pv ? pv.velocity : null;
+
+        if (!pEci || typeof pEci === 'boolean' || isNaN(pEci.x)) {
+          peBuffer[bufIdx + 1] = NaN;
+          continue;
+        }
+
+        peBuffer[bufIdx + 1] = pEci.x;
+        peBuffer[bufIdx + 2] = pEci.y;
+        peBuffer[bufIdx + 3] = pEci.z;
+
+        var posGd = satellite.eciToGeodetic(pEci, peGmst);
+        var subLat = satellite.degreesLat(posGd.latitude);
+        var subLon = satellite.degreesLong(posGd.longitude);
+        if (subLon > 180) subLon -= 360;
+        if (subLon < -180) subLon += 360;
+        var subAlt = posGd.height;
+
+        peBuffer[bufIdx + 4] = subLat;
+        peBuffer[bufIdx + 5] = subLon;
+        peBuffer[bufIdx + 6] = subAlt;
+
+        var speedKms = 0;
+        if (vEci && typeof vEci !== 'boolean') {
+          speedKms = Math.sqrt(vEci.x * vEci.x + vEci.y * vEci.y + vEci.z * vEci.z);
+          peBuffer[bufIdx + 7] = speedKms;
+        } else {
+          peBuffer[bufIdx + 7] = 0;
+        }
+
+        // Topocentric observation calculations
+        if (hasObs && peObsGd) {
+          var pEcf = satellite.eciToEcf(pEci, peGmst);
+          var dx = pEcf.x - peObsX;
+          var dy = pEcf.y - peObsY;
+          var dz = pEcf.z - peObsZ;
+
+          var dotZen = dx * peZenX + dy * peZenY + dz * peZenZ;
+          var isTrackedSat = (satObj.id === peTargetId);
+
+          // Fast rejection if deeply below horizon and not active selected sat
+          if (dotZen >= -2500 || isTrackedSat) {
+            var look = satellite.ecfToLookAngles(peObsGd, pEcf);
+            var elDeg = (look.elevation * 180) / Math.PI;
+            var azDeg = ((look.azimuth * 180) / Math.PI + 360) % 360;
+            var slantKm = Math.round(look.rangeSat);
+
+            // Sunlit condition
+            var rDotSun = pEci.x * peSunX + pEci.y * peSunY + pEci.z * peSunZ;
+            var isSunlit = true;
+            if (rDotSun < 0) {
+              var px = pEci.x - rDotSun * peSunX;
+              var py = pEci.y - rDotSun * peSunY;
+              var pz = pEci.z - rDotSun * peSunZ;
+              if (Math.sqrt(px * px + py * py + pz * pz) < PE_R_EARTH) {
+                isSunlit = false;
+              }
+            }
+
+            var intrinsic = getIntrinsicMagnitudeWorker(satObj.id, satObj.name);
+            var estMag = intrinsic + 5 * Math.log10(Math.max(1, slantKm) / 400);
+            if (!isSunlit) estMag += 4.5;
+            estMag = Math.round(estMag * 10) / 10;
+
+            var isAbove = elDeg > 0;
+            var isObservable = elDeg >= 10;
+            var isNakedEye = isAbove && isObservable && isSunlit && peIsDark && estMag <= 4.5;
+
+            var status = 'Below Horizon';
+            if (isNakedEye) status = 'Naked-Eye Visible';
+            else if (isAbove && isSunlit) status = 'Sunlit';
+            else if (isAbove && !isSunlit) status = 'In Umbral Eclipse';
+            else if (!isAbove && elDeg >= -5) status = 'Approaching';
+
+            if (isTrackedSat) {
+              peSelectedTelemetry = {
+                satId: satObj.id,
+                satName: satObj.name,
+                category: satObj.category,
+                orbitClass: satObj.orbitClass,
+                line1: satObj.line1,
+                line2: satObj.line2,
+                px: pEci.x,
+                py: pEci.y,
+                pz: pEci.z,
+                vx: vEci ? vEci.x : 0,
+                vy: vEci ? vEci.y : 0,
+                vz: vEci ? vEci.z : 0,
+                vel: speedKms,
+                lat: subLat,
+                lon: subLon,
+                alt: subAlt,
+                elevationDeg: Math.round(elDeg * 10) / 10,
+                azimuthDeg: Math.round(azDeg * 10) / 10,
+                slantRangeKm: slantKm,
+                isSunlit: isSunlit,
+                isAboveHorizon: isAbove,
+                isNakedEyeVisible: isNakedEye,
+                estimatedMagnitude: estMag,
+                statusLabel: status
+              };
+            }
+
+            if (elDeg >= -5) {
+              peAboveHorizon.push({
+                satId: satObj.id,
+                satName: satObj.name,
+                category: satObj.category || 'Active',
+                orbitClass: satObj.orbitClass || 'LEO',
+                line1: satObj.line1 || '',
+                line2: satObj.line2 || '',
+                azimuthDeg: Math.round(azDeg * 10) / 10,
+                elevationDeg: Math.round(elDeg * 10) / 10,
+                slantRangeKm: slantKm,
+                satLat: Math.round(subLat * 1000) / 1000,
+                satLon: Math.round(subLon * 1000) / 1000,
+                satAltKm: Math.round(subAlt),
+                isAboveHorizon: isAbove,
+                isObservable: isObservable,
+                isSunlit: isSunlit,
+                isObserverDark: peIsDark,
+                isNakedEyeVisible: isNakedEye,
+                estimatedMagnitude: estMag,
+                phaseAngleDeg: 45,
+                statusLabel: status
+              });
+            }
+          }
+        }
+      } catch (err) {
+        peBuffer[bufIdx + 1] = NaN;
+      }
+    }
+
+    peAboveHorizon.sort(function(a, b) {
+      return b.elevationDeg - a.elevationDeg;
+    });
+
+    // Transfer positions buffer directly to avoid copying overhead
+    self.postMessage({
+      type: 'unified_tick',
+      buffer: peBuffer,
+      results: peAboveHorizon,
+      selectedTelemetry: peSelectedTelemetry,
+      timeMs: peTimeMs
+    }, [peBuffer.buffer]);
   }
 };
+
+function getIntrinsicMagnitudeWorker(noradId, satName) {
+  if (noradId === 25544) return -1.8;
+  if (noradId === 48274) return -0.8;
+  if (noradId === 20580) return 1.5;
+  if (noradId === 50463) return 2.0;
+  if (noradId === 33591) return 3.5;
+  if (noradId === 44713) return 5.0;
+  var n = (satName || '').toUpperCase();
+  if (n.indexOf('ISS') !== -1 || n.indexOf('STATION') !== -1 || n.indexOf('CSS') !== -1) return -1.5;
+  if (n.indexOf('STARLINK') !== -1) return 5.2;
+  if (n.indexOf('GPS') !== -1 || n.indexOf('NAVSTAR') !== -1 || n.indexOf('GLONASS') !== -1 || n.indexOf('BEIDOU') !== -1) return 4.5;
+  if (n.indexOf('WEATHER') !== -1 || n.indexOf('NOAA') !== -1 || n.indexOf('GOES') !== -1) return 3.8;
+  return 4.2;
+}
+
+function predictUpcomingPassesWorker(candidateSats, observer, startTimeMs, lookaheadHours) {
+  if (!candidateSats || candidateSats.length === 0 || !observer) return [];
+
+  var passes = [];
+  var obsLatRad = (observer.lat * Math.PI) / 180;
+  var obsLonRad = (observer.lon * Math.PI) / 180;
+  var obsAltKm = (observer.altMeters || 10) / 1000;
+  var obsGd = { latitude: obsLatRad, longitude: obsLonRad, height: obsAltKm };
+
+  var stepMin = lookaheadHours <= 1 ? 1.0 : lookaheadHours <= 6 ? 2.0 : 3.0;
+  var totalSteps = Math.min(480, Math.ceil((lookaheadHours * 60) / stepMin));
+
+  for (var sIdx = 0; sIdx < candidateSats.length; sIdx++) {
+    var sat = candidateSats[sIdx];
+    var satrec = sat.satrec;
+    if (!satrec) {
+      try {
+        satrec = satellite.twoline2satrec(sat.line1, sat.line2);
+      } catch (e) {
+        continue;
+      }
+    }
+    if (!satrec || satrec.error) continue;
+
+    var intrinsicMag = getIntrinsicMagnitudeWorker(sat.id, sat.name);
+    var inPass = false;
+    var currentPassPoints = [];
+
+    for (var i = 0; i < totalSteps; i++) {
+      var tMs = startTimeMs + i * stepMin * 60 * 1000;
+      var date = new Date(tMs);
+      var gmst = satellite.gstime(date);
+
+      var posAndVel = satellite.propagate(satrec, date);
+      var posEci = posAndVel ? posAndVel.position : null;
+      var velEci = posAndVel ? posAndVel.velocity : null;
+
+      if (!posEci || typeof posEci === 'boolean' || isNaN(posEci.x) || !velEci || typeof velEci === 'boolean') {
+        continue;
+      }
+
+      var lookAngles = satellite.ecfToLookAngles(obsGd, satellite.eciToEcf(posEci, gmst));
+      var elDeg = (lookAngles.elevation * 180) / Math.PI;
+      var azDeg = (lookAngles.azimuth * 180) / Math.PI;
+      var slantRangeKm = lookAngles.rangeSat;
+
+      var posGd = satellite.eciToGeodetic(posEci, gmst);
+      var satLat = satellite.degreesLat(posGd.latitude);
+      var satLon = satellite.degreesLong(posGd.longitude);
+      if (satLon > 180) satLon -= 360;
+      if (satLon < -180) satLon += 360;
+      var altKm = posGd.height;
+      var velKms = Math.sqrt(velEci.x * velEci.x + velEci.y * velEci.y + velEci.z * velEci.z);
+
+      var yearDay = Math.floor((date.getTime() - new Date(Date.UTC(date.getUTCFullYear(), 0, 0)).getTime()) / (24 * 3600 * 1000));
+      var meanAnomalySun = ((357.529 + 0.98560028 * yearDay) * Math.PI) / 180;
+      var sunLon = ((280.459 + 0.98564736 * yearDay + 1.915 * Math.sin(meanAnomalySun)) * Math.PI) / 180;
+      var obliq = (23.439 * Math.PI) / 180;
+      var sunUnitX = Math.cos(sunLon);
+      var sunUnitY = Math.cos(obliq) * Math.sin(sunLon);
+      var sunUnitZ = Math.sin(obliq) * Math.sin(sunLon);
+      var AU_KM = 149597870.7;
+      var sunEci = {
+        x: sunUnitX * AU_KM,
+        y: sunUnitY * AU_KM,
+        z: sunUnitZ * AU_KM
+      };
+
+      var obsSunAngles = satellite.ecfToLookAngles(obsGd, satellite.eciToEcf(sunEci, gmst));
+      var obsSunElDeg = (obsSunAngles.elevation * 180) / Math.PI;
+      var isObserverInDarkness = obsSunElDeg < -6.0;
+
+      var projAntiSun = -(posEci.x * sunUnitX + posEci.y * sunUnitY + posEci.z * sunUnitZ);
+      var earthRadiusKm = 6371;
+      var isSunlit = true;
+      if (projAntiSun > 0) {
+        var satDistSq = posEci.x * posEci.x + posEci.y * posEci.y + posEci.z * posEci.z;
+        var distSqToAxis = satDistSq - projAntiSun * projAntiSun;
+        if (distSqToAxis < earthRadiusKm * earthRadiusKm) {
+          isSunlit = false;
+        }
+      }
+
+      var satSunVec = {
+        x: sunEci.x - posEci.x,
+        y: sunEci.y - posEci.y,
+        z: sunEci.z - posEci.z
+      };
+      var sunDist = Math.sqrt(satSunVec.x * satSunVec.x + satSunVec.y * satSunVec.y + satSunVec.z * satSunVec.z);
+      var satDist = Math.sqrt(posEci.x * posEci.x + posEci.y * posEci.y + posEci.z * posEci.z);
+      var dot = (posEci.x * satSunVec.x + posEci.y * satSunVec.y + posEci.z * satSunVec.z) / (satDist * sunDist);
+      var phaseAngleRad = Math.acos(Math.max(-1, Math.min(1, dot)));
+
+      var phaseFunc = (Math.sin(phaseAngleRad) + (Math.PI - phaseAngleRad) * Math.cos(phaseAngleRad)) / Math.PI;
+      var elClamped = Math.max(1, elDeg);
+      var airmass = 1 / (Math.sin((elClamped * Math.PI) / 180) + 0.15 * Math.pow(elClamped + 3.885, -1.25));
+      var extMag = 0.2 * Math.max(0, airmass - 1);
+      var vmag = intrinsicMag - 15.75 + 5 * Math.log10(Math.max(100, slantRangeKm)) - 2.5 * Math.log10(Math.max(0.001, phaseFunc)) + extMag;
+      var isVisible = isObserverInDarkness && isSunlit && elDeg >= 10.0 && vmag <= 4.5;
+
+      var pt = {
+        timeMs: tMs,
+        timeLabel: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        azimuthDeg: Math.round(azDeg),
+        elevationDeg: Math.round(elDeg),
+        slantRangeKm: Math.round(slantRangeKm),
+        altitudeKm: Math.round(altKm),
+        velocityKms: Number(velKms.toFixed(2)),
+        vmag: Number(vmag.toFixed(1)),
+        sunlit: isSunlit,
+        isVisible: isVisible,
+        satLat: Number(satLat.toFixed(3)),
+        satLon: Number(satLon.toFixed(3))
+      };
+
+      if (elDeg >= 5.0) {
+        if (!inPass) inPass = true;
+        currentPassPoints.push(pt);
+      } else {
+        if (inPass && currentPassPoints.length >= 1) {
+          var fPass = finalizePassWorker(sat, currentPassPoints);
+          if (fPass.maxElevationDeg >= 8) {
+            passes.push(fPass);
+          }
+        }
+        inPass = false;
+        currentPassPoints = [];
+      }
+    }
+
+    if (inPass && currentPassPoints.length >= 1) {
+      var fPassEnd = finalizePassWorker(sat, currentPassPoints);
+      if (fPassEnd.maxElevationDeg >= 8) {
+        passes.push(fPassEnd);
+      }
+    }
+  }
+
+  passes.sort(function(a, b) {
+    return a.startTimeMs - b.startTimeMs;
+  });
+  return passes;
+}
+
+function finalizePassWorker(sat, points) {
+  var maxEl = 0;
+  var peakMag = 99;
+  var maxPt = points[0];
+  var isEye = false;
+
+  for (var i = 0; i < points.length; i++) {
+    var pt = points[i];
+    if (pt.elevationDeg > maxEl) {
+      maxEl = pt.elevationDeg;
+      maxPt = pt;
+    }
+    if (pt.vmag < peakMag) {
+      peakMag = pt.vmag;
+    }
+    if (pt.isVisible) {
+      isEye = true;
+    }
+  }
+
+  var startPt = points[0];
+  var endPt = points[points.length - 1];
+  var durSec = points.length >= 2
+    ? Math.max(60, Math.round((endPt.timeMs - startPt.timeMs) / 1000))
+    : 180;
+  var minsFromNow = Math.max(0, Math.round((startPt.timeMs - Date.now()) / 60000));
+
+  return {
+    id: sat.id * 1000000 + (startPt.timeMs % 1000000),
+    satName: sat.name,
+    noradId: sat.id,
+    startTimeMs: startPt.timeMs,
+    maxTimeMs: maxPt.timeMs,
+    endTimeMs: endPt.timeMs,
+    maxElevationDeg: Math.round(maxEl),
+    peakVmag: peakMag === 99 ? 5.0 : peakMag,
+    riseAzimuthDeg: startPt.azimuthDeg,
+    setAzimuthDeg: endPt.azimuthDeg,
+    durationSec: durSec,
+    isVisibleToEye: isEye,
+    minsFromNow: minsFromNow,
+    points: points,
+    line1: sat.line1,
+    line2: sat.line2
+  };
+}
+

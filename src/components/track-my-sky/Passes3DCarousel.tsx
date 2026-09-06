@@ -236,18 +236,23 @@ export function Passes3DCarousel({
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const mouseStartXRef = useRef<number | null>(null);
+  const lastSyncedPassKeyRef = useRef<string>("");
 
-  // Sync index if external selectedPass changes
+  // Sync index only when an external selectedPass arrives from outside
   useEffect(() => {
     if (selectedPass && passes.length > 0) {
-      const idx = passes.findIndex(
-        (p) => p.noradId === selectedPass.noradId && p.startTimeMs === selectedPass.startTimeMs
-      );
-      if (idx !== -1 && idx !== currentIndex) {
-        setCurrentIndex(idx);
+      const passKey = `${selectedPass.noradId}-${selectedPass.startTimeMs}`;
+      if (lastSyncedPassKeyRef.current !== passKey) {
+        lastSyncedPassKeyRef.current = passKey;
+        const idx = passes.findIndex(
+          (p) => p.noradId === selectedPass.noradId && p.startTimeMs === selectedPass.startTimeMs
+        );
+        if (idx !== -1) {
+          setCurrentIndex(idx);
+        }
       }
     }
-  }, [selectedPass, passes, currentIndex]);
+  }, [selectedPass, passes]);
 
   // Keep index in bounds if passes list changes
   useEffect(() => {
@@ -256,12 +261,13 @@ export function Passes3DCarousel({
     }
   }, [passes.length, currentIndex]);
 
-  const selectIndex = useCallback((nextIdx: number) => {
+  const selectIndex = useCallback((nextIdx: number, triggerSelect = true) => {
     if (passes.length === 0) return;
     const bounded = (nextIdx + passes.length) % passes.length;
     setCurrentIndex(bounded);
     const pass = passes[bounded];
-    if (pass) {
+    if (pass && triggerSelect) {
+      lastSyncedPassKeyRef.current = `${pass.noradId}-${pass.startTimeMs}`;
       onSelectPass(pass);
       onSelectSatId(pass.noradId);
     }
@@ -413,31 +419,29 @@ export function Passes3DCarousel({
             const description = getPassDescription(pass);
 
             const absOffset = Math.abs(offset);
-            const xOffset = offset * (absOffset === 1 ? 185 : 315);
-            const rotateY = offset === 0 ? 0 : -Math.sign(offset) * (absOffset === 1 ? 42 : 54);
-            const scale = offset === 0 ? 1 : absOffset === 1 ? 0.86 : 0.72;
+            const xOffset = offset * (absOffset === 1 ? 190 : 320);
+            const rotateY = offset === 0 ? 0 : -Math.sign(offset) * (absOffset === 1 ? 38 : 50);
+            const scale = offset === 0 ? 1 : absOffset === 1 ? 0.88 : 0.74;
             const zIndex = offset === 0 ? 40 : absOffset === 1 ? 25 : 10;
-            const opacity = offset === 0 ? 1 : absOffset === 1 ? 0.65 : 0.25;
-            const blur = offset === 0 ? 0 : absOffset === 1 ? 0.6 : 2.0;
+            const opacity = offset === 0 ? 1 : absOffset === 1 ? 0.75 : 0.35;
 
             return (
               <motion.div
-                key={`coverflow-card-${pass.noradId}-${pass.startTimeMs}-${offset}`}
+                key={`coverflow-card-${pass.noradId}-${pass.startTimeMs}`}
                 animate={{
                   x: xOffset,
                   rotateY: rotateY,
                   scale: scale,
                   opacity: opacity,
-                  filter: `blur(${blur}px)`,
                   zIndex: zIndex,
                 }}
                 transition={{
-                  duration: 0.4,
+                  duration: 0.35,
                   ease: [0.25, 1, 0.5, 1],
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  selectIndex(index);
+                  selectIndex(index, true);
                 }}
                 className={`
                   absolute w-[290px] sm:w-[330px] md:w-[350px] h-[410px] sm:h-[435px]
