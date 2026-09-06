@@ -70,6 +70,16 @@ import { BottomSpacecraftHUD } from "@/components/stargaze/BottomSpacecraftHUD";
 import { SatelliteCapsuleCard } from "@/components/stargaze/SatelliteCapsuleCard";
 import { Planisphere2DRadar } from "@/components/stargaze/Planisphere2DRadar";
 import { MergedPassElevationMagGraph } from "@/components/stargaze/MergedPassElevationMagGraph";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  ReferenceLine,
+} from "recharts";
 import { LockedTelemetryCard } from "@/components/stargaze/LockedTelemetryCard";
 
 const SKY_RADIUS = 280;
@@ -1781,20 +1791,18 @@ const GLOSSARY_TERMS: GlossaryItem[] = [
 
 function StarGazerManualModal({
   onClose,
-  initialTab = "guide",
+  initialTab = "terms",
 }: {
   onClose: () => void;
-  initialTab?: "guide" | "features" | "terms" | "physics";
+  initialTab?: "terms" | "physics";
 }) {
-  const [activeTab, setActiveTab] = useState<"guide" | "features" | "terms" | "physics">(initialTab);
+  const [activeTab, setActiveTab] = useState<"terms" | "physics">(initialTab);
   const [glossaryCategory, setGlossaryCategory] = useState<"all" | "coordinates" | "orbits" | "optics" | "tracking">("all");
   const [glossarySearch, setGlossarySearch] = useState<string>("");
 
   const tabs = [
-    { id: "guide", label: "01 // QUICK START", icon: Zap },
-    { id: "features", label: "02 // SYSTEM CONTROLS", icon: Sliders },
-    { id: "terms", label: "03 // ASTROPHYSICS GLOSSARY", icon: Globe },
-    { id: "physics", label: "04 // GRAPH & PHYSICS", icon: Activity },
+    { id: "terms", label: "01 // ASTROPHYSICS GLOSSARY", icon: Globe },
+    { id: "physics", label: "02 // PASS GRAPH & PHYSICS", icon: Activity },
   ] as const;
 
   const filteredGlossary = useMemo(() => {
@@ -1899,195 +1907,8 @@ function StarGazerManualModal({
                 transition={{ duration: 0.18 }}
                 className="space-y-5"
               >
-                {/* ── TAB 1: QUICK START ── */}
-                {activeTab === "guide" && (
-                  <div className="space-y-4">
-                    {/* Top System Specification Banner */}
-                    <div className="p-4 bg-zinc-950/80 border border-zinc-800 text-zinc-300 font-mono text-xs flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <Radio className="h-4 w-4 text-cyan-400 shrink-0 animate-pulse" />
-                        <div>
-                          <div className="text-cyan-400 font-bold tracking-wider">SGP4 KERNEL PROPAGATION ACTIVE</div>
-                          <div className="text-[11px] text-zinc-400">
-                            Real-time topocentric equatorial & horizontal coordinate propagation for observer site.
-                          </div>
-                        </div>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-2 text-[10px] bg-black px-3 py-1.5 border border-zinc-800">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span className="text-zinc-300 font-bold">LIVE TELEMETRY</span>
-                      </div>
-                    </div>
 
-                    {/* Step Cards 2x2 Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      <div className="p-4 bg-zinc-950/60 border border-zinc-800 hover:border-cyan-500/40 transition-all duration-200 space-y-2 group">
-                        <div className="font-mono text-xs font-bold text-cyan-400 flex items-center gap-2.5">
-                          <span className="w-6 h-6 bg-cyan-950/50 border border-cyan-500/40 text-cyan-400 flex items-center justify-center text-[10px] font-mono group-hover:bg-cyan-500/20 transition">
-                            01
-                          </span>
-                          <span className="tracking-wider uppercase">Observer Site Calibration</span>
-                        </div>
-                        <p className="text-zinc-300 text-xs leading-relaxed">
-                          Click <strong>Use My Location</strong> to acquire live browser GPS coordinates (WGS84 lat, lon, alt) or choose from preset observatory coordinates in the site catalog dropdown.
-                        </p>
-                        <div className="pt-1 flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                          <MapPin className="h-3 w-3 text-cyan-400" />
-                          <span>WGS84 Reference Ellipsoid</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-zinc-950/60 border border-zinc-800 hover:border-cyan-500/40 transition-all duration-200 space-y-2 group">
-                        <div className="font-mono text-xs font-bold text-cyan-400 flex items-center gap-2.5">
-                          <span className="w-6 h-6 bg-cyan-950/50 border border-cyan-500/40 text-cyan-400 flex items-center justify-center text-[10px] font-mono group-hover:bg-cyan-500/20 transition">
-                            02
-                          </span>
-                          <span className="tracking-wider uppercase">3D Sky Dome Navigation</span>
-                        </div>
-                        <p className="text-zinc-300 text-xs leading-relaxed">
-                          Use <strong>Left-Click + Drag</strong> to tilt and orbit around your sky dome. Use <strong>Scroll Wheel</strong> to adjust camera altitude distance, and <strong>Right-Click + Drag</strong> to pan.
-                        </p>
-                        <div className="pt-1 flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                          <Compass className="h-3 w-3 text-cyan-400" />
-                          <span>Orbit Controls Engine</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-zinc-950/60 border border-zinc-800 hover:border-amber-500/40 transition-all duration-200 space-y-2 group">
-                        <div className="font-mono text-xs font-bold text-amber-400 flex items-center gap-2.5">
-                          <span className="w-6 h-6 bg-amber-950/50 border border-amber-500/40 text-amber-400 flex items-center justify-center text-[10px] font-mono group-hover:bg-amber-500/20 transition">
-                            03
-                          </span>
-                          <span className="tracking-wider uppercase">Target Lock & Sight Line</span>
-                        </div>
-                        <p className="text-zinc-300 text-xs leading-relaxed">
-                          Click any 3D green satellite node in the celestial dome or select one from the right panel. Click <strong>Aim Robot Sight & Track Camera</strong> to lock camera focus and fire a golden tracking laser vector.
-                        </p>
-                        <div className="pt-1 flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                          <Target className="h-3 w-3 text-amber-400" />
-                          <span>Golden Laser Vector (#f59e0b)</span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-zinc-950/60 border border-zinc-800 hover:border-pink-500/40 transition-all duration-200 space-y-2 group">
-                        <div className="font-mono text-xs font-bold text-pink-400 flex items-center gap-2.5">
-                          <span className="w-6 h-6 bg-pink-950/50 border border-pink-500/40 text-pink-400 flex items-center justify-center text-[10px] font-mono group-hover:bg-pink-500/20 transition">
-                            04
-                          </span>
-                          <span className="tracking-wider uppercase">Time-Warp Orbital Scrubber</span>
-                        </div>
-                        <p className="text-zinc-300 text-xs leading-relaxed">
-                          Click <strong>Simulate Time</strong> to open the 24-hour timeline scrubber. Drag the slider to fast-forward (+1x to +120x) or rewind time to watch satellites travel their projected pink orbital trajectories.
-                        </p>
-                        <div className="pt-1 flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                          <Clock className="h-3 w-3 text-pink-400" />
-                          <span>24h Trajectory Spline (#ec4899)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick Keybindings Reference Table */}
-                    <div className="p-4 bg-zinc-950/60 border border-zinc-800 space-y-3 font-mono">
-                      <div className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-2">
-                        <Command className="h-3.5 w-3.5 text-cyan-400" />
-                        <span>Interactive Viewport Controls Cheat Sheet</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                        <div className="p-2.5 bg-black border border-zinc-800">
-                          <div className="text-cyan-400 font-bold">LEFT CLICK + DRAG</div>
-                          <div className="text-zinc-400 text-[10px]">Rotate 3D Sky Dome</div>
-                        </div>
-                        <div className="p-2.5 bg-black border border-zinc-800">
-                          <div className="text-cyan-400 font-bold">RIGHT CLICK + DRAG</div>
-                          <div className="text-zinc-400 text-[10px]">Pan Camera Origin</div>
-                        </div>
-                        <div className="p-2.5 bg-black border border-zinc-800">
-                          <div className="text-cyan-400 font-bold">SCROLL WHEEL</div>
-                          <div className="text-zinc-400 text-[10px]">Zoom Viewport Distance</div>
-                        </div>
-                        <div className="p-2.5 bg-black border border-zinc-800">
-                          <div className="text-amber-400 font-bold">SIGHT LOCK BUTTON</div>
-                          <div className="text-zinc-400 text-[10px]">Deploy Laser Ray</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── TAB 2: SYSTEM CONTROLS ── */}
-                {activeTab === "features" && (
-                  <div className="space-y-4 font-mono text-xs">
-                    <div className="p-4.5 bg-zinc-950/60 border border-zinc-800 space-y-4">
-                      <div className="font-sans text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-800 pb-3">
-                        <Sliders className="h-4 w-4 text-cyan-400" />
-                        <span>StarGazer Telemetry Engine & Interface Specifications</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-zinc-300 font-sans">
-                        <div className="p-3.5 bg-black border border-zinc-800 hover:border-cyan-500/30 transition">
-                          <div className="font-mono font-bold text-cyan-400 text-xs mb-1 flex items-center gap-2">
-                            <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-                            GPS Telemetry Engine
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            Queries browser Geolocation API for WGS84 latitude, longitude, and elevation. Computes observer local sidereal time and zenith projection vector.
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 bg-black border border-zinc-800 hover:border-cyan-500/30 transition">
-                          <div className="font-mono font-bold text-cyan-400 text-xs mb-1 flex items-center gap-2">
-                            <Clock className="h-3.5 w-3.5 text-cyan-400" />
-                            24-Hour Pass Predictor
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            Filters satellites with upcoming horizon passes over the observer site within a 24-hour window, calculating AOS (Acquisition of Signal) and LOS (Loss of Signal).
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 bg-black border border-pink-500/30 hover:border-pink-500/50 transition">
-                          <div className="font-mono font-bold text-pink-400 text-xs mb-1 flex items-center gap-2">
-                            <Activity className="h-3.5 w-3.5 text-pink-400" />
-                            Pink Orbit Trajectories (#ec4899)
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            Renders projected topocentric horizon paths over a 24-hour orbital propagation window using 3D line splines.
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 bg-black border border-emerald-500/30 hover:border-emerald-500/50 transition">
-                          <div className="font-mono font-bold text-emerald-400 text-xs mb-1 flex items-center gap-2">
-                            <Globe className="h-3.5 w-3.5 text-emerald-400" />
-                            Green 3D Node Mesh (#10b981)
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            3D satellite model with solar array geometry scaled to planetarium coordinates, orientation-aligned to orbital velocity vector.
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 bg-black border border-amber-500/30 hover:border-amber-500/50 transition">
-                          <div className="font-mono font-bold text-amber-400 text-xs mb-1 flex items-center gap-2">
-                            <Target className="h-3.5 w-3.5 text-amber-400" />
-                            Golden Laser Vector (#f59e0b)
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            Line-of-sight tracking laser beam from observer origin (0,0,0) directly to target satellite coordinates with real-time camera tracking.
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 bg-black border border-cyan-500/30 hover:border-cyan-500/50 transition">
-                          <div className="font-mono font-bold text-cyan-400 text-xs mb-1 flex items-center gap-2">
-                            <Eye className="h-3.5 w-3.5 text-cyan-400" />
-                            Naked-Eye Visibility Filter
-                          </div>
-                          <div className="text-[11px] text-zinc-400 leading-relaxed">
-                            Physically screens for dark sky observer (Sun position &le; -6°), sunlit satellite, and visual magnitude V_mag &le; +6.0.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── TAB 3: ASTRODYNAMICS GLOSSARY (STARGAZE DOSSIER UI) ── */}
+                {/* ── TAB 1: ASTRODYNAMICS GLOSSARY (STARGAZE DOSSIER UI) ── */}
                 {activeTab === "terms" && (
                   <div className="space-y-4">
                     {/* Controls Bar: Category Filters & Real-Time Search */}
@@ -2221,7 +2042,7 @@ function StarGazerManualModal({
                   </div>
                 )}
 
-                {/* ── TAB 4: GRAPH & PHYSICS LOGIC ── */}
+                {/* ── TAB 2: PASS GRAPH & PHYSICS ── */}
                 {activeTab === "physics" && (
                   <div className="space-y-4 font-sans text-xs">
                     {/* ANNOTATED REAL SATELLITE PASS GRAPH SPECIMEN */}
@@ -2236,19 +2057,82 @@ function StarGazerManualModal({
                         </span>
                       </div>
 
-                      {/* Render SatellitePassGraph Specimen */}
-                      <div className="my-1.5 p-2 bg-black border border-zinc-800">
-                        <SatellitePassGraph points={SAMPLE_PASS_POINTS} />
+                      {/* Recharts AreaChart — mirrors MergedPassElevationMagGraph */}
+                      <div className="my-1.5">
+                        {/* Header row identical to live graph */}
+                        <div className="flex items-start justify-between gap-3 border-b border-zinc-800 pb-2 mb-2">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <Activity className="h-3.5 w-3.5 text-[#00e5ff] shrink-0" />
+                              <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono">
+                                PASS PROFILE — ISS (ZARYA) · SPECIMEN
+                              </h3>
+                            </div>
+                            <p className="text-[10px] text-zinc-400 font-mono">
+                              Topocentric elevation (<span className="text-[#00e5ff] font-bold">° cyan</span>) &amp; visual magnitude (<span className="text-emerald-400 font-bold">mᵥ emerald</span>).
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[9px] font-mono text-[#00e5ff] border border-cyan-500/30 bg-cyan-950/20 px-1.5 py-0.5">Peak 75°</span>
+                            <span className="text-[9px] font-mono text-emerald-400 border border-emerald-500/30 bg-emerald-950/20 px-1.5 py-0.5">Bright +1.8 mᵥ</span>
+                          </div>
+                        </div>
+                        {/* Chart */}
+                        <div className="h-44 w-full bg-zinc-950/80 p-1.5 border border-zinc-900">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart
+                              data={SAMPLE_PASS_POINTS.map((p) => ({
+                                time: p.timeStr,
+                                elevation: p.elevationDeg,
+                                magnitude: p.magnitude,
+                                slantRange: Math.round(520 + Math.abs(p.elevationDeg - 75) * 15),
+                              }))}
+                              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                            >
+                              <CartesianGrid strokeDasharray="2 2" stroke="#27272a" opacity={0.5} />
+                              <XAxis dataKey="time" stroke="#71717a" fontSize={9} tickLine={false} interval="preserveStartEnd" />
+                              <YAxis yAxisId="elevation" orientation="left" domain={[0, 90]} stroke="#00e5ff" fontSize={9} tickLine={false} tickFormatter={(v) => `${Math.round(v)}°`} />
+                              <YAxis yAxisId="magnitude" orientation="right" domain={[1, 7]} reversed stroke="#10b981" fontSize={9} tickLine={false} tickFormatter={(v) => `+${v.toFixed(1)}`} />
+                              <Tooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const d = payload[0].payload;
+                                    return (
+                                      <div className="bg-black/95 border border-zinc-700 p-2 text-[11px] text-zinc-200 shadow-2xl space-y-0.5 font-mono">
+                                        <div className="text-cyan-400 font-bold border-b border-zinc-800 pb-0.5">T: {d.time}</div>
+                                        <div className="flex justify-between gap-3 text-cyan-300"><span>Elevation:</span><strong>{d.elevation}°</strong></div>
+                                        <div className="flex justify-between gap-3 text-emerald-300"><span>Visual Mag:</span><strong>+{d.magnitude} mᵥ</strong></div>
+                                        <div className="flex justify-between gap-3 text-zinc-400 text-[10px]"><span>Slant Range:</span><span>{d.slantRange} km</span></div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <ReferenceLine yAxisId="elevation" x="05:32 PM" stroke="#00e5ff" strokeWidth={1.5} strokeDasharray="3 3" label={{ value: "TCA", position: "top", fill: "#00e5ff", fontSize: 9, fontFamily: "monospace" }} />
+                              <Area yAxisId="elevation" type="monotone" dataKey="elevation" stroke="#00e5ff" strokeWidth={2} fill="#00e5ff" fillOpacity={0.12} isAnimationActive={false} dot={{ r: 2.5, fill: "#00e5ff", stroke: "#000000", strokeWidth: 1 }} activeDot={{ r: 4.5, fill: "#ffffff", stroke: "#00e5ff", strokeWidth: 2 }} />
+                              <Area yAxisId="magnitude" type="monotone" dataKey="magnitude" stroke="#10b981" strokeWidth={2} fill="#10b981" fillOpacity={0.12} isAnimationActive={false} dot={{ r: 2.5, fill: "#10b981", stroke: "#000000", strokeWidth: 1 }} activeDot={{ r: 4.5, fill: "#ffffff", stroke: "#10b981", strokeWidth: 2 }} />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                        {/* Bottom legend row */}
+                        <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 pt-1.5 border-t border-zinc-900 mt-1.5">
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#00e5ff]" />Elevation° (Left Axis)</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" />Visual Mag mᵥ (Right Axis)</span>
+                          </div>
+                          <span className="text-zinc-500">Inc: 51.6° · Pass Window: ±7m from TCA</span>
+                        </div>
                       </div>
 
-                      {/* Callout Legend Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                        <div className="p-3 bg-black border border-pink-500/30 flex items-start gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shrink-0 mt-1 shadow-[0_0_8px_#ec4899]" />
+                      {/* Callout Legend Grid — updated for new chart */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] mt-3">
+                        <div className="p-3 bg-black border border-cyan-500/30 flex items-start gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#00e5ff] shrink-0 mt-1 shadow-[0_0_8px_#00e5ff]" />
                           <div>
-                            <div className="font-mono font-bold text-pink-300 text-xs">Solid Pink Curve (Elevation)</div>
+                            <div className="font-mono font-bold text-cyan-300 text-xs">Cyan Area — Elevation Angle (°)</div>
                             <div className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-                              Tracks vertical angle from 0° (Horizon Rise) up to 75° (Peak Zenith) and down to 0° (Horizon Set).
+                              Left Y-axis (0°–90°). Traces the satellite rising from the horizon (AOS), peaking at TCA (75° zenith), then descending to LOS. Each plotted dot is a 1-minute propagated position from the SGP4 kernel.
                             </div>
                           </div>
                         </div>
@@ -2256,19 +2140,19 @@ function StarGazerManualModal({
                         <div className="p-3 bg-black border border-emerald-500/30 flex items-start gap-2.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 mt-1 shadow-[0_0_8px_#10b981]" />
                           <div>
-                            <div className="font-mono font-bold text-emerald-300 text-xs">Dashed Green Curve (Visual Mag)</div>
+                            <div className="font-mono font-bold text-emerald-300 text-xs">Emerald Area — Visual Magnitude (mᵥ)</div>
                             <div className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-                              Calculates visual magnitude V_mag over time. Peaks at +1.8 (maximum brightness) near zenith.
+                              Right Y-axis (inverted: lower = brighter). Peaks at +1.8 mᵥ at zenith. Values above +6.0 mᵥ fall below naked-eye threshold. Follows Pogson's logarithmic photometry law.
                             </div>
                           </div>
                         </div>
 
-                        <div className="p-3 bg-black border border-red-500/30 flex items-start gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1 shadow-[0_0_8px_#ef4444] animate-ping" />
+                        <div className="p-3 bg-black border border-cyan-500/20 flex items-start gap-2.5">
+                          <span className="w-2.5 h-px bg-[#00e5ff] shrink-0 mt-1.5 border-t border-dashed border-cyan-400 w-5" />
                           <div>
-                            <div className="font-mono font-bold text-red-300 text-xs">Red Laser Cursor (Current Time)</div>
+                            <div className="font-mono font-bold text-cyan-300 text-xs">Dashed Vertical — TCA Reference Line</div>
                             <div className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-                              Sweeps across trajectory timeline to pinpoint instantaneous satellite location in real time.
+                              Marks Time of Closest Approach (05:32 PM) — the moment of minimum slant range, peak brightness, and maximum angular slew rate. Hover the chart for per-point slant range in km.
                             </div>
                           </div>
                         </div>
@@ -2276,9 +2160,9 @@ function StarGazerManualModal({
                         <div className="p-3 bg-black border border-purple-500/30 flex items-start gap-2.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shrink-0 mt-1 shadow-[0_0_8px_#a855f7]" />
                           <div>
-                            <div className="font-mono font-bold text-purple-300 text-xs">Inc Tag & Altitude Scale</div>
+                            <div className="font-mono font-bold text-purple-300 text-xs">Interactive Hover Tooltip</div>
                             <div className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
-                              Inc: 51.6° is orbital inclination tilt. Y-axis marks 90° (Zenith), 45° (Mid-sky), and 0° (Horizon).
+                              Hover over any point on the live graph overlay to read Elevation°, Visual Magnitude mᵥ, and Slant Range (km) at that UTC timestamp. Active on live observatory passes.
                             </div>
                           </div>
                         </div>
@@ -2601,7 +2485,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [selectedSat, setSelectedSat] = useState<ComputedSatelliteSkyState | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showManual, setShowManual] = useState<boolean>(false);
-  const [manualInitialTab, setManualInitialTab] = useState<"guide" | "features" | "terms" | "physics">("guide");
+  const [manualInitialTab, setManualInitialTab] = useState<"terms" | "physics">("terms");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -3122,7 +3006,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
         is180DomeView={is180DomeView}
         onToggle180DomeView={toggle180DomeView}
         onOpenManual={() => {
-          setManualInitialTab("guide");
+          setManualInitialTab("terms");
           setShowManual(true);
         }}
         onOpenGlossary={() => {

@@ -275,13 +275,6 @@ export function TopFloatingNav({
             </button>
           )}
 
-          <button
-            onClick={onOpenManual}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition cursor-pointer"
-          >
-            <BookOpen className="h-2.5 w-2.5 text-emerald-400" />
-            <span>Docs &amp; Guide</span>
-          </button>
         </nav>
 
         {/* Quick Layer Controls - Flat 1px borders */}
