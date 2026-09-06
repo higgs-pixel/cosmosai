@@ -27,7 +27,7 @@ interface GlitterStar {
   depth: number;
 }
 
-function StarfieldGlitterCanvas() {
+const StarfieldGlitterCanvas = memo(function StarfieldGlitterCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -198,7 +198,7 @@ function StarfieldGlitterCanvas() {
       style={{ display: "block" }}
     />
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Passes 3D Cover Flow Carousel Component

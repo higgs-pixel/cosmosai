@@ -35,6 +35,9 @@ function SkyPassAnalytics({
   timeMs,
   selectedPass,
 }: SkyPassAnalyticsProps) {
+  // Quantize pass profile curve computation to 20-second buckets so Recharts doesn't re-render SVG paths every second
+  const profileTimeBucket = Math.floor(timeMs / 20000) * 20000;
+
   // Real SGP4 pass profile trajectory data points for the selected satellite (15 smooth sample points)
   const passProfileData = useMemo(() => {
     const totalSamples = 15;
@@ -108,7 +111,7 @@ function SkyPassAnalytics({
           const pts = [];
           const windowSpanMs = 14 * 60_000;
           const stepMs = windowSpanMs / (totalSamples - 1);
-          const startMs = timeMs - 7 * 60_000;
+          const startMs = profileTimeBucket - 7 * 60_000;
 
           for (let i = 0; i < totalSamples; i++) {
             const curTime = new Date(startMs + i * stepMs);
@@ -120,7 +123,7 @@ function SkyPassAnalytics({
               const el = parseFloat(satellite.radiansToDegrees(look.elevation).toFixed(1));
               const slant = Math.round(look.rangeSat);
               const mag = estimateVisualMagnitude(selectedSat.satName, selectedSat.category || "Active", slant, 1.0);
-              const offsetMin = Math.round((startMs + i * stepMs - timeMs) / 60_000);
+              const offsetMin = Math.round((startMs + i * stepMs - profileTimeBucket) / 60_000);
               const label = offsetMin === 0 ? "Now" : `${offsetMin > 0 ? "+" : ""}${offsetMin}m`;
 
               pts.push({
@@ -151,7 +154,7 @@ function SkyPassAnalytics({
       });
     }
     return fallbackPts;
-  }, [selectedSat, selectedPass, observer, timeMs]);
+  }, [selectedSat?.satId, selectedPass?.startTimeMs, observer.lat, observer.lon, profileTimeBucket]);
 
   // Group visible satellites by category
   const categoryData = useMemo(() => {
