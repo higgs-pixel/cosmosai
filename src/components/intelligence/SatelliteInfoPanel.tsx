@@ -96,7 +96,7 @@ const SATELLITE_DB: Record<number, SatelliteInfo> = {
   // ── 48274: Tiangong Space Station ─────────────────────────────────────────
   48274: {
     name: "Tiangong Space Station (CSS — China Space Station)",
-    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/China_Space_Station_Animation.gif/600px-China_Space_Station_Animation.gif"),
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/25/Chinese_Tiangong_Space_Station.jpg"),
     wikipediaUrl: "https://en.wikipedia.org/wiki/Tiangong_space_station",
     agency: "CNSA (China National Space Administration)",
     country: "People's Republic of China",
@@ -120,12 +120,12 @@ const SATELLITE_DB: Record<number, SatelliteInfo> = {
       {
         title: "Space-Time Precision Metrology with Cold Atoms",
         desc: "Tiangong's cold-atom clock ensemble achieves unprecedented microgravity time precision, enabling fundamental tests of general relativity (gravitational redshift) and advancing 6G satellite-based precision timing networks.",
-        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/China_Space_Station_Animation.gif/600px-China_Space_Station_Animation.gif")
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Caesium_clock_block.svg/330px-Caesium_clock_block.svg.png")
       },
       {
         title: "Full Multigenerational Space Crop Cultivation",
         desc: "Completed full lifecycle germination-to-seed cultivation of rice (Oryza sativa) and arabidopsis in microgravity from seed-to-seed, demonstrating viability of closed-loop food production for future deep space habitats.",
-        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/China_Space_Station_Animation.gif/600px-China_Space_Station_Animation.gif")
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/3/32/ISS-46_Zinnia_flower_in_the_Cupola_%282%29.jpg")
       }
     ],
     links: [
@@ -133,6 +133,77 @@ const SATELLITE_DB: Record<number, SatelliteInfo> = {
       { label: "CMS Tiangong", url: "http://www.cmse.gov.cn/" }
     ],
     tags: ["Space Station", "Modular", "Crewed", "CNSA", "China"]
+  },
+
+  // ── 53239: Wentian Laboratory Cabin Module ──────────────────────────────────
+  53239: {
+    name: "Wentian Laboratory Cabin Module (Tiangong LCM-1)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/7/74/Wentian_lab_module_rendering.jpg"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Wentian_module",
+    agency: "CNSA (China National Space Administration)",
+    country: "People's Republic of China",
+    launchDate: "2022-07-24",
+    launchSite: "Wenchang Spacecraft Launch Site, Hainan, China",
+    launchVehicle: "Long March 5B (Y3)",
+    purpose: "First laboratory module docked to the Tiangong space station. Houses life science experiment racks for space genetics, developmental biology, and biotechnology research. Features an advanced airlock cabin with a 1-meter external hatch for spacewalks and a dedicated 5-meter robotic arm for exterior payload manipulation.",
+    status: "Operational",
+    orbit: "LEO ~ 390 km altitude × 41.5° inclination",
+    mass: "23,000 kg (wet mass at launch)",
+    dimensions: "17.9 m length × 4.2 m diameter with 55 m solar wingspan",
+    power: "Flexible GaAs thin-film solar wings providing >13.5 kW",
+    instruments: [
+      "Life & Ecology Science Experiment Rack (Arabidopsis, zebrafish, nematodes)",
+      "Biotechnology Science Experiment Rack (cell growth, protein crystals)",
+      "Science Glovebox and Low-Temperature Storage Rack (-80°C to +4°C)",
+      "5-meter Dexterous Secondary Robotic Arm (25-ton load capacity)"
+    ],
+    discoveries: [
+      {
+        title: "Zero-Gravity Aquatic Ecosystem Experiment",
+        desc: "Maintained closed-loop microgravity aquatic ecology with zebrafish and hornwort algae inside Wentian, observing vertebrate development and bone density adaptation in microgravity.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/7/74/Wentian_lab_module_rendering.jpg")
+      }
+    ],
+    links: [
+      { label: "CMSA Wentian", url: "http://www.cmse.gov.cn/" }
+    ],
+    tags: ["Space Station", "Laboratory", "Tiangong", "Wentian", "CNSA"]
+  },
+
+  // ── 54216: Mengtian Laboratory Cabin Module ─────────────────────────────────
+  54216: {
+    name: "Mengtian Laboratory Cabin Module (Tiangong LCM-2)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/0/02/Mengtian_lab_module_rendering.jpg"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Mengtian_module",
+    agency: "CNSA (China National Space Administration)",
+    country: "People's Republic of China",
+    launchDate: "2022-10-31",
+    launchSite: "Wenchang Spacecraft Launch Site, Hainan, China",
+    launchVehicle: "Long March 5B (Y4)",
+    purpose: "Second laboratory module docked to Tiangong, completing the T-shape configuration. Dedicated to microgravity physical sciences, fluid physics, materials science, combustion research, and fundamental physics experiments. Features a specialized cargo airlock and robotic payload deployer to release CubeSats directly into orbit.",
+    status: "Operational",
+    orbit: "LEO ~ 392 km altitude × 41.5° inclination",
+    mass: "23,000 kg (wet mass at launch)",
+    dimensions: "17.9 m length × 4.2 m diameter with 55 m solar wingspan",
+    power: "Flexible GaAs solar wings providing >13.5 kW",
+    instruments: [
+      "Cold Atom Physics Experiment Rack (Bose-Einstein Condensate cooling to pK)",
+      "High-Precision Time-Frequency System (Hydrogen + Rubidium + Cold Atom Ensemble)",
+      "Two-Phase System Experiment Rack (fluid dynamics & heat pipe physics)",
+      "Combustion Science Experiment Rack (microgravity soot formation & flame spread)",
+      "Automated Cargo Airlock and Payload Deployer"
+    ],
+    discoveries: [
+      {
+        title: "Space-Based Bose-Einstein Condensate Creation",
+        desc: "Created ultracold atomic clouds cooled to picokelvin temperatures in Mengtian's Cold Atom Physics Rack, demonstrating quantum macroscopic wave phenomena unperturbed by Earth's gravity.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Caesium_clock_block.svg/330px-Caesium_clock_block.svg.png")
+      }
+    ],
+    links: [
+      { label: "CMSA Mengtian", url: "http://www.cmse.gov.cn/" }
+    ],
+    tags: ["Space Station", "Laboratory", "Tiangong", "Mengtian", "Microgravity Physics"]
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -477,6 +548,158 @@ const SATELLITE_DB: Record<number, SatelliteInfo> = {
       { label: "NavIC Official", url: "https://www.navicindia.org/" }
     ],
     tags: ["NavIC", "Navigation", "GNSS", "ISRO", "India", "Geostationary"]
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HELIOPHYSICS & MAGNETOSPHERE EXPLORATION
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── 40482: MMS 1 ──────────────────────────────────────────────────────────
+  40482: {
+    name: "MMS 1 (Magnetospheric Multiscale Observatory 1)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/b/b3/Artist_depiction_of_MMS_spacecraft_%28SVS12239%29.png"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission",
+    agency: "NASA Goddard Space Flight Center",
+    country: "United States",
+    launchDate: "2015-03-13",
+    launchSite: "Cape Canaveral Space Force Station SLC-41, Florida, USA",
+    launchVehicle: "Atlas V 421 (AV-053)",
+    purpose: "First of four identical NASA spacecraft flying in an ultra-precise tetrahedral formation through Earth's magnetosphere. Investigates magnetic reconnection—a fundamental universal plasma physics process where magnetic topology explosively reconfigures, converting magnetic energy into kinetic particle acceleration and intense thermal energy driving solar storms, auroras, and coronal mass ejection impacts.",
+    status: "Operational",
+    orbit: "HEO ~ 1,800 km × 153,000 km (apogee into day-side and night-side magnetotail) × 28.5° inclination",
+    mass: "1,360 kg (wet mass with 410 kg hydrazine)",
+    dimensions: "3.5 m diameter × 1.2 m height octagonal prism with four 60 m wire booms",
+    power: "625 W from eight body-mounted GaAs solar panels",
+    instruments: [
+      "FPI — Fast Plasma Investigation (measures electron distributions at 30 ms and ions at 150 ms resolution)",
+      "FIELDS — Electric & Magnetic Field suite (Fluxgate Magnetometers & 60m wire double probes)",
+      "HPCA — Hot Plasma Composition Analyzer (mass spectrometer distinguishing H+, He+, He++, O+)",
+      "EPD — Energetic Particle Detector suite (FEEPS & EIS for 20 keV to >1 MeV particles)",
+      "ASPOC — Active Spacecraft Potential Control (indium liquid metal ion emitters for zero-bias)"
+    ],
+    discoveries: [
+      {
+        title: "Direct Electron-Scale Magnetic Reconnection Observed",
+        desc: "First direct in-situ measurement of the electron diffusion region where magnetic reconnection initiates, demonstrating that electron inertia breaks the frozen-in magnetic condition at sub-kilometer scales.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/24/Reconnection.gif")
+      }
+    ],
+    links: [
+      { label: "NASA MMS Mission", url: "https://www.nasa.gov/mission_pages/mms/index.html" },
+      { label: "SwRI Science Center", url: "https://mms.space.swri.edu/" }
+    ],
+    tags: ["Heliophysics", "Magnetosphere", "NASA", "Space Weather", "Formation Flying"]
+  },
+
+  // ── 40483: MMS 2 ──────────────────────────────────────────────────────────
+  40483: {
+    name: "MMS 2 (Magnetospheric Multiscale Observatory 2)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/b/b3/Artist_depiction_of_MMS_spacecraft_%28SVS12239%29.png"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission",
+    agency: "NASA Goddard Space Flight Center",
+    country: "United States",
+    launchDate: "2015-03-13",
+    launchSite: "Cape Canaveral Space Force Station SLC-41, Florida, USA",
+    launchVehicle: "Atlas V 421 (AV-053)",
+    purpose: "Second observatory of NASA's MMS tetrahedral constellation. Together with MMS 1, 3, and 4, maintains inter-spacecraft separations adjustable down to just 7 km to reconstruct true 3D spatial gradients and curlometer magnetic field currents in the magnetopause and magnetotail.",
+    status: "Operational",
+    orbit: "HEO ~ 1,800 km × 153,000 km × 28.5° inclination",
+    mass: "1,360 kg (wet)",
+    dimensions: "3.5 m diameter × 1.2 m height with four 60 m radial wire booms",
+    power: "625 W GaAs solar array",
+    instruments: [
+      "FPI — Fast Plasma Investigation (millisecond electron/ion spectrometers)",
+      "FIELDS — Electric Double Probes & Search-Coil Magnetometers (SCM)",
+      "HPCA — Hot Plasma Composition Analyzer (ion composition 1 eV to 40 keV)",
+      "EPD — Energetic Particle Detector (FEEPS/EIS)",
+      "ASPOC — Spacecraft Potential Neutralization"
+    ],
+    discoveries: [
+      {
+        title: "3D Current Sheet Geometry Reconstruction",
+        desc: "Utilized four-point tetrahedral timing measurements to calculate the 3D velocity and curl of current sheets during explosive reconnection in Earth's magnetosheath.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/24/Reconnection.gif")
+      }
+    ],
+    links: [
+      { label: "NASA MMS", url: "https://www.nasa.gov/mission_pages/mms/index.html" },
+      { label: "SwRI Science", url: "https://mms.space.swri.edu/" }
+    ],
+    tags: ["Heliophysics", "Magnetosphere", "NASA", "Space Weather"]
+  },
+
+  // ── 40484: MMS 3 ──────────────────────────────────────────────────────────
+  40484: {
+    name: "MMS 3 (Magnetospheric Multiscale Observatory 3)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/b/b3/Artist_depiction_of_MMS_spacecraft_%28SVS12239%29.png"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission",
+    agency: "NASA Goddard Space Flight Center",
+    country: "United States",
+    launchDate: "2015-03-13",
+    launchSite: "Cape Canaveral Space Force Station SLC-41, Florida, USA",
+    launchVehicle: "Atlas V 421 (AV-053)",
+    purpose: "Third observatory of NASA's MMS tetrahedral constellation. Flies in synchronized multi-point formation measuring the 3D structure of turbulent magnetic dissipation and particle acceleration in Earth's protective bow shock and magnetopause boundary.",
+    status: "Operational",
+    orbit: "HEO ~ 1,800 km × 153,000 km × 28.5° inclination",
+    mass: "1,360 kg (wet mass)",
+    dimensions: "3.5 m diameter × 1.2 m height with four 60 m wire booms",
+    power: "625 W body-mounted solar array",
+    instruments: [
+      "FPI — Fast Plasma Investigation (millisecond electron/ion spectrometers)",
+      "FIELDS — Digital Fluxgate & Search-Coil Magnetometers + Electric Double Probes",
+      "HPCA — Hot Plasma Composition Analyzer (mass spectrometry)",
+      "EPD — Energetic Particle Detector (FEEPS & EIS)",
+      "ASPOC — Active Spacecraft Potential Control"
+    ],
+    discoveries: [
+      {
+        title: "Discovery of Turbulent Magnetic Reconnection",
+        desc: "MMS 3 revealed that reconnection occurs inside turbulent plasma eddies smaller than previously thought possible, demonstrating universal electron-scale turbulence mechanisms.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/24/Reconnection.gif")
+      }
+    ],
+    links: [
+      { label: "NASA MMS", url: "https://www.nasa.gov/mission_pages/mms/index.html" },
+      { label: "SwRI Science", url: "https://mms.space.swri.edu/" }
+    ],
+    tags: ["Heliophysics", "Magnetosphere", "NASA", "Space Science"]
+  },
+
+  // ── 40485: MMS 4 ──────────────────────────────────────────────────────────
+  40485: {
+    name: "MMS 4 (Magnetospheric Multiscale Observatory 4)",
+    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/b/b3/Artist_depiction_of_MMS_spacecraft_%28SVS12239%29.png"),
+    wikipediaUrl: "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission",
+    agency: "NASA Goddard Space Flight Center",
+    country: "United States",
+    launchDate: "2015-03-13",
+    launchSite: "Cape Canaveral Space Force Station SLC-41, Florida, USA",
+    launchVehicle: "Atlas V 421 (AV-053)",
+    purpose: "Fourth observatory completing the NASA MMS tetrahedron. Measures high-frequency electric waves, magnetic fluctuations, and energetic ions to track geomagnetic storm triggering in real time.",
+    status: "Operational",
+    orbit: "HEO ~ 1,800 km × 153,000 km × 28.5° inclination",
+    mass: "1,360 kg (wet)",
+    dimensions: "3.5 m diameter × 1.2 m height octagonal prism",
+    power: "625 W solar array",
+    instruments: [
+      "FPI — Fast Plasma Investigation (millisecond plasma sensors)",
+      "FIELDS — Triaxial Fluxgate & Electric Field Probes",
+      "HPCA — Hot Plasma Composition Analyzer",
+      "EPD — Energetic Particle Detector",
+      "ASPOC — Spacecraft Potential Controller"
+    ],
+    discoveries: [
+      {
+        title: "Wave-Particle Energy Transfer in Earth's Bow Shock",
+        desc: "Resolved kinetic whistler and ion-cyclotron waves transferring solar wind kinetic energy directly into plasma thermal heating at Earth's shock front.",
+        imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/24/Reconnection.gif")
+      }
+    ],
+    links: [
+      { label: "NASA MMS", url: "https://www.nasa.gov/mission_pages/mms/index.html" },
+      { label: "SwRI Science", url: "https://mms.space.swri.edu/" }
+    ],
+    tags: ["Heliophysics", "Magnetosphere", "NASA", "Space Science"]
   }
 };
 
@@ -489,6 +712,45 @@ function inferSatelliteInfo(name: string, category: string): Partial<SatelliteIn
   const n = name.toUpperCase();
   const { agency, country } = inferAgencyAndCountry(name, category);
   const cleanName = name.replace(/\(.*\)/g, '').trim();
+
+  // ══ MMS HELIOPHYSICS MISSIONS ══════════════════════════════════════════════
+  if (n.match(/\bMMS\b/) || n.startsWith("MMS ") || n.startsWith("MMS-") || n.includes("MAGNETOSPHERIC MULTISCALE")) {
+    return {
+      name: `MMS (${cleanName || "Magnetospheric Multiscale"})`,
+      imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/b/b3/Artist_depiction_of_MMS_spacecraft_%28SVS12239%29.png"),
+      wikipediaUrl: "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission",
+      agency: "NASA Goddard Space Flight Center",
+      country: "United States",
+      launchDate: "2015-03-13",
+      launchSite: "Cape Canaveral Space Force Station SLC-41, Florida, USA",
+      launchVehicle: "Atlas V 421",
+      purpose: "NASA robotic mission comprising four identical spacecraft flying in an adjustable tetrahedron formation through Earth's magnetosphere to study magnetic reconnection—a fundamental universal plasma physics process that drives solar flares and auroral geomagnetic substorms.",
+      status: "Operational",
+      orbit: "HEO ~ 1,800 km × 153,000 km apogee × 28.5° inclination",
+      mass: "1,360 kg wet mass",
+      dimensions: "3.5 m diameter × 1.2 m height octagonal prism with four 60 m wire booms",
+      power: "625 W GaAs solar panels",
+      instruments: [
+        "FPI — Fast Plasma Investigation (millisecond electron & ion distribution spectrometers)",
+        "FIELDS — Dual Fluxgate Magnetometers, Search-Coil Magnetometer & Electric Double Probes",
+        "HPCA — Hot Plasma Composition Analyzer (mass spectrometry for H+, He+, He++, O+ ions)",
+        "EPD — Energetic Particle Detector suite (FEEPS and EIS sensors)",
+        "ASPOC — Active Spacecraft Potential Control (indium ion emission)"
+      ],
+      discoveries: [
+        {
+          title: "Direct Observation of the Electron Diffusion Region",
+          desc: "First direct in-situ measurement of explosive magnetic reconnection where magnetic field lines break and reconnect at near-light speeds, converting stored magnetic energy into particle kinetic heating.",
+          imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/2/24/Reconnection.gif")
+        }
+      ],
+      links: [
+        { label: "NASA MMS Mission", url: "https://www.nasa.gov/mission_pages/mms/index.html" },
+        { label: "SwRI MMS Center", url: "https://mms.space.swri.edu/" }
+      ],
+      tags: ["Heliophysics", "Magnetosphere", "NASA", "Space Weather", "Plasma Physics"]
+    };
+  }
 
   // ══ 0. DEBRIS & ROCKET BODIES ═══════════════════════════════════════════════
   if (isDebrisOrRocketBody(n)) {
@@ -2028,13 +2290,15 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
   const cleanName = satName.replace(/\(.*\)/g, '').trim().replace(/ /g, '_');
   const fallbackWikiUrl = directWikiUrl || `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanName)}`;
 
+  const hasSpecificInferred = inferred && inferred.name && !inferred.purpose?.includes("operating in Earth orbit for communications");
+
   const info: Partial<SatelliteInfo> & { name: string } = {
     ...inferred,
     ...base,
-    name: base?.name || satName,
-    imageUrl: base?.imageUrl || dynamicWiki?.imageUrl || inferred.imageUrl || LOCAL_FALLBACK_IMG,
-    wikipediaUrl: base?.wikipediaUrl || directWikiUrl || dynamicWiki?.wikiUrl || inferred.wikipediaUrl || fallbackWikiUrl,
-    purpose: base?.purpose || dynamicWiki?.extract || inferred.purpose || `${satName} is an orbital spacecraft operating in Earth orbit for communications, navigation, science, or Earth observation operations.`,
+    name: base?.name || (hasSpecificInferred ? inferred.name : null) || satName,
+    imageUrl: base?.imageUrl || (hasSpecificInferred && inferred.imageUrl && inferred.imageUrl !== LOCAL_FALLBACK_IMG ? inferred.imageUrl : (dynamicWiki?.imageUrl || inferred.imageUrl || LOCAL_FALLBACK_IMG)),
+    wikipediaUrl: base?.wikipediaUrl || directWikiUrl || (hasSpecificInferred ? inferred.wikipediaUrl : null) || dynamicWiki?.wikiUrl || fallbackWikiUrl,
+    purpose: base?.purpose || (hasSpecificInferred ? inferred.purpose : (dynamicWiki?.extract || inferred.purpose)) || `${satName} is an orbital spacecraft operating in Earth orbit for communications, navigation, science, or Earth observation operations.`,
     orbit: dynamicOrbit || base?.orbit || inferred.orbit || "Earth Orbit",
   };
 

@@ -73,45 +73,97 @@ export async function GET(req: NextRequest) {
   let imageUrl: string | null = null;
   let wikiTitle: string | null = null;
 
+  const USER_AGENT = "COSMOS-AI-Space-Observatory/1.0 (https://cosmos.ai; research@cosmos.ai)";
+  const DISQUALIFIERS = /\b(film|movie|soundtrack|album|song|actor|actress|cinema|bollywood|hollywood|confederate states|television series|tv series|video game|football|cricket|tennis|basketball|murder|novel|comic|band)\b/i;
+  const SPACE_QUALIFIERS = /\b(satellite|spacecraft|space probe|space station|orbit|orbital|launch vehicle|space agency|nasa|esa|isro|cnsa|roscosmos|jaxa|telescope|constellation|transponder|booster|rocket|apogee|perigee|geostationary|low earth orbit|magnetosphere|heliophysics|exoplanet|astronomy|astrophysics|payload|telemetry)\b/i;
+
+  // A. Priority 1: Direct Wikipedia page resolution if mapped
+  if (wikiUrl && wikiUrl.includes("/wiki/")) {
+    try {
+      const pageSlug = wikiUrl.split("/wiki/")[1];
+      const sumRes = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageSlug)}`,
+        { headers: { "User-Agent": USER_AGENT } }
+      );
+      if (sumRes.ok) {
+        const sumData = await sumRes.json();
+        if (sumData && sumData.type !== "disambiguation") {
+          extract = sumData.extract || null;
+          wikiTitle = sumData.title || null;
+          if (sumData.content_urls?.desktop?.page) {
+            wikiUrl = sumData.content_urls.desktop.page;
+          }
+          if (sumData.thumbnail?.source) {
+            imageUrl = `/api/image-proxy?url=${encodeURIComponent(sumData.thumbnail.source)}`;
+          } else if (sumData.originalimage?.source) {
+            imageUrl = `/api/image-proxy?url=${encodeURIComponent(sumData.originalimage.source)}`;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Wikipedia Direct Fetch Error]", err);
+    }
+  }
+
+  // B. Priority 2: Fallback Wikipedia search with aerospace validation
   const cleanName = satName
     .replace(/\(.*\)/g, "")
     .replace(/\b(DEB|RB|R\/B|PRN\s*\d+|NORAD\s*\d+)\b/gi, "")
     .trim();
 
-  if (cleanName) {
+  if (!extract && cleanName) {
     try {
       const searchRes = await fetch(
-        `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanName + " satellite")}&format=json&origin=*`,
-        { headers: { "User-Agent": "COSMOS-AI-Space-Observatory/1.0 (https://cosmos.ai; research@cosmos.ai)" } }
+        `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanName + " spacecraft satellite")}&format=json&origin=*`,
+        { headers: { "User-Agent": USER_AGENT } }
       );
 
       if (searchRes.ok) {
         const sData = await searchRes.json();
-        if (sData.query?.search?.length > 0) {
-          const firstResult = sData.query.search[0];
-          wikiTitle = firstResult.title;
+        const results = sData.query?.search || [];
 
+        // Search through results and verify aerospace relevance
+        for (const item of results.slice(0, 5)) {
+          const itemText = `${item.title} ${item.snippet}`;
+          if (DISQUALIFIERS.test(itemText)) {
+            continue; // Skip movies, songs, actors, sports
+          }
+          if (!SPACE_QUALIFIERS.test(itemText)) {
+            continue; // Must be related to space / satellites
+          }
+
+          // Verified space candidate
+          const candidateTitle = item.title;
           const sumRes = await fetch(
-            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle!.replace(/ /g, "_"))}`,
-            { headers: { "User-Agent": "COSMOS-AI-Space-Observatory/1.0 (https://cosmos.ai; research@cosmos.ai)" } }
+            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candidateTitle.replace(/ /g, "_"))}`,
+            { headers: { "User-Agent": USER_AGENT } }
           );
 
           if (sumRes.ok) {
             const sumData = await sumRes.json();
             if (sumData && sumData.type !== "disambiguation") {
+              const fullDesc = `${sumData.title} ${sumData.description || ""} ${sumData.extract || ""}`;
+              if (DISQUALIFIERS.test(fullDesc)) {
+                continue;
+              }
+
               extract = sumData.extract || null;
+              wikiTitle = sumData.title || null;
               if (sumData.content_urls?.desktop?.page) {
                 wikiUrl = sumData.content_urls.desktop.page;
               }
               if (sumData.thumbnail?.source) {
                 imageUrl = `/api/image-proxy?url=${encodeURIComponent(sumData.thumbnail.source)}`;
+              } else if (sumData.originalimage?.source) {
+                imageUrl = `/api/image-proxy?url=${encodeURIComponent(sumData.originalimage.source)}`;
               }
+              break; // Found good match
             }
           }
         }
       }
     } catch (err) {
-      console.error("[Wikipedia API Fetch Error]", err);
+      console.error("[Wikipedia Search Error]", err);
     }
   }
 

@@ -43,6 +43,9 @@ export function inferAgencyAndCountry(name: string, category: string): { agency:
 
   // US Missions & Constellations
   if (
+    n.match(/\bMMS\b/) || n.startsWith("MMS ") || n.startsWith("MMS-") ||
+    n.includes("THEMIS") || n.includes("IBEX") || n.includes("TIMED") ||
+    n.includes("VAN ALLEN") || n.includes("RBSP") || n.includes("DSCOVR") ||
     n.includes("USA") || n.includes("NAVSTAR") || n.includes("GPS") || n.includes("STARLINK") ||
     n.includes("IRIDIUM") || n.includes("GLOBALSTAR") || n.includes("GOES") || n.includes("NOAA") ||
     n.includes("LANDSAT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("AURA") ||
@@ -142,6 +145,18 @@ export function getDirectWikipediaUrl(rawName: string, category: string): string
   if (n.includes("ISS") || n.includes("ZARYA") || n.includes("NAUKA") || n.includes("COLUMBUS") || n.includes("KIBO")) return "https://en.wikipedia.org/wiki/International_Space_Station";
   if (n.includes("TIANGONG") || n.includes("CSS") || n.includes("TIANHE") || n.includes("WENTIAN") || n.includes("MENGTIAN")) return "https://en.wikipedia.org/wiki/Tiangong_space_station";
   if (n.includes("MIR")) return "https://en.wikipedia.org/wiki/Mir";
+
+  // Heliophysics & Space Weather / Magnetosphere
+  if (n.match(/\bMMS\b/) || n.startsWith("MMS ") || n.startsWith("MMS-") || n.includes("MAGNETOSPHERIC MULTISCALE")) return "https://en.wikipedia.org/wiki/Magnetospheric_Multiscale_Mission";
+  if (n.includes("THEMIS") || n.includes("ARTEMIS P1") || n.includes("ARTEMIS P2")) return "https://en.wikipedia.org/wiki/THEMIS";
+  if (n.includes("CLUSTER") || n.includes("RUMBA") || n.includes("SALSA") || n.includes("SAMBA") || n.includes("TANGO")) return "https://en.wikipedia.org/wiki/Cluster_II_(spacecraft)";
+  if (n.includes("VAN ALLEN") || n.includes("RBSP")) return "https://en.wikipedia.org/wiki/Van_Allen_Probes";
+  if (n.includes("IBEX")) return "https://en.wikipedia.org/wiki/Interstellar_Boundary_Explorer";
+  if (n.includes("TIMED")) return "https://en.wikipedia.org/wiki/TIMED";
+  if (n.includes("IRIS") && !n.includes("IRIDIUM")) return "https://en.wikipedia.org/wiki/Interface_Region_Imaging_Spectrograph";
+  if (n.includes("ACE") && (n.includes("ADVANCED COMPOSITION") || n.includes("EXPLORER"))) return "https://en.wikipedia.org/wiki/Advanced_Composition_Explorer";
+  if (n.includes("DSCOVR")) return "https://en.wikipedia.org/wiki/Deep_Space_Climate_Observatory";
+  if (n.includes("MOST") && category.includes("Science")) return "https://en.wikipedia.org/wiki/MOST_(satellite)";
 
   // Observatories / Telescopes
   if (n.includes("HUBBLE") || n.includes("HST")) return "https://en.wikipedia.org/wiki/Hubble_Space_Telescope";
