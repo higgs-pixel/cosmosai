@@ -2,26 +2,127 @@ importScripts('/satellite.min.js');
 
 var satellites = [];
 
+function parseTleText(text) {
+  var lines = (text || '').split(/\r?\n/).map(function(l) { return l.trim(); }).filter(Boolean);
+  var list = [];
+  var seenIds = {};
+
+  var i = 0;
+  while (i < lines.length) {
+    var name = 'SATELLITE';
+    var line1 = '';
+    var line2 = '';
+
+    if (lines[i].indexOf('1 ') === 0 && i + 1 < lines.length && lines[i + 1].indexOf('2 ') === 0) {
+      line1 = lines[i];
+      line2 = lines[i + 1];
+      i += 2;
+    } else if (i + 2 < lines.length && lines[i + 1].indexOf('1 ') === 0 && lines[i + 2].indexOf('2 ') === 0) {
+      name = lines[i];
+      line1 = lines[i + 1];
+      line2 = lines[i + 2];
+      i += 3;
+    } else {
+      i++;
+      continue;
+    }
+
+    try {
+      var id = parseInt(line1.substring(2, 7).trim(), 10);
+      if (isNaN(id) || seenIds[id]) continue;
+      seenIds[id] = true;
+
+      if (name === 'SATELLITE') {
+        name = 'SAT-' + id;
+      }
+
+      list.push({
+        id: id,
+        name: name,
+        line1: line1,
+        line2: line2,
+        category: 'Active',
+        orbitClass: 'LEO',
+        epochDate: new Date().toISOString()
+      });
+    } catch (err) {
+      // skip
+    }
+  }
+  return list;
+}
+
+function initSatellites(dataList) {
+  satellites = (dataList || []).map(function(item) {
+    try {
+      var satrec = satellite.twoline2satrec(item.line1, item.line2);
+      if (!satrec || satrec.error) return null;
+      return {
+        id: item.id,
+        name: item.name,
+        category: item.category || 'Active',
+        orbitClass: item.orbitClass || 'LEO',
+        line1: item.line1,
+        line2: item.line2,
+        epochDate: item.epochDate,
+        satrec: satrec
+      };
+    } catch (err) {
+      return null;
+    }
+  }).filter(Boolean);
+
+  var rawList = satellites.map(function(s) {
+    return {
+      id: s.id,
+      name: s.name,
+      category: s.category,
+      orbitClass: s.orbitClass,
+      line1: s.line1,
+      line2: s.line2,
+      epochDate: s.epochDate
+    };
+  });
+
+  self.postMessage({
+    type: 'catalog_loaded',
+    satellites: rawList,
+    count: rawList.length
+  });
+}
+
 self.onmessage = function(e) {
   var msg = e.data;
   if (!msg) return;
 
   if (msg.type === 'init') {
-    satellites = (msg.data || []).map(function(item) {
-      try {
-        return {
-          id: item.id,
-          name: item.name,
-          category: item.category || 'Active',
-          orbitClass: item.orbitClass || 'LEO',
-          line1: item.line1,
-          line2: item.line2,
-          satrec: satellite.twoline2satrec(item.line1, item.line2)
-        };
-      } catch (err) {
-        return null;
-      }
-    }).filter(Boolean);
+    initSatellites(msg.data || []);
+  } else if (msg.type === 'fetch_catalog') {
+    var url = msg.url;
+    var fallback = msg.fallback || [];
+    var satMap = {};
+    for (var f = 0; f < fallback.length; f++) {
+      satMap[fallback[f].id] = fallback[f];
+    }
+
+    fetch(url)
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function(txt) {
+        var parsed = parseTleText(txt);
+        for (var p = 0; p < parsed.length; p++) {
+          satMap[parsed[p].id] = parsed[p];
+        }
+        var fullList = Object.keys(satMap).map(function(k) { return satMap[k]; });
+        initSatellites(fullList);
+      })
+      .catch(function() {
+        // Fallback gracefully
+        var fullList = Object.keys(satMap).map(function(k) { return satMap[k]; });
+        initSatellites(fullList);
+      });
   } else if (msg.type === 'propagate') {
     var timeMs = (msg.data && msg.data.timeMs) || msg.timeMs || Date.now();
     var date = new Date(timeMs);
@@ -127,6 +228,105 @@ self.onmessage = function(e) {
     var sunAltDeg = Math.asin(Math.max(-1, Math.min(1, sunDotZenith))) * (180 / Math.PI);
     var isObserverDark = sunAltDeg < -6;
 
+    // 1. Calculate Selected Satellite Live Telemetry in Worker
+    var selectedTelemetry = null;
+    var targetSatId = msg.selectedSatId || 25544;
+    var targetSat = null;
+
+    for (var k = 0; k < satellites.length; k++) {
+      if (satellites[k].id === targetSatId) {
+        targetSat = satellites[k];
+        break;
+      }
+    }
+    if (!targetSat && satellites.length > 0) {
+      targetSat = satellites[0];
+    }
+
+    if (targetSat) {
+      try {
+        var sPv = satellite.propagate(targetSat.satrec, vDate);
+        if (sPv && sPv.position && typeof sPv.position !== 'boolean' && sPv.velocity && typeof sPv.velocity !== 'boolean') {
+          var sPos = sPv.position;
+          var sVel = sPv.velocity;
+          var sPosGd = satellite.eciToGeodetic(sPos, vGmst);
+          var sLat = satellite.degreesLat(sPosGd.latitude);
+          var sLon = satellite.degreesLong(sPosGd.longitude);
+          if (sLon > 180) sLon -= 360;
+          if (sLon < -180) sLon += 360;
+          var sAlt = sPosGd.height;
+          var sVx = sVel.x;
+          var sVy = sVel.y;
+          var sVz = sVel.z;
+          var sSpeed = Math.sqrt(sVx * sVx + sVy * sVy + sVz * sVz);
+
+          var sEcf = satellite.eciToEcf(sPos, vGmst);
+          var sLook = satellite.ecfToLookAngles(obsGd, sEcf);
+          var sElDeg = sLook.elevation * (180 / Math.PI);
+          var sAzDeg = (sLook.azimuth * (180 / Math.PI) + 360) % 360;
+          var sSlant = Math.round(sLook.rangeSat);
+
+          var sRDotSun = sPos.x * sunX + sPos.y * sunY + sPos.z * sunZ;
+          var sIsSunlit = true;
+          if (sRDotSun < 0) {
+            var spx = sPos.x - sRDotSun * sunX;
+            var spy = sPos.y - sRDotSun * sunY;
+            var spz = sPos.z - sRDotSun * sunZ;
+            if (Math.sqrt(spx * spx + spy * spy + spz * spz) < R_EARTH) sIsSunlit = false;
+          }
+
+          var sIntrinsic = 4.2;
+          var sNameUpper = (targetSat.name || '').toUpperCase();
+          if (targetSat.id === 25544 || sNameUpper.indexOf('ISS') !== -1) sIntrinsic = -1.8;
+          else if (targetSat.id === 48274 || sNameUpper.indexOf('TIANGONG') !== -1) sIntrinsic = -0.8;
+          else if (targetSat.id === 20580 || sNameUpper.indexOf('HUBBLE') !== -1) sIntrinsic = 1.5;
+          else if (sNameUpper.indexOf('STARLINK') !== -1) sIntrinsic = 5.2;
+
+          var sEstMag = sIntrinsic + 5 * Math.log10(Math.max(1, sSlant) / 400);
+          if (!sIsSunlit) sEstMag += 4.5;
+          sEstMag = Math.round(sEstMag * 10) / 10;
+
+          var sAbove = sElDeg > 0;
+          var sObs = sElDeg >= 10;
+          var sNaked = sAbove && sObs && sIsSunlit && isObserverDark && sEstMag <= 4.5;
+          var sStatus = 'Below Horizon';
+          if (sNaked) sStatus = 'Naked-Eye Visible';
+          else if (sAbove && sIsSunlit) sStatus = 'Sunlit Outside Umbra';
+          else if (sAbove && !sIsSunlit) sStatus = 'In Umbral Eclipse';
+
+          selectedTelemetry = {
+            satId: targetSat.id,
+            satName: targetSat.name,
+            category: targetSat.category,
+            orbitClass: targetSat.orbitClass,
+            line1: targetSat.line1,
+            line2: targetSat.line2,
+            px: sPos.x,
+            py: sPos.y,
+            pz: sPos.z,
+            vx: sVx,
+            vy: sVy,
+            vz: sVz,
+            vel: sSpeed,
+            lat: sLat,
+            lon: sLon,
+            alt: sAlt,
+            elevationDeg: Math.round(sElDeg * 10) / 10,
+            azimuthDeg: Math.round(sAzDeg * 10) / 10,
+            slantRangeKm: sSlant,
+            isSunlit: sIsSunlit,
+            isAboveHorizon: sAbove,
+            isNakedEyeVisible: sNaked,
+            estimatedMagnitude: sEstMag,
+            statusLabel: sStatus
+          };
+        }
+      } catch (err) {
+        // skip
+      }
+    }
+
+    // 2. Scan All 900+ Satellites for Horizon Visibility using Tangent Plane Culling
     var aboveHorizon = [];
 
     for (var j = 0; j < satellites.length; j++) {
@@ -138,39 +338,31 @@ self.onmessage = function(e) {
 
         var pEcf = satellite.eciToEcf(pEci, vGmst);
 
-        // Vector from observer to satellite in ECF:
         var dx = pEcf.x - obsX;
         var dy = pEcf.y - obsY;
         var dz = pEcf.z - obsZ;
 
-        // Blazing-fast Horizon Tangent Plane Early Exit:
-        // (r_sat - R_obs) . Zenith
-        // If projection along local Zenith normal is less than -250 km,
-        // the satellite is geometrically below the horizon (occulted by Earth).
+        // Tangent Plane Horizon Early Exit
         var dotZenith = dx * zenX + dy * zenY + dz * zenZ;
         if (dotZenith < -250) {
-          continue; // Early exit in 2 arithmetic operations!
+          continue;
         }
 
-        // Full Topocentric Look Angles
         var look = satellite.ecfToLookAngles(obsGd, pEcf);
         var elDeg = look.elevation * (180 / Math.PI);
 
-        // Keep all satellites that are above horizon (or approaching within -5°)
         if (elDeg < -5) continue;
 
         var azDeg = (look.azimuth * (180 / Math.PI) + 360) % 360;
         var slantKm = Math.round(look.rangeSat);
 
-        // Subpoint Geodetics
         var posGd = satellite.eciToGeodetic(pEci, vGmst);
-        var sLat = satellite.degreesLat(posGd.latitude);
-        var sLon = satellite.degreesLong(posGd.longitude);
-        if (sLon > 180) sLon -= 360;
-        if (sLon < -180) sLon += 360;
-        var sAlt = Math.round(posGd.height);
+        var subLat = satellite.degreesLat(posGd.latitude);
+        var subLon = satellite.degreesLong(posGd.longitude);
+        if (subLon > 180) subLon -= 360;
+        if (subLon < -180) subLon += 360;
+        var subAlt = Math.round(posGd.height);
 
-        // Earth shadow (umbra) check
         var rDotSun = pEci.x * sunX + pEci.y * sunY + pEci.z * sunZ;
         var isSunlit = true;
         if (rDotSun < 0) {
@@ -183,7 +375,6 @@ self.onmessage = function(e) {
           }
         }
 
-        // Photometric magnitude
         var intrinsic = 4.2;
         var uName = (s.name || '').toUpperCase();
         if (s.id === 25544 || uName.indexOf('ISS') !== -1 || uName.indexOf('STATION') !== -1 || uName.indexOf('ZARYA') !== -1) intrinsic = -1.8;
@@ -217,9 +408,9 @@ self.onmessage = function(e) {
           azimuthDeg: Math.round(azDeg * 10) / 10,
           elevationDeg: Math.round(elDeg * 10) / 10,
           slantRangeKm: slantKm,
-          satLat: Math.round(sLat * 1000) / 1000,
-          satLon: Math.round(sLon * 1000) / 1000,
-          satAltKm: sAlt,
+          satLat: Math.round(subLat * 1000) / 1000,
+          satLon: Math.round(subLon * 1000) / 1000,
+          satAltKm: subAlt,
           isAboveHorizon: isAbove,
           isObservable: isObservable,
           isSunlit: isSunlit,
@@ -234,7 +425,6 @@ self.onmessage = function(e) {
       }
     }
 
-    // Sort by elevation descending
     aboveHorizon.sort(function(a, b) {
       return b.elevationDeg - a.elevationDeg;
     });
@@ -242,6 +432,7 @@ self.onmessage = function(e) {
     self.postMessage({
       type: 'visibility_results',
       results: aboveHorizon,
+      selectedTelemetry: selectedTelemetry,
       timeMs: vTimeMs
     });
   }

@@ -346,6 +346,7 @@ export default function TrackMySkyDashboard() {
   const latestPositionsRef = useRef<Float32Array | null>(null);
   const isWorkerBusyRef = useRef(false);
   const [workerVisibilityResults, setWorkerVisibilityResults] = useState<SatelliteVisibilityResult[]>([]);
+  const [workerSelectedTelemetry, setWorkerSelectedTelemetry] = useState<any>(null);
 
   // Sync satellitesList into orbital store for 3D trajectory calculation
   useEffect(() => {
@@ -370,13 +371,22 @@ export default function TrackMySkyDashboard() {
 
       worker.onmessage = (e) => {
         isWorkerBusyRef.current = false;
-        const { type, buffer, results } = e.data;
+        const { type, buffer, results, selectedTelemetry, satellites: loadedSats } = e.data;
         if (type === "positions") {
           latestPositionsRef.current = buffer;
         } else if (type === "visibility_results" && Array.isArray(results)) {
           startTransition(() => {
             setWorkerVisibilityResults(results);
+            if (selectedTelemetry) {
+              setWorkerSelectedTelemetry(selectedTelemetry);
+            }
           });
+        } else if (type === "catalog_loaded" && Array.isArray(loadedSats)) {
+          startTransition(() => {
+            setSatellitesList(loadedSats);
+            setLoadingSats(false);
+          });
+          useOrbitalStore.getState().setSatellitesList(loadedSats);
         }
       };
     } catch {
@@ -413,7 +423,7 @@ export default function TrackMySkyDashboard() {
     return () => cancelAnimationFrame(frameId);
   }, [satellitesList]);
 
-  // High-performance background Web Worker evaluation for ALL above-horizon satellites
+  // High-performance background Web Worker evaluation for ALL above-horizon satellites + live telemetry
   // Completely offloads SGP4 look-angles and shadow calculations from the main thread (<4ms in worker)
   // Ensures 100% of satellites above horizon are tracked live with zero main-thread lag!
   useEffect(() => {
@@ -426,6 +436,7 @@ export default function TrackMySkyDashboard() {
         workerRef.current.postMessage({
           type: "evaluate_visibility",
           timeMs: currentTime,
+          selectedSatId: selectedSatId ?? 25544,
           observer: {
             lat: observer.lat,
             lon: observer.lon,
@@ -436,10 +447,10 @@ export default function TrackMySkyDashboard() {
     };
 
     requestVisibility();
-    timer = setInterval(requestVisibility, 1200);
+    timer = setInterval(requestVisibility, 1000);
 
     return () => clearInterval(timer);
-  }, [satellitesList, observer.lat, observer.lon, observer.altMeters]);
+  }, [satellitesList, selectedSatId, observer.lat, observer.lon, observer.altMeters]);
 
   // Synchronize selected satellite with store
   useEffect(() => {
@@ -500,60 +511,19 @@ export default function TrackMySkyDashboard() {
   const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
 
   useEffect(() => {
-    let isMounted = true;
     setLoadingSats(true);
-
-    const loadData = async () => {
-      const satMap = new Map<number, SatelliteData>();
-      DEFAULT_SATELLITE_CATALOG.forEach((s) => satMap.set(s.id, s));
-
-      if (storeSatellitesList && storeSatellitesList.length >= 25) {
-        storeSatellitesList.forEach((s) => satMap.set(s.id, s));
-      }
-
-      try {
-        const res = await fetch(`/api/orbital?group=${skyCatalogGroup}&format=tle`);
-        if (res.ok) {
-          const txt = await res.text();
-          const parsed = parseTleText(txt);
-          if (parsed.length > 0) {
-            parsed.forEach((s) => satMap.set(s.id, s));
-          }
-        }
-      } catch {
-        /* skip */
-      }
-
-      if (satMap.size < 20 && skyCatalogGroup === "active") {
-        try {
-          const res = await fetch("/api/orbital?group=visual&format=tle");
-          if (res.ok) {
-            const txt = await res.text();
-            const parsed = parseTleText(txt);
-            if (parsed.length > 0) {
-              parsed.forEach((s) => satMap.set(s.id, s));
-            }
-          }
-        } catch {
-          /* skip */
-        }
-      }
-
-      if (isMounted) {
-        const fullList = Array.from(satMap.values());
-        startTransition(() => {
-          setSatellitesList(fullList);
-        });
-        useOrbitalStore.getState().setSatellitesList(fullList);
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: "fetch_catalog",
+        url: `/api/orbital?group=${skyCatalogGroup}&format=tle`,
+        fallback: DEFAULT_SATELLITE_CATALOG,
+      });
+    } else {
+      startTransition(() => {
+        setSatellitesList(DEFAULT_SATELLITE_CATALOG);
         setLoadingSats(false);
-      }
-    };
-
-    void loadData();
-
-    return () => {
-      isMounted = false;
-    };
+      });
+    }
   }, [skyCatalogGroup]);
 
   // Geolocation Tier 1: Companion Mobile Polling
@@ -684,13 +654,19 @@ export default function TrackMySkyDashboard() {
     return satellitesList.find((s) => s.id === id) || satellitesList[0] || null;
   }, [satellitesList, selectedSatId]);
 
-  // Live 1-second topocentric coordinates for the selected satellite ONLY.
-  // Evaluating exactly 1 satellite takes < 0.05ms, giving buttery smooth live telemetry
-  // without blocking the main JavaScript thread or stuttering animations!
+  // Live telemetry stream for the selected satellite calculated smoothly in Web Worker
   const selectedSat = useMemo(() => {
+    if (workerSelectedTelemetry && workerSelectedTelemetry.satId === (selectedSatId ?? 25544)) {
+      return {
+        ...workerSelectedTelemetry,
+        satLat: workerSelectedTelemetry.lat,
+        satLon: workerSelectedTelemetry.lon,
+        satAltKm: workerSelectedTelemetry.alt,
+      };
+    }
     if (!selectedRawSat) return null;
     return evaluateSatelliteVisibility(selectedRawSat, observer, date);
-  }, [selectedRawSat, observer, date]);
+  }, [workerSelectedTelemetry, selectedSatId, selectedRawSat, observer, date]);
 
   // Quantize catalog topocentric evaluation to 4-second buckets and evaluate up to 120 key targets.
   // Satellites move only ~0.15° in 4 seconds, so 4s bucket keeps catalog and sky dome 100% accurate
@@ -767,8 +743,11 @@ export default function TrackMySkyDashboard() {
     return parseOrbitalElements(selectedRawSat.line2);
   }, [selectedRawSat]);
 
-  // ECI and geodetic vector telemetry
+  // ECI and geodetic vector telemetry calculated in Web Worker
   const selectedTelemetry = useMemo(() => {
+    if (workerSelectedTelemetry && workerSelectedTelemetry.satId === (selectedSatId ?? 25544)) {
+      return workerSelectedTelemetry;
+    }
     if (!selectedRawSat) return null;
     try {
       const satrec = satellite.twoline2satrec(selectedRawSat.line1, selectedRawSat.line2);
@@ -792,7 +771,7 @@ export default function TrackMySkyDashboard() {
       // skip
     }
     return null;
-  }, [selectedRawSat, date]);
+  }, [workerSelectedTelemetry, selectedSatId, selectedRawSat, date]);
 
   const epochAgeDays = useMemo(() => {
     if (!selectedRawSat?.epochDate) return 0;
