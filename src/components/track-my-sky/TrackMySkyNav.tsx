@@ -20,6 +20,7 @@ interface TrackMySkyNavProps {
   onOpenPairModal?: () => void;
   onOpenManual?: () => void;
   onOpenKnowledge?: (tab: "glossary" | "docs") => void;
+  onOpenGlossary?: () => void;
   onScrollToSection: (id: string) => void;
   activeSection?: string;
   searchQuery?: string;
@@ -32,6 +33,7 @@ export function TrackMySkyNav({
   onOpenPairModal,
   onOpenManual,
   onOpenKnowledge,
+  onOpenGlossary,
   onScrollToSection,
   activeSection = "hero",
   searchQuery = "",
@@ -159,12 +161,20 @@ export function TrackMySkyNav({
             );
           })}
 
-          {onOpenManual ? (
+          {onOpenGlossary ? (
+            <button
+              onClick={onOpenGlossary}
+              className="ml-auto flex items-center gap-1 shrink-0 text-[11px] uppercase tracking-[0.15em] font-semibold text-zinc-400 hover:text-cyan-300 transition cursor-pointer"
+              title="Open Astrometry Glossary"
+            >
+              <span>Glossary</span>
+            </button>
+          ) : onOpenManual ? (
             <button
               onClick={onOpenManual}
               className="ml-auto flex items-center gap-1 shrink-0 text-[10px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
             >
-              <span>Guide &amp; Glossary</span>
+              <span>Glossary</span>
             </button>
           ) : null}
         </nav>

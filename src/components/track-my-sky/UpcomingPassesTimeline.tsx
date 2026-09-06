@@ -136,6 +136,7 @@ export function UpcomingPassesTimeline({
             selectedPass={selectedPass}
             onSelectPass={onSelectPass}
             onSelectSatId={onSelectSatId}
+            onSwitchToList={() => setViewMode("grid")}
           />
         ) : (
           /* Mode 2: NASA Editorial Story Grid of Pass Cards */

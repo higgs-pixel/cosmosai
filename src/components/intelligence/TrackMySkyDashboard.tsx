@@ -878,6 +878,10 @@ export default function TrackMySkyDashboard() {
         activeSection={activeSection}
         searchQuery={tableSearch}
         onSearchChange={setTableSearch}
+        onOpenGlossary={() => {
+          setKnowledgeActiveTab("glossary");
+          setIsKnowledgeModalOpen(true);
+        }}
       />
 
       {/* ─────────────────────────────────────────────────────────────────────────────

@@ -55,26 +55,26 @@ const StarfieldGlitterCanvas = memo(function StarfieldGlitterCanvas() {
     ];
 
     const initStars = (w: number, h: number) => {
-      // High star count to reproduce the dense glittering starlight in the reference
-      const count = Math.min(1100, Math.max(550, Math.floor((w * h) / 750)));
+      // Subdued star count for calm, non-distracting background depth
+      const count = Math.min(90, Math.max(45, Math.floor((w * h) / 7000)));
       const newStars: GlitterStar[] = [];
 
       for (let i = 0; i < count; i++) {
-        const isBright = Math.random() > 0.88;
+        const isBright = Math.random() > 0.94;
         const radius = isBright
-          ? 1.5 + Math.random() * 1.3
-          : 0.5 + Math.random() * 0.9;
+          ? 0.9 + Math.random() * 0.4
+          : 0.4 + Math.random() * 0.4;
 
         newStars.push({
           x: Math.random() * w,
           y: Math.random() * h,
           baseRadius: radius,
-          baseAlpha: isBright ? 0.65 + Math.random() * 0.35 : 0.2 + Math.random() * 0.6,
-          twinkleSpeed: 0.0018 + Math.random() * 0.004,
+          baseAlpha: isBright ? 0.25 + Math.random() * 0.2 : 0.08 + Math.random() * 0.15,
+          twinkleSpeed: 0.0002 + Math.random() * 0.0004, // Very slow, calm ambient breathing
           phase: Math.random() * Math.PI * 2,
-          flare: isBright && Math.random() > 0.45,
+          flare: false,
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
-          depth: 0.3 + Math.random() * 1.2,
+          depth: 0.1 + Math.random() * 0.3,
         });
       }
       stars = newStars;
@@ -109,8 +109,8 @@ const StarfieldGlitterCanvas = memo(function StarfieldGlitterCanvas() {
       lastTime = time;
 
       // Smooth mouse interpolation for parallax
-      mouseX += (targetMouseX - mouseX) * 0.04;
-      mouseY += (targetMouseY - mouseY) * 0.04;
+      mouseX += (targetMouseX - mouseX) * 0.03;
+      mouseY += (targetMouseY - mouseY) * 0.03;
 
       // Deep space black void background
       ctx.fillStyle = "#000000";
@@ -123,60 +123,33 @@ const StarfieldGlitterCanvas = memo(function StarfieldGlitterCanvas() {
         50,
         width * 0.5,
         height * 0.5,
-        Math.max(width, height) * 0.7
+        Math.max(width, height) * 0.6
       );
-      grad.addColorStop(0, "rgba(8, 14, 30, 0.45)");
-      grad.addColorStop(0.6, "rgba(2, 4, 10, 0.85)");
-      grad.addColorStop(1, "rgba(0, 0, 0, 1)");
+      grad.addColorStop(0, "rgba(6, 18, 38, 0.35)");
+      grad.addColorStop(0.6, "rgba(2, 6, 16, 0.15)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
-      // Render glittering stars
+      // Render calm, ambient starlight
       for (let i = 0; i < stars.length; i++) {
         const star = stars[i];
 
-        // Twinkle oscillation
+        // Gentle, slow breathing oscillation
         const flicker = Math.sin(time * star.twinkleSpeed + star.phase);
-        const alpha = Math.max(0.08, Math.min(1.0, star.baseAlpha + flicker * 0.42));
+        const alpha = Math.max(0.05, Math.min(0.6, star.baseAlpha + flicker * 0.08));
 
-        // Subtle 3D mouse parallax
-        const px = (star.x + mouseX * star.depth * 18 + width) % width;
-        const py = (star.y + mouseY * star.depth * 18 + height) % height;
+        // Subdued 3D mouse parallax
+        const px = (star.x + mouseX * star.depth * 2 + width) % width;
+        const py = (star.y + mouseY * star.depth * 2 + height) % height;
 
-        const currentRadius = star.baseRadius * (0.8 + alpha * 0.28);
+        const currentRadius = star.baseRadius;
 
         // Core star point
         ctx.fillStyle = `${star.color} ${alpha.toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(px, py, currentRadius, 0, Math.PI * 2);
         ctx.fill();
-
-        // Star diffraction spikes / glitter flare for prominent sparkling stars
-        if (star.flare && alpha > 0.72) {
-          const flareLen = star.baseRadius * (3.8 + Math.sin(time * 0.006 + star.phase) * 1.5);
-          const flareAlpha = (alpha - 0.72) * 2.8;
-
-          ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(flareAlpha, 0.85).toFixed(3)})`;
-          ctx.lineWidth = 0.65;
-          ctx.beginPath();
-          // Horizontal spike
-          ctx.moveTo(px - flareLen, py);
-          ctx.lineTo(px + flareLen, py);
-          // Vertical spike
-          ctx.moveTo(px, py - flareLen);
-          ctx.lineTo(px, py + flareLen);
-          ctx.stroke();
-
-          // Subtle diagonal micro-cross
-          const microFlare = flareLen * 0.5;
-          ctx.strokeStyle = `rgba(207, 250, 254, ${(flareAlpha * 0.5).toFixed(3)})`;
-          ctx.beginPath();
-          ctx.moveTo(px - microFlare, py - microFlare);
-          ctx.lineTo(px + microFlare, py + microFlare);
-          ctx.moveTo(px - microFlare, py + microFlare);
-          ctx.lineTo(px + microFlare, py - microFlare);
-          ctx.stroke();
-        }
       }
 
       animId = requestAnimationFrame(render);
@@ -208,6 +181,7 @@ interface Passes3DCarouselProps {
   selectedPass: SatellitePass | null;
   onSelectPass: (pass: SatellitePass) => void;
   onSelectSatId: (id: number) => void;
+  onSwitchToList?: () => void;
 }
 
 function getRelativeTimeStr(targetTimeMs: number): string {
@@ -232,6 +206,7 @@ export function Passes3DCarousel({
   selectedPass,
   onSelectPass,
   onSelectSatId,
+  onSwitchToList,
 }: Passes3DCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
@@ -375,6 +350,16 @@ export function Passes3DCarousel({
             SWIPE / USE ARROWS TO ROTATE
           </span>
         </div>
+      </div>
+
+      {/* Helper text on top of the carousel cards */}
+      <div className="relative z-10 text-center -mt-3 mb-6 px-4">
+        <p
+          onClick={onSwitchToList}
+          className="text-sm md:text-base text-zinc-400 font-normal tracking-wide cursor-pointer hover:text-zinc-200 transition-colors inline-block"
+        >
+          prefer the list view for quick updates
+        </p>
       </div>
 
       {/* 3. 3D Cylindrical Perspective Stage */}
