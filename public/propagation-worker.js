@@ -98,14 +98,21 @@ self.onmessage = function(e) {
   if (msg.type === 'init') {
     initSatellites(msg.data || []);
   } else if (msg.type === 'fetch_catalog') {
-    var url = msg.url;
+    var rawUrl = msg.url || '/api/orbital?group=active&format=tle';
+    var fullUrl = rawUrl;
+    try {
+      if (rawUrl.indexOf('http') !== 0 && self.location && self.location.origin) {
+        fullUrl = self.location.origin + (rawUrl.indexOf('/') === 0 ? '' : '/') + rawUrl;
+      }
+    } catch (e) {}
+
     var fallback = msg.fallback || [];
     var satMap = {};
     for (var f = 0; f < fallback.length; f++) {
       satMap[fallback[f].id] = fallback[f];
     }
 
-    fetch(url)
+    fetch(fullUrl)
       .then(function(res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.text();
@@ -118,8 +125,7 @@ self.onmessage = function(e) {
         var fullList = Object.keys(satMap).map(function(k) { return satMap[k]; });
         initSatellites(fullList);
       })
-      .catch(function() {
-        // Fallback gracefully
+      .catch(function(err) {
         var fullList = Object.keys(satMap).map(function(k) { return satMap[k]; });
         initSatellites(fullList);
       });
@@ -342,9 +348,9 @@ self.onmessage = function(e) {
         var dy = pEcf.y - obsY;
         var dz = pEcf.z - obsZ;
 
-        // Tangent Plane Horizon Early Exit
+        // Coarse opposite-hemisphere Earth culling (distance > 2500 km below observer horizon plane)
         var dotZenith = dx * zenX + dy * zenY + dz * zenZ;
-        if (dotZenith < -250) {
+        if (dotZenith < -2500) {
           continue;
         }
 

@@ -47,6 +47,7 @@ interface TrackMySkyHeroProps {
   visibleCount: number;
   nakedEyeCount: number;
   sunlitCount: number;
+  totalFleetCount?: number;
   activeSatName?: string;
   activeSatAltKm?: number;
   activeSatElDeg?: number;
@@ -64,6 +65,7 @@ export function TrackMySkyHero({
   visibleCount,
   nakedEyeCount,
   sunlitCount,
+  totalFleetCount,
   activeSatName = "ISS (ZARYA)",
   activeSatAltKm = 418,
   activeSatElDeg = 45.2,
@@ -212,8 +214,12 @@ export function TrackMySkyHero({
             className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-white transition cursor-pointer"
           >
             <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Catalog Fleet</span>
-            <span className="text-xl font-bold text-white font-sans">{visibleCount}</span>
-            <span className="text-[11px] text-zinc-400 block truncate">Overhead horizon</span>
+            <span className="text-xl font-bold text-white font-sans">
+              {totalFleetCount && totalFleetCount > visibleCount ? totalFleetCount.toLocaleString() : visibleCount}
+            </span>
+            <span className="text-[11px] text-zinc-400 block truncate">
+              {totalFleetCount && totalFleetCount > visibleCount ? "Active assets tracked" : "Overhead horizon"}
+            </span>
           </button>
 
           <button

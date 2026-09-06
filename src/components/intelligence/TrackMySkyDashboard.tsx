@@ -25,6 +25,7 @@ import { TrackMySkyHero } from "@/components/track-my-sky/TrackMySkyHero";
 import { ObservatoryCommandConsole } from "@/components/track-my-sky/ObservatoryCommandConsole";
 import { UpcomingPassesTimeline } from "@/components/track-my-sky/UpcomingPassesTimeline";
 import { createSgp4Worker } from "./worker-code";
+import { parseTleText } from "@/lib/astronomy/satellite-sky-math";
 
 const Satellite3DView = dynamic(() => import("./Satellite3DView"), {
   ssr: false,
@@ -159,56 +160,6 @@ function formatClockTime(timeMs: number, tzId: string): string {
   } catch {
     return d.toUTCString();
   }
-}
-
-function parseTleText(text: string): SatelliteData[] {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const list: SatelliteData[] = [];
-  const seenIds = new Set<number>();
-
-  let i = 0;
-  while (i < lines.length) {
-    let name = "SATELLITE";
-    let line1 = "";
-    let line2 = "";
-
-    if (lines[i].startsWith("1 ") && i + 1 < lines.length && lines[i + 1].startsWith("2 ")) {
-      line1 = lines[i];
-      line2 = lines[i + 1];
-      i += 2;
-    } else if (i + 2 < lines.length && lines[i + 1].startsWith("1 ") && lines[i + 2].startsWith("2 ")) {
-      name = lines[i];
-      line1 = lines[i + 1];
-      line2 = lines[i + 2];
-      i += 3;
-    } else {
-      i++;
-      continue;
-    }
-
-    try {
-      const id = parseInt(line1.substring(2, 7).trim(), 10);
-      if (isNaN(id) || seenIds.has(id)) continue;
-      seenIds.add(id);
-
-      if (name === "SATELLITE") {
-        name = `SAT-${id}`;
-      }
-
-      list.push({
-        id,
-        name,
-        line1,
-        line2,
-        category: "Active",
-        orbitClass: "LEO",
-        epochDate: new Date().toISOString(),
-      });
-    } catch {
-      /* skip */
-    }
-  }
-  return list;
 }
 
 // Parses Keplerian elements from TLE Line 2
@@ -355,19 +306,11 @@ export default function TrackMySkyDashboard() {
     }
   }, [satellitesList, setStoreSatellitesList]);
 
-  // SGP4 Web Worker initialization
+  // Persistent SGP4 Web Worker lifecycle (created once on mount)
   useEffect(() => {
-    if (satellitesList.length === 0) return;
-
-    if (workerRef.current) {
-      workerRef.current.postMessage({ type: "init", data: satellitesList });
-      return;
-    }
-
     try {
       const worker = createSgp4Worker();
       workerRef.current = worker;
-      worker.postMessage({ type: "init", data: satellitesList });
 
       worker.onmessage = (e) => {
         isWorkerBusyRef.current = false;
@@ -389,14 +332,21 @@ export default function TrackMySkyDashboard() {
           useOrbitalStore.getState().setSatellitesList(loadedSats);
         }
       };
-    } catch {
-      /* Worker fallback */
+    } catch (err) {
+      console.warn("[TrackMySky] Web Worker fallback:", err);
     }
 
     return () => {
       workerRef.current?.terminate();
       workerRef.current = null;
     };
+  }, []);
+
+  // Synchronize satellitesList with Web Worker on updates
+  useEffect(() => {
+    if (workerRef.current && satellitesList.length > 0) {
+      workerRef.current.postMessage({ type: "init", data: satellitesList });
+    }
   }, [satellitesList]);
 
   // Continuous SGP4 propagation loop for 3D globe satellites
@@ -507,24 +457,72 @@ export default function TrackMySkyDashboard() {
     }
   }, [isPaused]);
 
-  // Satellite Group Selection
+  // Satellite Group Selection & Live TLE Fetching (Loads full 900+ active constellation targets)
   const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
 
   useEffect(() => {
+    let cancelled = false;
     setLoadingSats(true);
-    if (workerRef.current) {
-      workerRef.current.postMessage({
-        type: "fetch_catalog",
-        url: `/api/orbital?group=${skyCatalogGroup}&format=tle`,
-        fallback: DEFAULT_SATELLITE_CATALOG,
-      });
-    } else {
-      startTransition(() => {
-        setSatellitesList(DEFAULT_SATELLITE_CATALOG);
-        setLoadingSats(false);
-      });
-    }
-  }, [skyCatalogGroup]);
+
+    const loadLiveCatalog = async () => {
+      try {
+        const queryUrl = `/api/orbital?group=${skyCatalogGroup}&format=tle`;
+        const res = await fetch(queryUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (cancelled) return;
+
+        const parsed = parseTleText(text);
+        if (parsed && parsed.length > 0) {
+          // Merge with built-in default targets so key stations (ISS, Tiangong, Hubble) are guaranteed present
+          const idMap = new Map<number, SatelliteData>();
+          for (const s of DEFAULT_SATELLITE_CATALOG) idMap.set(s.id, s);
+          for (const s of parsed) idMap.set(s.id, s);
+          const fullList = Array.from(idMap.values());
+
+          startTransition(() => {
+            setSatellitesList(fullList);
+            setLoadingSats(false);
+          });
+          useOrbitalStore.getState().setSatellitesList(fullList);
+
+          // Update worker immediately with full 900+ catalog
+          if (workerRef.current) {
+            workerRef.current.postMessage({ type: "init", data: fullList });
+            workerRef.current.postMessage({
+              type: "evaluate_visibility",
+              timeMs: useOrbitalStore.getState().timeMs,
+              selectedSatId: selectedSatId ?? 25544,
+              observer: {
+                lat: observer.lat,
+                lon: observer.lon,
+                altMeters: observer.altMeters || 180,
+              },
+            });
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn("[TrackMySky] Live catalog fetch error, falling back to local catalog:", err);
+      }
+
+      if (!cancelled) {
+        startTransition(() => {
+          setSatellitesList(DEFAULT_SATELLITE_CATALOG);
+          setLoadingSats(false);
+        });
+        if (workerRef.current) {
+          workerRef.current.postMessage({ type: "init", data: DEFAULT_SATELLITE_CATALOG });
+        }
+      }
+    };
+
+    loadLiveCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [skyCatalogGroup, observer.lat, observer.lon, observer.altMeters, selectedSatId]);
 
   // Geolocation Tier 1: Companion Mobile Polling
   useEffect(() => {
@@ -851,6 +849,7 @@ export default function TrackMySkyDashboard() {
         <TrackMySkyHero
           observer={observer}
           visibleCount={visibilityResults.length}
+          totalFleetCount={satellitesList.length}
           nakedEyeCount={nakedEyeCount}
           sunlitCount={sunlitCount}
           activeSatName={selectedSat?.satName || selectedRawSat?.name || "ISS (ZARYA)"}
