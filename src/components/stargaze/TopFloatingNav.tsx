@@ -16,8 +16,10 @@ import {
   Play,
   Search,
   ChevronDown,
-  ExternalLink,
+  Eye,
   Target,
+  BarChart2,
+  FileText,
 } from "lucide-react";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
@@ -26,6 +28,8 @@ export interface TopFloatingNavProps {
   currentDate: Date;
   isMobileSynced: boolean;
   onOpenMobileSync: () => void;
+  mobileSightMode?: "ar" | "track";
+  onToggleMobileSightMode?: () => void;
   showLabels: boolean;
   onToggleLabels: () => void;
   showOrbits: boolean;
@@ -44,6 +48,10 @@ export interface TopFloatingNavProps {
   visible24hCount: number;
   searchQuery?: string;
   onSearchChange?: (q: string) => void;
+  onToggleTelemetryPanel?: () => void;
+  isTelemetryPanelOpen?: boolean;
+  onToggleGraph?: () => void;
+  showGraph?: boolean;
 }
 
 export function TopFloatingNav({
@@ -51,6 +59,8 @@ export function TopFloatingNav({
   currentDate,
   isMobileSynced,
   onOpenMobileSync,
+  mobileSightMode = "track",
+  onToggleMobileSightMode,
   showLabels,
   onToggleLabels,
   showOrbits,
@@ -69,6 +79,10 @@ export function TopFloatingNav({
   visible24hCount,
   searchQuery = "",
   onSearchChange,
+  onToggleTelemetryPanel,
+  isTelemetryPanelOpen = false,
+  onToggleGraph,
+  showGraph = false,
 }: TopFloatingNavProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -80,15 +94,8 @@ export function TopFloatingNav({
     }
   };
 
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-50 w-full bg-black/95 border-b border-zinc-850 backdrop-blur-xl select-none font-sans">
+    <header className="relative z-50 w-full bg-black/95 border-b border-zinc-850 backdrop-blur-xl select-none font-sans">
       {/* ── TOP UTILITY & BRAND BAR ── */}
       <div className="w-full px-4 sm:px-8 py-2.5 flex items-center justify-between gap-4 border-b border-zinc-900/80">
         {/* Brand Logo - NASA Editorial Geometric Typography */}
@@ -112,14 +119,13 @@ export function TopFloatingNav({
 
           <span className="h-4 w-px bg-zinc-800 hidden sm:inline" />
 
-          {/* Quick Observatory Tag */}
+          {/* Observer GPS Coordinates readout */}
           <div
-            onClick={() => scrollToSection("stargaze-ground-station")}
-            className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 hover:text-white cursor-pointer transition truncate max-w-[240px]"
-            title="Click to view observer location"
+            className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 hover:text-white transition truncate max-w-[280px]"
+            title={`Observer Site: ${observer.name}`}
           >
             <MapPin className="h-3 w-3 text-cyan-400 shrink-0" />
-            <span className="truncate">{observer.name}</span>
+            <span className="truncate">GPS ({observer.lat.toFixed(4)}°, {observer.lon.toFixed(4)}°)</span>
           </div>
         </div>
 
@@ -138,12 +144,16 @@ export function TopFloatingNav({
         </div>
 
         {/* Right Status & Quick Utilities */}
-        <div className="flex items-center gap-3 shrink-0 text-xs font-mono">
+        <div className="flex items-center gap-2.5 shrink-0 text-xs font-mono">
           {/* Active Sensor / Telemetry Count */}
           <button
-            onClick={() => scrollToSection("stargaze-catalog")}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-300 hover:text-white border border-zinc-800 bg-zinc-950 hover:border-zinc-700 transition cursor-pointer"
-            title="Jump to satellite catalog"
+            onClick={onToggleTelemetryDrawer}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs border transition cursor-pointer ${
+              isTelemetryDrawerOpen
+                ? "border-cyan-400 bg-cyan-950/50 text-cyan-300 font-bold"
+                : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:text-white hover:border-zinc-700"
+            }`}
+            title="Open Satellite Fleet Catalog"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] animate-ping" />
             <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-400">
@@ -159,16 +169,36 @@ export function TopFloatingNav({
             onClick={onOpenMobileSync}
             className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] border transition cursor-pointer ${
               isMobileSynced
-                ? "border-cyan-400/80 bg-cyan-950/40 text-cyan-300 font-bold"
+                ? "border-emerald-400/80 bg-emerald-950/40 text-emerald-300 font-bold"
                 : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700"
             }`}
             title={isMobileSynced ? "Phone compass connected" : "Pair smartphone compass via QR"}
           >
-            <Smartphone className={`h-3 w-3 ${isMobileSynced ? "text-cyan-400 animate-pulse" : "text-zinc-400"}`} />
+            <Smartphone className={`h-3 w-3 ${isMobileSynced ? "text-emerald-400 animate-pulse" : "text-zinc-400"}`} />
             <span className="hidden sm:inline">
-              {isMobileSynced ? "Sensors Synced" : "Pair Phone"}
+              {isMobileSynced ? "Phone Synced" : "Pair Phone"}
             </span>
           </button>
+
+          {/* AR View vs Track View Toggle Tab (Visible when Phone is Synced) */}
+          {isMobileSynced && onToggleMobileSightMode && (
+            <button
+              onClick={onToggleMobileSightMode}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] border transition cursor-pointer font-bold ${
+                mobileSightMode === "ar"
+                  ? "border-cyan-400 bg-cyan-400 text-black shadow-[0_0_12px_rgba(0,229,255,0.4)]"
+                  : "border-cyan-500/60 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/40"
+              }`}
+              title={
+                mobileSightMode === "ar"
+                  ? "Currently in 1st-Person AR View (Click to switch to 3D Track View)"
+                  : "Currently in 3D Track View (Click to switch to 1st-Person AR View)"
+              }
+            >
+              <Eye className="h-3 w-3" />
+              <span>{mobileSightMode === "ar" ? "Mode: AR View" : "Mode: Track View"}</span>
+            </button>
+          )}
 
           {/* Fullscreen Button */}
           <button
@@ -182,48 +212,45 @@ export function TopFloatingNav({
       </div>
 
       {/* ── SUB-NAVIGATION ROW (NASA EDITORIAL MENU) ── */}
-      <div className="w-full px-4 sm:px-8 py-2 flex items-center justify-between gap-6 overflow-x-auto scrollbar-none text-[11px] tracking-[0.18em] uppercase font-mono">
-        {/* Navigation Categories with Dropdown Indicators */}
+      <div className="w-full px-4 sm:px-8 py-1.5 flex items-center justify-between gap-6 overflow-x-auto scrollbar-none text-[11px] tracking-[0.16em] uppercase font-mono">
+        {/* Navigation Categories with Indicators */}
         <nav className="flex items-center gap-5 sm:gap-7 shrink-0">
           <button
-            onClick={() => scrollToSection("stargaze-hero")}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition cursor-pointer"
+            onClick={onToggleTelemetryDrawer}
+            className={`flex items-center gap-1 transition cursor-pointer ${
+              isTelemetryDrawerOpen ? "text-cyan-400 font-bold" : "text-zinc-400 hover:text-white"
+            }`}
           >
-            <span>Dome View</span>
-            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-          </button>
-
-          <button
-            onClick={() => scrollToSection("stargaze-telemetry")}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition cursor-pointer"
-          >
-            <span>Telemetry</span>
-            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-          </button>
-
-          <button
-            onClick={() => scrollToSection("stargaze-trajectory")}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition cursor-pointer"
-          >
-            <span>Pass Graph</span>
-            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-          </button>
-
-          <button
-            onClick={() => scrollToSection("stargaze-ground-station")}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition cursor-pointer"
-          >
-            <span>Ground Station</span>
-            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
-          </button>
-
-          <button
-            onClick={() => scrollToSection("stargaze-catalog")}
-            className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 font-bold transition cursor-pointer"
-          >
+            <Satellite className="h-3 w-3" />
             <span>Missions Catalog</span>
             <ChevronDown className="h-2.5 w-2.5 opacity-70" />
           </button>
+
+          {onToggleTelemetryPanel && (
+            <button
+              onClick={onToggleTelemetryPanel}
+              className={`flex items-center gap-1 transition cursor-pointer ${
+                isTelemetryPanelOpen ? "text-cyan-400 font-bold" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Target className="h-3 w-3" />
+              <span>Telemetry Data</span>
+              <ChevronDown className="h-2.5 w-2.5 opacity-50" />
+            </button>
+          )}
+
+          {onToggleGraph && (
+            <button
+              onClick={onToggleGraph}
+              className={`flex items-center gap-1 transition cursor-pointer ${
+                showGraph ? "text-cyan-400 font-bold" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              <BarChart2 className="h-3 w-3" />
+              <span>Pass Profile Graph</span>
+              <ChevronDown className="h-2.5 w-2.5 opacity-50" />
+            </button>
+          )}
 
           <button
             onClick={onToggleSimDock}
@@ -232,7 +259,7 @@ export function TopFloatingNav({
             }`}
           >
             <Play className="h-2.5 w-2.5 text-cyan-400" />
-            <span>24h Sim</span>
+            <span>24h Sim Dock</span>
             <ChevronDown className="h-2.5 w-2.5 opacity-50" />
           </button>
 
@@ -246,7 +273,7 @@ export function TopFloatingNav({
         </nav>
 
         {/* Quick Layer Controls - Flat 1px borders */}
-        <div className="hidden xl:flex items-center gap-1.5 shrink-0 border-l border-zinc-800 pl-4">
+        <div className="hidden lg:flex items-center gap-1.5 shrink-0 border-l border-zinc-800 pl-4">
           <span className="text-[10px] text-zinc-500 tracking-widest mr-1">LAYERS:</span>
 
           <button

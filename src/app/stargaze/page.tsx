@@ -104,7 +104,7 @@ export default function StarGazePage() {
   return (
     <main
       id="main-content"
-      className="relative min-h-screen w-full bg-black text-white selection:bg-[#00e5ff]/20 selection:text-white"
+      className="fixed inset-0 w-screen h-screen overflow-hidden bg-black text-white select-none"
     >
       <StarGazeView observer={observer} />
     </main>
