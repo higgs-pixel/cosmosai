@@ -20,6 +20,7 @@ import {
   Target,
   BarChart2,
   FileText,
+  Globe,
 } from "lucide-react";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
@@ -43,6 +44,7 @@ export interface TopFloatingNavProps {
   is180DomeView: boolean;
   onToggle180DomeView: () => void;
   onOpenManual: () => void;
+  onOpenGlossary?: () => void;
   onToggleTelemetryDrawer: () => void;
   isTelemetryDrawerOpen: boolean;
   visible24hCount: number;
@@ -74,6 +76,7 @@ export function TopFloatingNav({
   is180DomeView,
   onToggle180DomeView,
   onOpenManual,
+  onOpenGlossary,
   onToggleTelemetryDrawer,
   isTelemetryDrawerOpen,
   visible24hCount,
@@ -260,6 +263,17 @@ export function TopFloatingNav({
             <span>24h Sim Dock</span>
             <ChevronDown className="h-2.5 w-2.5 opacity-50" />
           </button>
+
+          {onOpenGlossary && (
+            <button
+              onClick={onOpenGlossary}
+              className="flex items-center gap-1 text-zinc-400 hover:text-cyan-400 transition cursor-pointer"
+              title="Open Astrophysics & Astrometry Glossary"
+            >
+              <Globe className="h-2.5 w-2.5 text-cyan-400" />
+              <span>Glossary</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenManual}
