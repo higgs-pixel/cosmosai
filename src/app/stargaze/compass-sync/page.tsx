@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye, Navigation } from "lucide-react";
+import { Compass, Smartphone, Radio, CheckCircle2, AlertCircle, Sliders, Eye, Navigation, Target } from "lucide-react";
 import { Vector3, Matrix4, MathUtils } from "three";
+
+// Compass cardinal bearings matching Stargaze FloatingCompassHUD
+const CARDINALS = [
+  { label: "N", deg: 0, isMajor: true },
+  { label: "NE", deg: 45, isMajor: false },
+  { label: "E", deg: 90, isMajor: true },
+  { label: "SE", deg: 135, isMajor: false },
+  { label: "S", deg: 180, isMajor: true },
+  { label: "SW", deg: 225, isMajor: false },
+  { label: "W", deg: 270, isMajor: true },
+  { label: "NW", deg: 315, isMajor: false },
+];
+
+const TICKS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
 
 // Calculate 3D W3C Earth frame orientation to compute true heading & elevation without Gimbal Lock
 function calculateDeviceSightOrientation(
@@ -96,7 +110,6 @@ export default function MobileCompassSyncPage() {
   const [invertPitch, setInvertPitch] = useState<boolean>(false);
   const [calibrationOffset, setCalibrationOffset] = useState<number>(0);
   const [sightMode, setSightMode] = useState<"auto" | "camera" | "pointer">("auto");
-  const [isDisconnected, setIsDisconnected] = useState<boolean>(false);
 
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
@@ -121,7 +134,6 @@ export default function MobileCompassSyncPage() {
   // Transmit orientation data over HTTP POST and BroadcastChannel
   const sendOrientationData = useCallback(
     async (h: number, p: number, r: number) => {
-      if (isDisconnected) return;
       setIsSending(true);
 
       // 1. BroadcastChannel local tab sync fallback
@@ -174,29 +186,6 @@ export default function MobileCompassSyncPage() {
     };
   }, []);
 
-  const disconnectSession = useCallback(async () => {
-    setIsDisconnected(true);
-    try {
-      if (channelRef.current) {
-        channelRef.current.postMessage({
-          type: "COMPASS_DISCONNECT",
-          sessionId,
-        });
-      }
-    } catch {}
-
-    try {
-      await fetch("/api/stargaze/compass-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          disconnect: true,
-        }),
-      });
-    } catch {}
-  }, [sessionId]);
-
   // Page leave / beforeunload listener to notify desktop observatory immediately
   useEffect(() => {
     const handleLeave = () => {
@@ -211,7 +200,9 @@ export default function MobileCompassSyncPage() {
           "/api/stargaze/compass-sync",
           new Blob([JSON.stringify({ sessionId, disconnect: true })], { type: "application/json" })
         );
-      } catch {}
+      } catch {
+        /* skip */
+      }
     };
 
     window.addEventListener("beforeunload", handleLeave);
@@ -224,17 +215,14 @@ export default function MobileCompassSyncPage() {
 
   // Send initial handshake immediately on page load
   useEffect(() => {
-    if (isDisconnected) return;
     sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
 
     const heartbeat = setInterval(() => {
-      if (!isDisconnected) {
-        sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
-      }
+      sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
     }, 400);
 
     return () => clearInterval(heartbeat);
-  }, [sendOrientationData, isDisconnected]);
+  }, [sendOrientationData]);
 
   // Direct Device Orientation Listener (W3C 3D Earth frame math)
   const startListening = useCallback(() => {
@@ -379,136 +367,227 @@ export default function MobileCompassSyncPage() {
   const displaySessionId = `#${sessionId.slice(0, 10)}`;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center justify-between p-4 sm:p-6 select-none overflow-x-hidden">
-      {/* Header Bar */}
-      <header className="w-full max-w-md flex items-center justify-between border-b border-emerald-500/30 pb-3">
-        <div className="flex items-center gap-2 truncate">
-          <Smartphone className="h-6 w-6 text-emerald-400 animate-pulse shrink-0" />
+    <main className="min-h-screen bg-[#02040a] text-white font-mono flex flex-col items-center justify-between p-4 sm:p-6 select-none overflow-x-hidden">
+      {/* ── 1. HEADER BAR (NASA EDITORIAL OBSERVATORY STYLE) ── */}
+      <header className="w-full max-w-md flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="flex items-center gap-2.5 truncate">
+          <div className="p-1.5 bg-black border border-zinc-800 text-cyan-400 shrink-0">
+            <Smartphone className="h-4 w-4 text-cyan-400 animate-pulse" />
+          </div>
           <div className="truncate">
-            <h1 className="font-extrabold text-sm text-white tracking-wide truncate">STARGAZER COMPASS SENSOR</h1>
-            <div className="text-[10px] font-mono text-emerald-400 truncate">SESSION: {displaySessionId}</div>
+            <h1 className="font-extrabold text-xs text-white tracking-[0.16em] uppercase truncate">
+              COSMOS AI // SIGHT SENSOR
+            </h1>
+            <div className="text-[10px] text-zinc-400 tracking-wider truncate">
+              SESSION: <span className="text-cyan-400 font-bold">{displaySessionId}</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {isDisconnected ? (
-            <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/50 text-[10px] font-mono font-bold text-rose-300">
-              DISCONNECTED
-            </span>
-          ) : (
-            <>
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300">
-                <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
-                <span>TRANSMITTING</span>
-              </div>
-              <button
-                onClick={disconnectSession}
-                className="px-2.5 py-1 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-[10px] font-mono font-bold text-rose-300 transition cursor-pointer"
-              >
-                DISCONNECT
-              </button>
-            </>
-          )}
+        {/* Status Badge: TRANSMITTING label (no disconnect tab) */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-black border border-emerald-500/50 text-[10px] font-bold tracking-wider uppercase text-emerald-400 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
+          <span>TRANSMITTING</span>
         </div>
       </header>
 
-      {/* Stellarium AR Sight Banner */}
-      <div className="w-full max-w-md my-2 p-3 rounded-2xl bg-slate-950/60 border border-white/[0.12] shadow-[0_8px_32px_0_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.1)] backdrop-blur-2xl flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-400/40 text-cyan-300 shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.25)]">
-          <Smartphone className="h-5 w-5 animate-pulse" />
+      {/* ── 2. SIGHT VECTOR MODE SELECTOR (STARGAZE CARD STYLE) ── */}
+      <div className="w-full max-w-md my-2 p-3 bg-black/90 border border-zinc-800 shadow-2xl backdrop-blur-md flex flex-col gap-2">
+        <div className="flex items-center justify-between text-[10px] text-zinc-400">
+          <span className="text-cyan-400 font-bold tracking-wider flex items-center gap-1.5">
+            <Navigation className="h-3 w-3" />
+            <span>SIGHT VECTOR MODE</span>
+          </span>
+          <span className="px-1.5 py-0.5 border border-cyan-400/40 text-cyan-300 bg-cyan-950/40 text-[9px] uppercase font-bold">
+            {sightMode}
+          </span>
         </div>
-        <div className="text-[11px] font-mono leading-tight flex-1">
-          <div className="font-extrabold text-cyan-300 tracking-wide flex items-center justify-between">
-            <span>
-              {sightMode === "pointer"
-                ? "COMPASS POINTER MODE (TOP EDGE)"
-                : sightMode === "camera"
-                ? "BACK CAMERA LENS SIGHT"
-                : "SMART AUTO (POINTER / CAMERA)"}
-            </span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/30 text-cyan-200 uppercase font-bold">
-              {sightMode}
-            </span>
-          </div>
-          <div className="text-slate-300 text-[10px] mt-0.5">
-            {sightMode === "pointer"
-              ? "Aim top edge of phone at the sky or horizon like a laser pointer."
-              : sightMode === "camera"
-              ? "Aim back camera lens at the sky like a telescope viewfinder."
-              : "Hold flat to read compass, tilt up to aim at satellites & stars."}
-          </div>
+
+        {/* Mode Selector Segmented Tabs */}
+        <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 border border-zinc-850">
+          <button
+            onClick={() => setSightMode("auto")}
+            className={`py-1.5 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${
+              sightMode === "auto"
+                ? "bg-cyan-400 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Auto (Smart)
+          </button>
+          <button
+            onClick={() => setSightMode("pointer")}
+            className={`py-1.5 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${
+              sightMode === "pointer"
+                ? "bg-cyan-400 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
+            title="Point top edge of phone at stars / horizon"
+          >
+            Pointer (Top)
+          </button>
+          <button
+            onClick={() => setSightMode("camera")}
+            className={`py-1.5 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${
+              sightMode === "camera"
+                ? "bg-cyan-400 text-black shadow-[0_0_10px_rgba(0,229,255,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
+            title="Aim back camera lens at the sky"
+          >
+            Camera (Lens)
+          </button>
+        </div>
+
+        <div className="text-[10px] text-zinc-400 leading-relaxed pt-0.5 border-t border-zinc-900">
+          {sightMode === "pointer"
+            ? "Top Pointer: Aim the top edge of your phone directly at the sky or horizon like a laser pointer."
+            : sightMode === "camera"
+            ? "Camera Lens: Aim the back camera lens at stars and satellites like a telescope viewfinder."
+            : "Smart Auto: Hold flat to view compass bearings; tilt upright to sight celestial objects."}
         </div>
       </div>
 
-      {/* Center Interactive Glowing Compass Rose Dial */}
-      <section className="my-4 flex flex-col items-center justify-center relative w-full max-w-md">
-        {/* Outer Rotating Compass Outer Ring */}
-        <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border-2 border-emerald-500/40 bg-slate-900/90 backdrop-blur-2xl flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.25)] overflow-hidden">
-          {/* Concentric Elevation Rings */}
-          <div className="absolute inset-4 rounded-full border border-white/10" />
-          <div className="absolute inset-12 rounded-full border border-emerald-500/20" />
-          <div className="absolute inset-20 rounded-full border border-white/10" />
+      {/* ── 3. CENTER FLOATING COMPASS HUD (EXACT STARGAZE COMPONENT DESIGN) ── */}
+      <section className="my-3 flex flex-col items-center justify-center relative w-full max-w-md">
+        {/* Main Circular Dial (matches Stargaze FloatingCompassHUD & Planisphere radar styling) */}
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border border-zinc-800 bg-black/95 backdrop-blur-md flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9),inset_0_0_25px_rgba(0,229,255,0.06)] overflow-hidden">
+          {/* Outer Ring Border */}
+          <div className="absolute inset-2 rounded-full border border-zinc-850" />
+          {/* Mid Ring Border */}
+          <div className="absolute inset-8 rounded-full border border-zinc-900" />
+          {/* Inner Ring Border */}
+          <div className="absolute inset-16 rounded-full border border-zinc-900/60" />
 
-          {/* Compass Needle */}
+          {/* Hairline Crosshairs */}
+          <div className="absolute inset-x-0 h-px bg-zinc-850/80" />
+          <div className="absolute inset-y-0 w-px bg-zinc-850/80" />
+          <div className="absolute w-full h-px bg-zinc-900/40 rotate-45" />
+          <div className="absolute w-full h-px bg-zinc-900/40 -rotate-45" />
+
+          {/* Rotating Compass Ring */}
           <div
+            className="absolute inset-0 transition-transform duration-100 ease-out pointer-events-none"
             style={{ transform: `rotate(${-heading}deg)` }}
-            className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-100 ease-out"
           >
-            {/* North Red Pointer */}
-            <div className="absolute top-2 font-mono text-xs font-black text-red-500 flex flex-col items-center">
-              <span>N</span>
-              <div className="w-1.5 h-6 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]" />
-            </div>
-            {/* South Pointer */}
-            <div className="absolute bottom-2 font-mono text-xs font-bold text-emerald-400 flex flex-col items-center">
-              <div className="w-1.5 h-6 bg-emerald-400 rounded-full" />
-              <span>S</span>
-            </div>
-            {/* East / West */}
-            <div className="absolute right-3 font-mono text-xs font-bold text-slate-400">E</div>
-            <div className="absolute left-3 font-mono text-xs font-bold text-slate-400">W</div>
+            {/* Cardinal Markers */}
+            {CARDINALS.map((c) => {
+              const rad = (c.deg * Math.PI) / 180;
+              const r = 104; // radius in px from center
+              const x = Math.sin(rad) * r;
+              const y = -Math.cos(rad) * r;
+              const isNorth = c.label === "N";
 
-            {/* Line of sight beam line */}
-            <div className="w-0.5 h-full bg-emerald-500/30 absolute" />
+              return (
+                <div
+                  key={c.label}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+                  style={{
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                  }}
+                >
+                  <span
+                    className={`font-mono text-center select-none ${
+                      isNorth
+                        ? "text-cyan-400 font-black text-xs drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]"
+                        : c.isMajor
+                        ? "text-zinc-300 font-bold text-[10px]"
+                        : "text-zinc-600 text-[8px]"
+                    }`}
+                  >
+                    {c.label}
+                  </span>
+                  {isNorth && (
+                    <div className="w-1 h-3 bg-cyan-400 rounded-full shadow-[0_0_8px_#00e5ff] mt-0.5" />
+                  )}
+                  {c.label === "S" && (
+                    <div className="w-1 h-2 bg-emerald-400 rounded-full mt-0.5" />
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Subtle Azimuth Degree Ticks */}
+            {TICKS.map((deg) => {
+              const rad = (deg * Math.PI) / 180;
+              const r = 122;
+              const x = Math.sin(rad) * r;
+              const y = -Math.cos(rad) * r;
+              const isCard = deg % 90 === 0;
+
+              return (
+                <div
+                  key={`tick-${deg}`}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                  }}
+                >
+                  <div
+                    className={`rounded-full ${
+                      isCard ? "w-1 h-1 bg-zinc-500" : "w-0.5 h-0.5 bg-zinc-800"
+                    }`}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Vertical Line of Sight Beam */}
+            <div className="w-px h-full bg-cyan-400/20 absolute left-1/2 -translate-x-1/2" />
           </div>
 
-          {/* Center HUD Heading Degree Value */}
-          <div className="z-10 flex flex-col items-center justify-center bg-slate-950/90 p-4 rounded-full border border-emerald-500/50 shadow-2xl">
-            <Compass className="h-6 w-6 text-emerald-400 mb-1" />
-            <div className="font-mono text-2xl font-black text-white">{heading}°</div>
-            <div className="font-mono text-[9px] font-bold text-emerald-300 uppercase tracking-wider">
+          {/* Center Observer Sight Reticle (Matches Stargaze FloatingCompassHUD Hub) */}
+          <div className="z-10 flex flex-col items-center justify-center bg-black/95 px-5 py-4 rounded-full border border-zinc-750 shadow-2xl backdrop-blur-md">
+            <Navigation className="h-4 w-4 text-cyan-400 mb-1 rotate-45 animate-pulse" />
+            <div className="font-mono text-2xl font-black text-white tracking-tight leading-none">
+              {heading}°
+            </div>
+            <div className="font-mono text-[9px] font-bold text-cyan-300 uppercase tracking-widest mt-1">
               {getCardinalText(heading)}
             </div>
+            <div className="font-mono text-[8px] text-amber-400 uppercase tracking-wider mt-0.5 font-bold">
+              {pitch}° EL {pitch === 0 ? "(HORIZON)" : pitch === 90 ? "(ZENITH)" : ""}
+            </div>
           </div>
         </div>
 
-        {/* Live Telemetry HUD Grid */}
-        <div className="w-full grid grid-cols-3 gap-2 mt-4 font-mono text-xs">
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-center">
-            <div className="text-[10px] text-slate-400">AZIMUTH</div>
-            <div className="font-extrabold text-emerald-400 text-sm">{heading}°</div>
+        {/* ── 4. LIVE TELEMETRY HUD DATA GRID (NASA EDITORIAL METRICS) ── */}
+        <div className="w-full grid grid-cols-4 gap-1.5 mt-3 font-mono">
+          <div className="p-2 bg-black/90 border border-zinc-800 text-center">
+            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">AZIMUTH</div>
+            <div className="font-black text-cyan-400 text-sm mt-0.5">{heading}°</div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-pink-500/30 text-center">
-            <div className="text-[10px] text-slate-400">ELEVATION</div>
-            <div className="font-extrabold text-pink-400 text-sm">{pitch}° {pitch === 0 ? "(Horizon)" : pitch === 90 ? "(Zenith)" : ""}</div>
+          <div className="p-2 bg-black/90 border border-zinc-800 text-center">
+            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">PITCH</div>
+            <div className="font-black text-amber-400 text-sm mt-0.5">{pitch}°</div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/30 text-center">
-            <div className="text-[10px] text-slate-400">PACKETS</div>
-            <div className="font-extrabold text-amber-300 text-sm">{packetCount}</div>
+          <div className="p-2 bg-black/90 border border-zinc-800 text-center">
+            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">ROLL</div>
+            <div className="font-black text-purple-300 text-sm mt-0.5">{roll}°</div>
+          </div>
+          <div className="p-2 bg-black/90 border border-zinc-800 text-center">
+            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">PACKETS</div>
+            <div className="font-black text-emerald-400 text-sm mt-0.5">{packetCount}</div>
           </div>
         </div>
 
-        {/* Interactive Manual Sliders & Sensor Controls */}
-        <div className="w-full mt-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between text-[11px] font-mono text-slate-300 flex-wrap gap-1">
-            <span className="flex items-center gap-1">
-              <Sliders className="h-3.5 w-3.5 text-emerald-400" /> Sensor Settings
+        {/* ── 5. SENSOR SETTINGS & MANUAL OVERRIDE (STARGAZE NASA CONTROL PANEL) ── */}
+        <div className="w-full mt-3 p-3 bg-black/90 border border-zinc-800 flex flex-col gap-2.5 font-mono">
+          <div className="flex items-center justify-between text-[11px] text-zinc-300 pb-2 border-b border-zinc-850 flex-wrap gap-1">
+            <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-xs">
+              <Sliders className="h-3.5 w-3.5 text-cyan-400" />
+              <span>SENSOR SETTINGS</span>
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setInvertPitch(!invertPitch)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                  invertPitch ? "bg-pink-500 text-white" : "bg-slate-800 text-slate-300 hover:text-white"
+                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border transition cursor-pointer ${
+                  invertPitch
+                    ? "border-amber-500 bg-amber-950/40 text-amber-300"
+                    : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white"
                 }`}
                 title="Toggle if tilting top of phone up moves elevation down"
               >
@@ -517,55 +596,22 @@ export default function MobileCompassSyncPage() {
 
               <button
                 onClick={() => setManualMode(!manualMode)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                  manualMode ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-400 hover:text-white"
+                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border transition cursor-pointer ${
+                  manualMode
+                    ? "border-cyan-400 bg-cyan-950/40 text-cyan-300"
+                    : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white"
                 }`}
               >
-                {manualMode ? "MANUAL OVERRIDE ON" : "AUTO SENSORS"}
+                {manualMode ? "MANUAL OVERRIDE" : "AUTO GYRO"}
               </button>
             </div>
           </div>
 
-          {/* Sight Vector Mode Selector */}
-          <div className="flex items-center justify-between text-[10px] font-mono bg-slate-950/80 p-2 rounded-lg border border-cyan-500/30">
-            <span className="text-cyan-300 font-bold flex items-center gap-1">
-              <Navigation className="h-3 w-3" />
-              <span>SIGHT MODE:</span>
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSightMode("auto")}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                  sightMode === "auto" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
-                }`}
-              >
-                Auto (Smart)
-              </button>
-              <button
-                onClick={() => setSightMode("pointer")}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                  sightMode === "pointer" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
-                }`}
-                title="Point top edge of phone at stars / horizon"
-              >
-                Pointer (Top)
-              </button>
-              <button
-                onClick={() => setSightMode("camera")}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                  sightMode === "camera" ? "bg-cyan-500 text-slate-950 shadow-sm" : "bg-slate-900 text-slate-400 hover:text-white"
-                }`}
-                title="Aim back camera lens at the sky"
-              >
-                Camera (Lens)
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1 text-[10px] font-mono">
-            <div className="flex justify-between text-slate-400">
+          {/* Azimuth Range Slider */}
+          <div className="flex flex-col gap-1 text-[10px]">
+            <div className="flex justify-between text-zinc-400 uppercase tracking-wider">
               <span>AZIMUTH (Heading)</span>
-              <span className="text-emerald-400 font-bold">{heading}°</span>
+              <span className="text-cyan-400 font-bold">{heading}°</span>
             </div>
             <input
               type="range"
@@ -578,14 +624,15 @@ export default function MobileCompassSyncPage() {
                 setHeading(h);
                 sendOrientationData(h, pitch, roll);
               }}
-              className="accent-emerald-400 w-full cursor-pointer h-1.5 rounded-lg bg-slate-800"
+              className="accent-cyan-400 w-full cursor-pointer h-1.5 rounded-none bg-zinc-850"
             />
           </div>
 
-          <div className="flex flex-col gap-1 text-[10px] font-mono">
-            <div className="flex justify-between text-slate-400">
+          {/* Elevation Range Slider */}
+          <div className="flex flex-col gap-1 text-[10px]">
+            <div className="flex justify-between text-zinc-400 uppercase tracking-wider">
               <span>ELEVATION (Pitch)</span>
-              <span className="text-pink-400 font-bold">{pitch}°</span>
+              <span className="text-amber-400 font-bold">{pitch}°</span>
             </div>
             <input
               type="range"
@@ -598,23 +645,24 @@ export default function MobileCompassSyncPage() {
                 setPitch(p);
                 sendOrientationData(heading, p, roll);
               }}
-              className="accent-pink-400 w-full cursor-pointer h-1.5 rounded-lg bg-slate-800"
+              className="accent-amber-400 w-full cursor-pointer h-1.5 rounded-none bg-zinc-850"
             />
           </div>
 
-          <div className="flex flex-col gap-1 text-[10px] font-mono border-t border-slate-800/80 pt-2 mt-1">
-            <div className="flex justify-between text-slate-400">
-              <span className="flex items-center gap-1 text-cyan-300 font-semibold">
-                <span>COMPASS CALIBRATION OFFSET</span>
-              </span>
+          {/* Calibration Offset Slider */}
+          <div className="flex flex-col gap-1 text-[10px] border-t border-zinc-900 pt-2 mt-0.5">
+            <div className="flex justify-between text-zinc-400 uppercase tracking-wider items-center">
+              <span className="text-zinc-300">COMPASS CALIBRATION OFFSET</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCalibrationOffset(0)}
-                  className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white"
+                  className="text-[9px] px-1.5 py-0.2 border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white transition"
                 >
                   RESET (0°)
                 </button>
-                <span className="text-cyan-400 font-bold">{calibrationOffset > 0 ? `+${calibrationOffset}` : calibrationOffset}°</span>
+                <span className="text-emerald-400 font-bold">
+                  {calibrationOffset > 0 ? `+${calibrationOffset}` : calibrationOffset}°
+                </span>
               </div>
             </div>
             <input
@@ -623,18 +671,18 @@ export default function MobileCompassSyncPage() {
               max="180"
               value={calibrationOffset}
               onChange={(e) => setCalibrationOffset(parseInt(e.target.value, 10))}
-              className="accent-cyan-400 w-full cursor-pointer h-1.5 rounded-lg bg-slate-800"
+              className="accent-emerald-400 w-full cursor-pointer h-1.5 rounded-none bg-zinc-850"
             />
           </div>
         </div>
       </section>
 
-      {/* Permission Button / Status Footer */}
-      <footer className="w-full max-w-md flex flex-col items-center gap-2 mb-2">
+      {/* ── 6. PERMISSION & STATUS FOOTER ── */}
+      <footer className="w-full max-w-md flex flex-col items-center gap-2 mb-2 font-mono">
         {hasPermission !== true && (
           <button
             onClick={requestSensorPermission}
-            className="w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2"
+            className="w-full py-3 bg-cyan-400 hover:bg-cyan-300 text-black font-black text-xs tracking-wider uppercase transition shadow-[0_0_25px_rgba(0,229,255,0.4)] flex items-center justify-center gap-2 border border-cyan-300 cursor-pointer"
           >
             <Compass className="h-4 w-4" />
             <span>ENABLE GYROSCOPE &amp; COMPASS SENSORS</span>
@@ -642,15 +690,15 @@ export default function MobileCompassSyncPage() {
         )}
 
         {hasPermission === true && (
-          <div className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-center text-xs font-mono text-emerald-300 flex items-center justify-center gap-2 shadow-inner">
+          <div className="w-full p-2.5 bg-black border border-emerald-500/40 text-center text-xs text-emerald-300 flex items-center justify-center gap-2 shadow-inner uppercase tracking-wider font-bold">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             <span>Transmitting Live Telemetry to 3D Dome</span>
           </div>
         )}
 
-        <div className="text-[10px] font-mono text-slate-400 text-center flex items-center gap-1.5">
+        <div className="text-[10px] text-zinc-500 text-center flex items-center gap-1.5">
           {hasPermission === false ? (
-            <span className="text-red-400 flex items-center gap-1">
+            <span className="text-amber-400 flex items-center gap-1">
               <AlertCircle className="h-3.5 w-3.5" /> Sensor permission denied (use sliders above)
             </span>
           ) : (
