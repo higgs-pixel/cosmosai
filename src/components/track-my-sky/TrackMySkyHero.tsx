@@ -58,6 +58,7 @@ interface TrackMySkyHeroProps {
   activeSatNoradId?: number;
   onDetectGps: () => void;
   onScrollToSection: (id: string) => void;
+  onOpenGlossary?: () => void;
 }
 
 export function TrackMySkyHero({
@@ -76,6 +77,7 @@ export function TrackMySkyHero({
   activeSatNoradId = 25544,
   onDetectGps,
   onScrollToSection,
+  onOpenGlossary,
 }: TrackMySkyHeroProps) {
   return (
     <section className="relative w-full min-h-screen lg:min-h-[96vh] flex flex-col justify-between pt-24 pb-16 overflow-hidden bg-black border-b border-zinc-900">
@@ -204,6 +206,16 @@ export function TrackMySkyHero({
               <Navigation className="h-3.5 w-3.5 text-zinc-500 group-hover:text-[#00e5ff]" />
               <span>Detect GPS</span>
             </button>
+
+            {onOpenGlossary && (
+              <button
+                onClick={onOpenGlossary}
+                className="inline-flex items-center hover:text-white transition group border-b border-transparent hover:border-white pb-0.5 cursor-pointer text-zinc-400 uppercase text-[11px]"
+                title="Astronomical Glossary & Observatory Documentation"
+              >
+                <span>Glossary</span>
+              </button>
+            )}
           </motion.div>
         </div>
 

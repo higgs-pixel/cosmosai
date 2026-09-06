@@ -294,7 +294,20 @@ export default function TrackMySkyDashboard() {
   const tick = useOrbitalStore((s) => s.tick);
   const storeSatellitesList = useOrbitalStore((s) => s.satellitesList);
 
-  const [satellitesList, setSatellitesList] = useState<SatelliteData[]>(() => DEFAULT_SATELLITE_CATALOG);
+  const [satellitesList, setSatellitesList] = useState<SatelliteData[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("cosmos_sky_catalog_active");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 50) return parsed;
+        }
+      } catch {
+        /* skip */
+      }
+    }
+    return DEFAULT_SATELLITE_CATALOG;
+  });
   const [loadingSats, setLoadingSats] = useState(false);
 
   const [sliderBaseTime, setSliderBaseTime] = useState(() => Date.now());
@@ -306,6 +319,7 @@ export default function TrackMySkyDashboard() {
   const isWorkerBusyRef = useRef(false);
   const [workerVisibilityResults, setWorkerVisibilityResults] = useState<SatelliteVisibilityResult[]>([]);
   const [workerSelectedTelemetry, setWorkerSelectedTelemetry] = useState<any>(null);
+  const lastWorkerInitCountRef = useRef(0);
 
   // Sync satellitesList into orbital store for 3D trajectory calculation
   useEffect(() => {
@@ -349,7 +363,13 @@ export default function TrackMySkyDashboard() {
           });
         } else if (type === "catalog_loaded" && Array.isArray(loadedSats)) {
           startTransition(() => {
-            setSatellitesList(loadedSats);
+            setSatellitesList((current) => {
+              // Never downgrade full fleet back to a smaller fallback!
+              if (current && current.length > loadedSats.length) {
+                return current;
+              }
+              return loadedSats;
+            });
             setLoadingSats(false);
           });
           useOrbitalStore.getState().setSatellitesList(loadedSats);
@@ -373,10 +393,13 @@ export default function TrackMySkyDashboard() {
     }
   }, [onlyVisible]);
 
-  // Synchronize satellitesList with Web Worker on updates
+  // Synchronize satellitesList with Web Worker once per distinct count
   useEffect(() => {
     if (workerRef.current && satellitesList.length > 0) {
-      workerRef.current.postMessage({ type: "init", data: satellitesList });
+      if (lastWorkerInitCountRef.current !== satellitesList.length) {
+        lastWorkerInitCountRef.current = satellitesList.length;
+        workerRef.current.postMessage({ type: "init", data: satellitesList });
+      }
     }
   }, [satellitesList]);
 
@@ -488,13 +511,22 @@ export default function TrackMySkyDashboard() {
           for (const s of parsed) idMap.set(s.id, s);
           const fullList = Array.from(idMap.values());
 
+          try {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem("cosmos_sky_catalog_active", JSON.stringify(fullList));
+            }
+          } catch {
+            /* skip */
+          }
+
+          lastWorkerInitCountRef.current = fullList.length;
           startTransition(() => {
             setSatellitesList(fullList);
             setLoadingSats(false);
           });
           useOrbitalStore.getState().setSatellitesList(fullList);
 
-          // Update worker immediately with full 900+ catalog
+          // Update worker immediately with full 1,200+ catalog
           if (workerRef.current) {
             workerRef.current.postMessage({ type: "init", data: fullList });
             workerRef.current.postMessage({
@@ -511,17 +543,12 @@ export default function TrackMySkyDashboard() {
           return;
         }
       } catch (err) {
-        console.warn("[TrackMySky] Live catalog fetch error, falling back to local catalog:", err);
+        console.warn("[TrackMySky] Live catalog fetch error, keeping existing catalog:", err);
       }
 
       if (!cancelled) {
-        startTransition(() => {
-          setSatellitesList(DEFAULT_SATELLITE_CATALOG);
-          setLoadingSats(false);
-        });
-        if (workerRef.current) {
-          workerRef.current.postMessage({ type: "init", data: DEFAULT_SATELLITE_CATALOG });
-        }
+        setLoadingSats(false);
+        setSatellitesList((prev) => (prev && prev.length > 50 ? prev : DEFAULT_SATELLITE_CATALOG));
       }
     };
 
@@ -847,10 +874,6 @@ export default function TrackMySkyDashboard() {
         observer={observer}
         formattedTime={formatClockTime(uiTimeMs, selectedTz)}
         onOpenPairModal={() => setShowPairModal(true)}
-        onOpenKnowledge={(tab) => {
-          setKnowledgeActiveTab(tab);
-          setIsKnowledgeModalOpen(true);
-        }}
         onScrollToSection={scrollToSection}
         activeSection={activeSection}
         searchQuery={tableSearch}
@@ -878,6 +901,10 @@ export default function TrackMySkyDashboard() {
           activeSatNoradId={selectedSat?.satId || selectedRawSat?.id || 25544}
           onDetectGps={detectUserLocation}
           onScrollToSection={scrollToSection}
+          onOpenGlossary={() => {
+            setKnowledgeActiveTab("glossary");
+            setIsKnowledgeModalOpen(true);
+          }}
         />
       </div>
 
