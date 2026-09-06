@@ -24,12 +24,17 @@ function cleanupSessions() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sessionId, heading, pitch, roll } = body;
+    const { sessionId, heading, pitch, roll, disconnect } = body;
 
     const normSessionId =
       sessionId && String(sessionId).trim() !== "<SESSION_ID>" && String(sessionId).trim() !== "%3CSESSION_ID%3E"
         ? String(sessionId).trim()
         : "stargaze-sync";
+
+    if (disconnect) {
+      compassSessions.delete(normSessionId);
+      return NextResponse.json({ success: true, disconnected: true });
+    }
 
     if (typeof heading !== "number") {
       return NextResponse.json({ error: "Missing heading" }, { status: 400 });

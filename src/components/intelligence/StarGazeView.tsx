@@ -2011,6 +2011,7 @@ function SatelliteTrackerCelestialScene({
   satellites,
   onSelectSat,
   is180DomeView,
+  isMobileSynced = false,
   mobileOrientation,
   mobileSightMode = "track",
   isAimLocked = false,
@@ -2029,6 +2030,7 @@ function SatelliteTrackerCelestialScene({
   satellites: ComputedSatelliteSkyState[];
   onSelectSat: (sat: ComputedSatelliteSkyState) => void;
   is180DomeView: boolean;
+  isMobileSynced?: boolean;
   mobileOrientation?: { heading: number; pitch: number; roll?: number } | null;
   mobileSightMode?: "ar" | "track";
   isAimLocked?: boolean;
@@ -2039,6 +2041,16 @@ function SatelliteTrackerCelestialScene({
   const isTargetInit = useRef<boolean>(false);
   const lastFacingAz = useRef<number>(0);
   const lastFacingTime = useRef<number>(0);
+  const wasMobileSyncedInScene = useRef<boolean>(false);
+
+  const defaultTarget = useMemo(
+    () => (is180DomeView ? new THREE.Vector3(0, 25, 0) : new THREE.Vector3(0, 60, 0)),
+    [is180DomeView]
+  );
+  const defaultCamPos = useMemo(
+    () => (is180DomeView ? new THREE.Vector3(0, 25, 200) : new THREE.Vector3(0, 240, 320)),
+    [is180DomeView]
+  );
 
   useFrame(({ camera }, delta) => {
     const dir = new THREE.Vector3();
@@ -2053,7 +2065,21 @@ function SatelliteTrackerCelestialScene({
       onUpdateHeading(Math.round(facingAz));
     }
 
-    if (mobileOrientation) {
+    // When phone was previously synced and now disconnected, immediately restore camera target & position
+    if (wasMobileSyncedInScene.current && (!isMobileSynced || !mobileOrientation)) {
+      wasMobileSyncedInScene.current = false;
+      isTargetInit.current = false;
+      if (controlsRef.current) {
+        controlsRef.current.target.copy(defaultTarget);
+        if (camera.position.length() < 50) {
+          camera.position.copy(defaultCamPos);
+        }
+        controlsRef.current.update();
+      }
+    }
+
+    if (isMobileSynced && mobileOrientation) {
+      wasMobileSyncedInScene.current = true;
       const azRad = (mobileOrientation.heading * Math.PI) / 180;
       const elRad = (mobileOrientation.pitch * Math.PI) / 180;
       const r = 240;
@@ -2076,10 +2102,26 @@ function SatelliteTrackerCelestialScene({
         // FIRST-PERSON AR SKY VIEWER MODE: Smooth fluid orientation
         camera.position.set(0, 10, 0);
         camera.lookAt(smoothedTarget.current);
-      } else if (controlsRef.current && (!isAimLocked || !selectedSat)) {
-        // OBSERVATORY TRACK MODE: Orbit controls target smoothly glides to sight vector (when not aim-locked to satellite)
-        controlsRef.current.target.lerp(smoothedTarget.current, damp);
-        controlsRef.current.update();
+      } else {
+        // OBSERVATORY 3D TRACK MODE:
+        // The 3D robot ground station actively tracks the mobile phone's orientation and shoots
+        // the collimated sight beam. OrbitControls target remains centered on the observatory dome
+        // so the user can orbit and inspect freely without getting the pivot stuck in outer space!
+        if (controlsRef.current && !isAimLocked) {
+          if (controlsRef.current.target.distanceTo(defaultTarget) > 0.5) {
+            controlsRef.current.target.lerp(defaultTarget, damp);
+            controlsRef.current.update();
+          }
+        }
+      }
+    } else {
+      // Not mobile-synced: smoothly ensure target stays at observatory center when not aim-locked
+      if (!isAimLocked && controlsRef.current) {
+        if (controlsRef.current.target.distanceTo(defaultTarget) > 0.5) {
+          const returnDamp = 1 - Math.exp(-6.0 * Math.min(delta, 0.1));
+          controlsRef.current.target.lerp(defaultTarget, returnDamp);
+          controlsRef.current.update();
+        }
       }
     }
 
@@ -2145,7 +2187,7 @@ function SatelliteTrackerCelestialScene({
         enableDamping
         dampingFactor={0.05}
         rotateSpeed={0.6}
-        enableRotate={!is180DomeView && mobileSightMode !== "ar"}
+        enableRotate={!is180DomeView && !(isMobileSynced && mobileSightMode === "ar")}
         target={is180DomeView ? [0, 25, 0] : [0, 60, 0]}
         minPolarAngle={0.001}
         maxPolarAngle={Math.PI / 2 + 0.1}
@@ -2240,14 +2282,29 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
   const [lastRefreshedDate, setLastRefreshedDate] = useState<Date>(new Date());
   const [isRefreshingTles, setIsRefreshingTles] = useState<boolean>(false);
 
+  const resetDomeCamera = useCallback(() => {
+    if (controlsRef.current) {
+      if (is180DomeView) {
+        controlsRef.current.object.position.set(0, 25, 200);
+        controlsRef.current.target.set(0, 25, 0);
+      } else {
+        controlsRef.current.object.position.set(0, 240, 320);
+        controlsRef.current.target.set(0, 60, 0);
+      }
+      controlsRef.current.update();
+    }
+  }, [is180DomeView]);
+
   const handleRegenerateSession = useCallback(() => {
     const newId = Math.random().toString(36).substring(2, 10);
     setSessionId(newId);
     setMobileOrientation(null);
     setIsMobileSynced(false);
+    setMobileSightMode("track");
     wasMobileSyncedRef.current = false;
+    resetDomeCamera();
     showToast(`New QR Session Generated: #${newId}`);
-  }, []);
+  }, [resetDomeCamera]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2299,19 +2356,30 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       channel = new BroadcastChannel("stargaze_compass_channel");
       channel.onmessage = (event) => {
         if (!isSubscribed) return;
-        if (event.data && event.data.type === "COMPASS_TELEMETRY" && event.data.sessionId === sessionId) {
-          lastBroadcastMsgTime = Date.now();
-          setMobileOrientation({
-            heading: event.data.heading,
-            pitch: event.data.pitch,
-            roll: event.data.roll || 0,
-          });
-          setIsMobileSynced(true);
-          // Only auto-close once upon initial sync
-          if (!wasMobileSyncedRef.current) {
-            wasMobileSyncedRef.current = true;
-            setShowQrPanel(false);
-            showToast("Mobile Phone Connected Successfully");
+        if (event.data && event.data.sessionId === sessionId) {
+          if (event.data.type === "COMPASS_DISCONNECT") {
+            wasMobileSyncedRef.current = false;
+            setIsMobileSynced(false);
+            setMobileOrientation(null);
+            setMobileSightMode("track");
+            resetDomeCamera();
+            showToast("Mobile Phone Disconnected: Camera Restored");
+            return;
+          }
+          if (event.data.type === "COMPASS_TELEMETRY") {
+            lastBroadcastMsgTime = Date.now();
+            setMobileOrientation({
+              heading: event.data.heading,
+              pitch: event.data.pitch,
+              roll: event.data.roll || 0,
+            });
+            setIsMobileSynced(true);
+            // Only auto-close once upon initial sync
+            if (!wasMobileSyncedRef.current) {
+              wasMobileSyncedRef.current = true;
+              setShowQrPanel(false);
+              showToast("Mobile Phone Connected Successfully");
+            }
           }
         }
       };
@@ -2346,9 +2414,14 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             showToast("Mobile Phone Connected Successfully");
           }
         } else if (isSubscribed && !data.connected && Date.now() - lastBroadcastMsgTime > 6000) {
-          wasMobileSyncedRef.current = false;
-          setIsMobileSynced(false);
-          setMobileOrientation(null);
+          if (wasMobileSyncedRef.current) {
+            wasMobileSyncedRef.current = false;
+            setIsMobileSynced(false);
+            setMobileOrientation(null);
+            setMobileSightMode("track");
+            resetDomeCamera();
+            showToast("Mobile Phone Disconnected: Camera Restored");
+          }
         }
       } catch {
         /* skip network hiccups */
@@ -2739,6 +2812,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             satellites={allSatellites}
             onSelectSat={(sat) => handleTrackSatellite(sat)}
             is180DomeView={is180DomeView}
+            isMobileSynced={isMobileSynced}
             mobileOrientation={mobileOrientation}
             mobileSightMode={mobileSightMode}
             isAimLocked={isAimLocked}
@@ -2774,6 +2848,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
             onToggleAimLock={() => {
               if (isAimLocked) {
                 setIsAimLocked(false);
+                resetDomeCamera();
                 showToast("Sight Unlocked: Camera Free");
               } else {
                 handleTrackSatellite(activeLabelSat);
@@ -2843,6 +2918,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
               <button
                 onClick={() => {
                   setIsAimLocked(false);
+                  resetDomeCamera();
                   showToast("Sight Unlocked: Camera Free");
                 }}
                 className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs font-mono uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer shadow-lg"

@@ -96,6 +96,7 @@ export default function MobileCompassSyncPage() {
   const [invertPitch, setInvertPitch] = useState<boolean>(false);
   const [calibrationOffset, setCalibrationOffset] = useState<number>(0);
   const [sightMode, setSightMode] = useState<"auto" | "camera" | "pointer">("auto");
+  const [isDisconnected, setIsDisconnected] = useState<boolean>(false);
 
   const headingRef = useRef<number>(0);
   const pitchRef = useRef<number>(0);
@@ -120,6 +121,7 @@ export default function MobileCompassSyncPage() {
   // Transmit orientation data over HTTP POST and BroadcastChannel
   const sendOrientationData = useCallback(
     async (h: number, p: number, r: number) => {
+      if (isDisconnected) return;
       setIsSending(true);
 
       // 1. BroadcastChannel local tab sync fallback
@@ -172,16 +174,67 @@ export default function MobileCompassSyncPage() {
     };
   }, []);
 
+  const disconnectSession = useCallback(async () => {
+    setIsDisconnected(true);
+    try {
+      if (channelRef.current) {
+        channelRef.current.postMessage({
+          type: "COMPASS_DISCONNECT",
+          sessionId,
+        });
+      }
+    } catch {}
+
+    try {
+      await fetch("/api/stargaze/compass-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          disconnect: true,
+        }),
+      });
+    } catch {}
+  }, [sessionId]);
+
+  // Page leave / beforeunload listener to notify desktop observatory immediately
+  useEffect(() => {
+    const handleLeave = () => {
+      try {
+        if (channelRef.current) {
+          channelRef.current.postMessage({
+            type: "COMPASS_DISCONNECT",
+            sessionId,
+          });
+        }
+        navigator.sendBeacon?.(
+          "/api/stargaze/compass-sync",
+          new Blob([JSON.stringify({ sessionId, disconnect: true })], { type: "application/json" })
+        );
+      } catch {}
+    };
+
+    window.addEventListener("beforeunload", handleLeave);
+    window.addEventListener("pagehide", handleLeave);
+    return () => {
+      window.removeEventListener("beforeunload", handleLeave);
+      window.removeEventListener("pagehide", handleLeave);
+    };
+  }, [sessionId]);
+
   // Send initial handshake immediately on page load
   useEffect(() => {
+    if (isDisconnected) return;
     sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
 
     const heartbeat = setInterval(() => {
-      sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
+      if (!isDisconnected) {
+        sendOrientationData(headingRef.current, pitchRef.current, rollRef.current);
+      }
     }, 400);
 
     return () => clearInterval(heartbeat);
-  }, [sendOrientationData]);
+  }, [sendOrientationData, isDisconnected]);
 
   // Direct Device Orientation Listener (W3C 3D Earth frame math)
   const startListening = useCallback(() => {
@@ -337,9 +390,25 @@ export default function MobileCompassSyncPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 shrink-0">
-          <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
-          <span>TRANSMITTING</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {isDisconnected ? (
+            <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/50 text-[10px] font-mono font-bold text-rose-300">
+              DISCONNECTED
+            </span>
+          ) : (
+            <>
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300">
+                <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
+                <span>TRANSMITTING</span>
+              </div>
+              <button
+                onClick={disconnectSession}
+                className="px-2.5 py-1 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-[10px] font-mono font-bold text-rose-300 transition cursor-pointer"
+              >
+                DISCONNECT
+              </button>
+            </>
+          )}
         </div>
       </header>
 
