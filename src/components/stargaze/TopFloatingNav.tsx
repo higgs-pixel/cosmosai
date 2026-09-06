@@ -104,12 +104,10 @@ export function TopFloatingNav({
             href="/"
             className="flex items-center gap-2.5 text-white hover:text-cyan-400 transition group"
           >
-            <div className="px-2 py-0.5 border border-white text-white font-black tracking-widest text-sm sm:text-base font-mono uppercase transition group-hover:border-cyan-400 group-hover:text-cyan-400">
-              NASA
-            </div>
+            
             <div className="flex flex-col leading-none">
               <span className="font-extrabold text-xs tracking-[0.2em] text-white uppercase font-sans">
-                COSMOS
+                COSMOS AI
               </span>
               <span className="text-[9px] font-mono tracking-widest text-zinc-400 uppercase">
                 STARGAZE OBSERVATORY
