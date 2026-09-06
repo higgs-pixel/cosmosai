@@ -729,10 +729,13 @@ export default function TrackMySkyDashboard() {
 
   const candidateSatellites = useMemo(() => {
     if (!satellitesList || satellitesList.length === 0) return [];
-    const priorityIds = new Set([25544, 48274, 20580, 25994, 43013, 27424, 33591, 39634, 40697, 44713, 26690, 37753, 43001, 39620]);
+    const priorityIds = new Set([
+      25544, 48274, 20580, 25994, 43013, 27424, 33591, 39634, 40697, 44713,
+      26690, 37753, 43001, 39620, 40732, 41836, 41752, 43013, 44725, 48274
+    ]);
     const priorityList = satellitesList.filter((s) => priorityIds.has(s.id));
     const regularList = satellitesList.filter((s) => !priorityIds.has(s.id));
-    return [...priorityList, ...regularList].slice(0, 16);
+    return [...priorityList, ...regularList].slice(0, 75);
   }, [satellitesList]);
 
   // Keplerian elements from TLE Line 2

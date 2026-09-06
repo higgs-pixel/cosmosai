@@ -243,8 +243,12 @@ export function TrackMySkyHero({
           <button
             onClick={() => onScrollToSection("console-section")}
             className="border-l border-zinc-800 pl-3 py-1 text-left group hover:border-cyan-400 transition cursor-pointer"
+            title="Click to select any country or trigger GPS"
           >
-            <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Observer Site</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-widest text-zinc-500 block">Observer Site</span>
+              <span className="text-[8px] px-1 rounded bg-cyan-500/10 text-cyan-400 uppercase font-semibold">Change</span>
+            </div>
             <span className="text-sm font-bold text-white font-sans truncate block">{(observer.name || "Observer Site").split(",")[0]}</span>
             <span className="text-[11px] text-zinc-400 block">{observer.lat.toFixed(2)}°, {observer.lon.toFixed(2)}°</span>
           </button>

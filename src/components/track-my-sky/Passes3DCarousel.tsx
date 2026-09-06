@@ -201,7 +201,7 @@ const StarfieldGlitterCanvas = memo(function StarfieldGlitterCanvas() {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Passes 3D Cover Flow Carousel Component
+// Passes 3D Cover Flow Carousel Component (Space-Tech Liquid Glass)
 // ─────────────────────────────────────────────────────────────────────────────
 interface Passes3DCarouselProps {
   passes: SatellitePass[];
@@ -212,19 +212,19 @@ interface Passes3DCarouselProps {
 
 function getRelativeTimeStr(targetTimeMs: number): string {
   const diffMs = targetTimeMs - Date.now();
-  if (diffMs <= 0) return "ACTIVE NOW";
+  if (diffMs <= 0) return "ACTIVE OVERHEAD";
   const diffMins = Math.round(diffMs / 60000);
-  if (diffMins < 60) return `IN ${diffMins}m`;
+  if (diffMins < 60) return `IN ${diffMins} MINS`;
   const diffHours = Math.floor(diffMins / 60);
   const remMins = diffMins % 60;
-  return remMins > 0 ? `IN ${diffHours}h ${remMins}m` : `IN ${diffHours}h`;
+  return remMins > 0 ? `IN ${diffHours}H ${remMins}M` : `IN ${diffHours} HOURS`;
 }
 
 function getPassDescription(pass: SatellitePass): string {
   if (pass.isVisibleToEye) {
-    return `Prime naked-eye observation window. Reaching a peak elevation of ${pass.maxElevationDeg}° with exceptionally high visual brightness (${pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ) traversing from azimuth ${pass.riseAzimuthDeg}° to ${pass.setAzimuthDeg}°. 🛰️⚡`;
+    return `Prime naked-eye visual pass. Spacecraft achieves peak elevation of ${pass.maxElevationDeg}° with high photometric reflectivity (${pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ) traversing from azimuth ${pass.riseAzimuthDeg}° to ${pass.setAzimuthDeg}°.`;
   }
-  return `Topocentric orbital crossing reaching ${pass.maxElevationDeg}° altitude above your ground station. Slant range geometry yields an apparent magnitude of ${pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ across a ${Math.round(pass.durationSec / 60)} minute pass window. 📡`;
+  return `Topocentric orbital crossing reaching ${pass.maxElevationDeg}° above local horizon. Slant range geometry yields apparent magnitude ${pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ across a ${Math.round(pass.durationSec / 60)} minute pass window.`;
 }
 
 export function Passes3DCarousel({
@@ -234,15 +234,46 @@ export function Passes3DCarousel({
   onSelectSatId,
 }: Passes3DCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const mouseStartXRef = useRef<number | null>(null);
+
+  // Sync index if external selectedPass changes
+  useEffect(() => {
+    if (selectedPass && passes.length > 0) {
+      const idx = passes.findIndex(
+        (p) => p.noradId === selectedPass.noradId && p.startTimeMs === selectedPass.startTimeMs
+      );
+      if (idx !== -1 && idx !== currentIndex) {
+        setCurrentIndex(idx);
+      }
+    }
+  }, [selectedPass, passes, currentIndex]);
+
+  // Keep index in bounds if passes list changes
+  useEffect(() => {
+    if (currentIndex >= passes.length && passes.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [passes.length, currentIndex]);
+
+  const selectIndex = useCallback((nextIdx: number) => {
+    if (passes.length === 0) return;
+    const bounded = (nextIdx + passes.length) % passes.length;
+    setCurrentIndex(bounded);
+    const pass = passes[bounded];
+    if (pass) {
+      onSelectPass(pass);
+      onSelectSatId(pass.noradId);
+    }
+  }, [passes, onSelectPass, onSelectSatId]);
 
   const handlePrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : Math.max(0, passes.length - 1)));
-  }, [passes.length]);
+    selectIndex(currentIndex - 1);
+  }, [currentIndex, selectIndex]);
 
   const handleNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev < passes.length - 1 ? prev + 1 : 0));
-  }, [passes.length]);
+    selectIndex(currentIndex + 1);
+  }, [currentIndex, selectIndex]);
 
   // Keyboard navigation support
   useEffect(() => {
@@ -254,11 +285,55 @@ export function Passes3DCarousel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handlePrev, handleNext]);
 
-  if (passes.length === 0) return null;
+  // Touch Swipe Handlers for mobile & trackpad
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartXRef.current;
+    if (diff > 45) handlePrev();
+    else if (diff < -45) handleNext();
+    touchStartXRef.current = null;
+  };
 
-  // Build 5-card 3D perspective fan (Cover Flow)
-  const offsets = [-2, -1, 0, 1, 2];
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mouseStartXRef.current = e.clientX;
+  };
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (mouseStartXRef.current === null) return;
+    const diff = e.clientX - mouseStartXRef.current;
+    if (diff > 50) handlePrev();
+    else if (diff < -50) handleNext();
+    mouseStartXRef.current = null;
+  };
+
+  if (passes.length === 0) {
+    return (
+      <div className="relative w-full py-16 overflow-hidden font-sans select-none rounded-2xl bg-black border border-zinc-850 text-center">
+        <StarfieldGlitterCanvas />
+        <div className="relative z-10 space-y-2">
+          <p className="text-white text-sm font-bold uppercase tracking-wider">No Upcoming Passes in Current Window</p>
+          <p className="text-xs text-zinc-400">Expand the observation timeframe or choose a different ground station.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Deduplicated offset generation for smooth Cover Flow
   const total = passes.length;
+  let offsets: number[] = [0];
+  if (total === 2) {
+    offsets = [-1, 0];
+  } else if (total === 3) {
+    offsets = [-1, 0, 1];
+  } else if (total === 4) {
+    offsets = [-1, 0, 1, 2];
+  } else if (total >= 5) {
+    offsets = [-2, -1, 0, 1, 2];
+  }
+
   const visibleCards = offsets.map((offset) => {
     let idx = (currentIndex + offset) % total;
     if (idx < 0) idx += total;
@@ -266,54 +341,66 @@ export function Passes3DCarousel({
   });
 
   return (
-    <div className="relative w-full py-8 overflow-hidden font-sans select-none rounded-2xl bg-black border border-zinc-850">
-      {/* 1. Dynamic Glittering Starfield Background Canvas */}
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      className="relative w-full py-8 overflow-hidden font-sans select-none rounded-2xl bg-black border border-zinc-850"
+    >
+      {/* 1. Deep Space Glitter Starfield Background */}
       <StarfieldGlitterCanvas />
 
-      {/* 2. Top Header Information & Counter */}
+      {/* 2. Header Bar: Counter & Quick Controls */}
       <div className="relative z-10 flex items-center justify-between mb-8 px-4 sm:px-8">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#00e5ff]">
+          <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#00e5ff] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] animate-ping" />
             Topocentric Passes ({passes.length})
           </span>
           <span className="text-zinc-700">&bull;</span>
-          <span className="text-xs text-zinc-400">
-            Object <strong className="text-white font-semibold">{currentIndex + 1}</strong> of {passes.length}
+          <span className="text-xs text-zinc-400 font-mono">
+            TARGET <strong className="text-white font-bold">{currentIndex + 1}</strong> OF {passes.length}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-zinc-500 uppercase tracking-wider hidden sm:inline">
-            Use arrows or drag to navigate
+          <span className="text-[10px] text-zinc-500 uppercase tracking-widest hidden sm:inline font-mono">
+            SWIPE / USE ARROWS TO ROTATE
           </span>
         </div>
       </div>
 
-      {/* 3. 3D Cover Flow Stage */}
+      {/* 3. 3D Cylindrical Perspective Stage */}
       <div className="relative z-10 w-full flex items-center justify-center min-h-[460px] sm:min-h-[500px]">
-        {/* Left Navigation Chevron Arrow */}
+        {/* Left Arrow Button */}
         <button
-          onClick={handlePrev}
-          className="absolute left-2 sm:left-6 z-50 p-2 text-white/60 hover:text-white transition-all transform hover:scale-125 active:scale-95 cursor-pointer focus:outline-none drop-shadow-[0_0_16px_rgba(255,255,255,0.6)]"
-          title="Previous (Left Arrow)"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePrev();
+          }}
+          className="absolute left-2 sm:left-6 z-50 p-2 text-zinc-400 hover:text-[#00e5ff] transition-all transform hover:scale-125 active:scale-95 cursor-pointer focus:outline-none drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]"
+          title="Previous Pass (Left Arrow)"
           aria-label="Previous Pass"
         >
-          <ChevronLeft className="w-9 h-9 sm:w-12 sm:h-12 stroke-[2]" />
+          <ChevronLeft className="w-9 h-9 sm:w-12 sm:h-12 stroke-[2.5]" />
         </button>
 
-        {/* Right Navigation Chevron Arrow */}
+        {/* Right Arrow Button */}
         <button
-          onClick={handleNext}
-          className="absolute right-2 sm:right-6 z-50 p-2 text-white/60 hover:text-white transition-all transform hover:scale-125 active:scale-95 cursor-pointer focus:outline-none drop-shadow-[0_0_16px_rgba(255,255,255,0.6)]"
-          title="Next (Right Arrow)"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNext();
+          }}
+          className="absolute right-2 sm:right-6 z-50 p-2 text-zinc-400 hover:text-[#00e5ff] transition-all transform hover:scale-125 active:scale-95 cursor-pointer focus:outline-none drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]"
+          title="Next Pass (Right Arrow)"
           aria-label="Next Pass"
         >
-          <ChevronRight className="w-9 h-9 sm:w-12 sm:h-12 stroke-[2]" />
+          <ChevronRight className="w-9 h-9 sm:w-12 sm:h-12 stroke-[2.5]" />
         </button>
 
-        {/* 3D Perspective Card Track */}
+        {/* 3D Perspective Track */}
         <div
-          ref={containerRef}
           className="relative w-full h-[420px] sm:h-[450px] flex items-center justify-center"
           style={{ perspective: 1100, transformStyle: "preserve-3d" }}
         >
@@ -326,12 +413,12 @@ export function Passes3DCarousel({
             const description = getPassDescription(pass);
 
             const absOffset = Math.abs(offset);
-            const xOffset = offset * (absOffset === 1 ? 175 : 305);
-            const rotateY = offset === 0 ? 0 : -Math.sign(offset) * (absOffset === 1 ? 46 : 56);
-            const scale = offset === 0 ? 1 : absOffset === 1 ? 0.86 : 0.74;
+            const xOffset = offset * (absOffset === 1 ? 185 : 315);
+            const rotateY = offset === 0 ? 0 : -Math.sign(offset) * (absOffset === 1 ? 42 : 54);
+            const scale = offset === 0 ? 1 : absOffset === 1 ? 0.86 : 0.72;
             const zIndex = offset === 0 ? 40 : absOffset === 1 ? 25 : 10;
-            const opacity = offset === 0 ? 1 : absOffset === 1 ? 0.65 : 0.28;
-            const blur = offset === 0 ? 0 : absOffset === 1 ? 0.8 : 2.5;
+            const opacity = offset === 0 ? 1 : absOffset === 1 ? 0.65 : 0.25;
+            const blur = offset === 0 ? 0 : absOffset === 1 ? 0.6 : 2.0;
 
             return (
               <motion.div
@@ -345,32 +432,22 @@ export function Passes3DCarousel({
                   zIndex: zIndex,
                 }}
                 transition={{
-                  duration: 0.45,
+                  duration: 0.4,
                   ease: [0.25, 1, 0.5, 1],
                 }}
-                drag={isCenter ? "x" : false}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.25}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x > 45) handlePrev();
-                  else if (info.offset.x < -45) handleNext();
-                }}
-                onClick={() => {
-                  if (!isCenter) {
-                    setCurrentIndex(index);
-                  }
-                  onSelectPass(pass);
-                  onSelectSatId(pass.noradId);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectIndex(index);
                 }}
                 className={`
-                  absolute w-[280px] sm:w-[320px] md:w-[340px] h-[400px] sm:h-[430px]
+                  absolute w-[290px] sm:w-[330px] md:w-[350px] h-[410px] sm:h-[435px]
                   rounded-3xl p-6 sm:p-7 cursor-pointer
                   flex flex-col justify-between select-none
-                  transition-shadow duration-300
+                  transition-all duration-300
                   ${
                     isCenter
-                      ? "bg-white text-zinc-900 shadow-[0_25px_65px_rgba(0,0,0,0.95),0_0_55px_rgba(255,255,255,0.22)] ring-1 ring-white/70"
-                      : "bg-white/85 text-zinc-800 backdrop-blur-md shadow-[0_15px_40px_rgba(0,0,0,0.85)] hover:bg-white/95"
+                      ? "bg-[#060a17]/95 backdrop-blur-2xl text-white border-2 border-cyan-400/80 shadow-[0_25px_65px_rgba(0,0,0,0.95),0_0_50px_rgba(0,229,255,0.22)] ring-1 ring-cyan-400/50"
+                      : "bg-[#040714]/80 backdrop-blur-xl text-zinc-300 border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.8)] hover:border-cyan-500/40"
                   }
                 `}
                 style={{
@@ -378,81 +455,84 @@ export function Passes3DCarousel({
                   backfaceVisibility: "hidden",
                 }}
               >
-                {/* Upper Section: Title & Tags */}
-                <div className="space-y-3">
+                {/* Liquid Glass Subtle Sheen Overlay */}
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent pointer-events-none" />
+
+                {/* Upper Section: Title, NORAD & Status Tag */}
+                <div className="space-y-3 relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-[#00e5ff] uppercase">
                       NORAD {pass.noradId}
                     </span>
 
                     <span
-                      className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                      className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border ${
                         pass.isVisibleToEye
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-zinc-100 text-zinc-700"
+                          ? "bg-emerald-950/60 border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                          : "bg-zinc-900 border-zinc-700 text-zinc-300"
                       }`}
                     >
-                      {pass.isVisibleToEye && <Sparkles className="h-3 w-3 text-emerald-600" />}
-                      <span>{pass.isVisibleToEye ? "Naked Eye" : "Radar Visible"}</span>
+                      {pass.isVisibleToEye && <Sparkles className="h-3 w-3 text-emerald-400 animate-pulse" />}
+                      <span>{pass.isVisibleToEye ? "Naked Eye" : "Above Horizon"}</span>
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-2xl sm:text-[28px] font-black tracking-tight text-zinc-950 font-sans leading-tight line-clamp-2">
+                    <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white font-sans leading-tight line-clamp-2 uppercase">
                       {pass.satName}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1 font-sans">
-                      <Clock className="h-3.5 w-3.5 text-zinc-400" />
-                      <span className="font-bold text-zinc-800">{relativeTime}</span>
-                      <span className="text-zinc-300">&bull;</span>
-                      <span>Duration {Math.round(pass.durationSec / 60)} min</span>
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1 font-sans">
+                      <Clock className="h-3.5 w-3.5 text-[#00e5ff]" />
+                      <span className="font-bold text-[#00e5ff]">{relativeTime}</span>
+                      <span className="text-zinc-600">&bull;</span>
+                      <span className="text-zinc-400">Duration {Math.round(pass.durationSec / 60)} min</span>
                     </div>
                   </div>
 
-                  {/* Informative Paragraph / Narrative */}
-                  <p className="text-xs sm:text-[13px] text-zinc-600 leading-relaxed line-clamp-4 pt-1">
+                  {/* Informative Pass Description */}
+                  <p className="text-xs text-zinc-300 leading-relaxed line-clamp-4 pt-1 font-sans">
                     {description}
                   </p>
                 </div>
 
-                {/* Bottom Section: Metrics Strip & Interactive Action */}
-                <div className="space-y-4 pt-3 border-t border-zinc-100">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-zinc-50 rounded-xl p-2">
-                      <span className="text-[9px] uppercase text-zinc-400 block font-semibold">Peak Elev</span>
-                      <span className="text-sm font-black text-zinc-900">{pass.maxElevationDeg}°</span>
+                {/* Bottom Section: Astrometric Grid & Action CTA */}
+                <div className="space-y-3 pt-3 border-t border-zinc-800/80 relative z-10">
+                  <div className="grid grid-cols-3 gap-2 text-center font-sans">
+                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-2">
+                      <span className="text-[9px] uppercase text-zinc-500 block font-semibold">Peak Elev</span>
+                      <span className="text-sm font-black text-white">{pass.maxElevationDeg}°</span>
                     </div>
-                    <div className="bg-zinc-50 rounded-xl p-2">
-                      <span className="text-[9px] uppercase text-zinc-400 block font-semibold">Est. Mag</span>
-                      <span className="text-sm font-black text-emerald-600">
-                        {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag}
+                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-2">
+                      <span className="text-[9px] uppercase text-zinc-500 block font-semibold">Visual Mag</span>
+                      <span className="text-sm font-black text-emerald-400">
+                        {pass.peakVmag > 0 ? `+${pass.peakVmag}` : pass.peakVmag} mᵥ
                       </span>
                     </div>
-                    <div className="bg-zinc-50 rounded-xl p-2">
-                      <span className="text-[9px] uppercase text-zinc-400 block font-semibold">AOS Time</span>
-                      <span className="text-xs font-bold text-zinc-900">
+                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-2">
+                      <span className="text-[9px] uppercase text-zinc-500 block font-semibold">AOS Time</span>
+                      <span className="text-xs font-bold text-zinc-200">
                         {new Date(pass.startTimeMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                   </div>
 
-                  {/* Bottom Action CTA */}
+                  {/* Track Satellite Action CTA */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectPass(pass);
                       onSelectSatId(pass.noradId);
                     }}
-                    className={`w-full h-10 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    className={`w-full h-9 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-black text-white shadow-md font-black"
+                        ? "bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.4)] font-black"
                         : isCenter
-                        ? "bg-zinc-950 hover:bg-black text-white"
-                        : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
+                        ? "bg-white hover:bg-[#00e5ff] text-black font-bold"
+                        : "bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
                     }`}
                   >
                     <Crosshair className="h-3.5 w-3.5" />
-                    <span>{isSelected ? "Tracking Active" : "Track Satellite"}</span>
+                    <span>{isSelected ? "Tracking Active" : "Track Target Orbit"}</span>
                   </button>
                 </div>
               </motion.div>
@@ -463,12 +543,15 @@ export function Passes3DCarousel({
 
       {/* 4. Pagination Dots Indicator */}
       <div className="relative z-10 flex items-center justify-center gap-1.5 pt-6">
-        {passes.slice(0, Math.min(passes.length, 14)).map((_, idx) => (
+        {passes.slice(0, Math.min(passes.length, 16)).map((_, idx) => (
           <button
             key={`dot-${idx}`}
-            onClick={() => setCurrentIndex(idx)}
+            onClick={(e) => {
+              e.stopPropagation();
+              selectIndex(idx);
+            }}
             className={`h-1.5 rounded-full transition-all cursor-pointer ${
-              currentIndex === idx ? "w-6 bg-white" : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
+              currentIndex === idx ? "w-7 bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]" : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
             }`}
           />
         ))}

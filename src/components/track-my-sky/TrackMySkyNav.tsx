@@ -105,14 +105,15 @@ export function TrackMySkyNav({
 
           {/* Right Controls: Companion Phone Link, Observer Site & Live Time */}
           <div className="flex items-center gap-4 text-xs font-sans">
-            {/* Observer Geodetic Site Pill */}
-            <div
-              className="hidden lg:flex items-center gap-1.5 text-zinc-400 max-w-[200px] truncate"
-              title={`Observer Site: ${observer.name}`}
+            {/* Observer Geodetic Site Pill (Click to open Country / GPS Console) */}
+            <button
+              onClick={() => onScrollToSection("console-section")}
+              className="hidden lg:flex items-center gap-1.5 text-zinc-400 hover:text-cyan-300 transition-colors max-w-[220px] truncate cursor-pointer px-2 py-1 rounded bg-zinc-950/80 border border-zinc-850 hover:border-cyan-500/40"
+              title={`Observer Site: ${observer.name} (Click to switch country or GPS)`}
             >
-              <MapPin className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
-              <span className="truncate text-[11px] font-sans text-zinc-300">{observer.name}</span>
-            </div>
+              <MapPin className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+              <span className="truncate text-[11px] font-sans text-zinc-200">{observer.name}</span>
+            </button>
 
             {/* Companion Smartphone GPS Sync */}
             {onOpenPairModal && (

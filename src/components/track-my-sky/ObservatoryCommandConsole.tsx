@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   Navigation,
   Play,
@@ -10,9 +11,16 @@ import {
   Sun,
   Moon,
   Crosshair,
+  Globe,
+  Search,
+  X,
+  Check,
+  MapPin,
+  Sparkles,
 } from "lucide-react";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 import { ObserverTwilightInfo } from "@/lib/orbit/visibility";
+import { WORLD_COUNTRIES, WorldCountry } from "@/lib/orbit/countries";
 
 interface ObservatoryCommandConsoleProps {
   observer: ObserverCoords & { accuracyRadiusMeters?: number; source?: string };
@@ -82,6 +90,33 @@ export function ObservatoryCommandConsole({
   aboveHorizonCount,
   nakedEyeCount,
 }: ObservatoryCommandConsoleProps) {
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState<string>("All");
+
+  const filteredCountries = useMemo(() => {
+    return WORLD_COUNTRIES.filter((c) => {
+      if (selectedRegion !== "All" && c.region !== selectedRegion) return false;
+      if (!countrySearch.trim()) return true;
+      const q = countrySearch.toLowerCase().trim();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.capital.toLowerCase().includes(q) ||
+        c.code.toLowerCase().includes(q)
+      );
+    });
+  }, [countrySearch, selectedRegion]);
+
+  const handleCountrySelect = (c: WorldCountry) => {
+    onSelectPresetCity({
+      name: `${c.flag} ${c.name} (${c.capital})`,
+      lat: c.lat,
+      lon: c.lon,
+      altMeters: c.altMeters,
+    });
+    setIsCountryModalOpen(false);
+  };
+
   return (
     <section id="console-section" className="w-full space-y-6 font-sans">
       {/* Section Header */}
@@ -94,7 +129,7 @@ export function ObservatoryCommandConsole({
             Ground Station Astrometry &amp; Time Propagation
           </h2>
           <p className="text-xs text-zinc-400 font-sans mt-1">
-            Topocentric geodetic coordinate calibration, orbital clock scrubbing, and twilight illumination analysis.
+            Calibrate ground station coordinates across 195+ countries or via live GPS to observe topocentric satellites and upcoming passes.
           </p>
         </div>
 
@@ -119,39 +154,97 @@ export function ObservatoryCommandConsole({
             <span className="border border-white/20 inline-block px-2 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300 font-semibold">
               Active Ground Station
             </span>
-            <div className="text-base font-bold text-white tracking-wide">{observer.name}</div>
+            <div className="text-base font-bold text-white tracking-wide flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-[#00e5ff] shrink-0" />
+              <span className="truncate">{observer.name}</span>
+            </div>
             <div className="text-xs text-zinc-400 font-mono">
               {observer.lat.toFixed(4)}°N, {observer.lon.toFixed(4)}°E &bull; {observer.altMeters}m ASL &bull; &plusmn;{observer.accuracyRadiusMeters || 25}m
             </div>
           </div>
 
-          {/* Preset Selector + Auto GPS Button */}
+          {/* Quick Dropdown + Explore All Countries Modal Trigger + Auto GPS */}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 flex-1 max-w-xl">
-            <div className="flex-1 min-w-[200px]">
+            <div className="flex-1 min-w-[180px]">
               <label className="text-[9px] uppercase tracking-widest text-zinc-400 block mb-1 font-semibold">
-                Preset Observatories
+                Quick Ground Station
               </label>
               <select
-                value={presetCities.some((c) => c.name === observer.name) ? observer.name : "custom"}
+                value={observer.name}
                 onChange={(e) => {
-                  const found = presetCities.find((c) => c.name === e.target.value);
-                  if (found) onSelectPresetCity(found);
+                  const val = e.target.value;
+                  const city = presetCities.find((c) => c.name === val);
+                  if (city) {
+                    onSelectPresetCity(city);
+                    return;
+                  }
+                  const country = WORLD_COUNTRIES.find((c) => `${c.flag} ${c.name} (${c.capital})` === val || c.name === val);
+                  if (country) {
+                    handleCountrySelect(country);
+                  }
                 }}
                 className="w-full h-8 border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-200 outline-none focus:border-zinc-500 font-sans cursor-pointer"
               >
-                <option value="custom">Select Observatory Preset…</option>
-                {presetCities.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                <option value={observer.name}>{observer.name}</option>
+                <optgroup label="Preset Space Observatories">
+                  {presetCities.map((c) => (
+                    <option key={`preset-${c.name}`} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Americas">
+                  {WORLD_COUNTRIES.filter((c) => c.region === "Americas").map((c) => (
+                    <option key={`am-${c.code}`} value={`${c.flag} ${c.name} (${c.capital})`}>
+                      {c.flag} {c.name} — {c.capital}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Europe">
+                  {WORLD_COUNTRIES.filter((c) => c.region === "Europe").map((c) => (
+                    <option key={`eu-${c.code}`} value={`${c.flag} ${c.name} (${c.capital})`}>
+                      {c.flag} {c.name} — {c.capital}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Asia">
+                  {WORLD_COUNTRIES.filter((c) => c.region === "Asia").map((c) => (
+                    <option key={`as-${c.code}`} value={`${c.flag} ${c.name} (${c.capital})`}>
+                      {c.flag} {c.name} — {c.capital}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Africa">
+                  {WORLD_COUNTRIES.filter((c) => c.region === "Africa").map((c) => (
+                    <option key={`af-${c.code}`} value={`${c.flag} ${c.name} (${c.capital})`}>
+                      {c.flag} {c.name} — {c.capital}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Oceania">
+                  {WORLD_COUNTRIES.filter((c) => c.region === "Oceania").map((c) => (
+                    <option key={`oc-${c.code}`} value={`${c.flag} ${c.name} (${c.capital})`}>
+                      {c.flag} {c.name} — {c.capital}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 flex items-center gap-2">
+              <button
+                onClick={() => setIsCountryModalOpen(true)}
+                className="h-8 px-3 border border-cyan-500/40 bg-cyan-950/20 hover:bg-cyan-900/40 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
+                title="Search all 195+ countries in the world"
+              >
+                <Globe className="h-3.5 w-3.5 text-[#00e5ff]" />
+                <span className="hidden sm:inline">All Countries</span>
+              </button>
+
               <button
                 onClick={onDetectGps}
                 className="h-8 px-3 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
+                title="Detect precise observer location via GPS sensor"
               >
                 <Navigation className={`h-3 w-3 ${gpsStatus === "locating" ? "animate-spin text-[#00e5ff]" : "text-zinc-400"}`} />
                 <span>Auto GPS</span>
@@ -203,6 +296,138 @@ export function ObservatoryCommandConsole({
             </div>
           </div>
         </div>
+
+        {/* Global Countries Explorer Modal */}
+        {isCountryModalOpen && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setIsCountryModalOpen(false)}
+          >
+            <div
+              className="relative w-full max-w-4xl max-h-[85vh] bg-[#050814] border border-cyan-500/40 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_60px_rgba(0,229,255,0.18)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/80">
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-[#00e5ff]" />
+                  <div>
+                    <h3 className="text-base font-black text-white uppercase tracking-wider font-sans">
+                      Select Ground Station Observatory
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-sans">
+                      Choose any country in the world to calculate overhead satellites and upcoming passes over its horizon.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsCountryModalOpen(false)}
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition cursor-pointer"
+                  title="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Controls: Search & Region Tabs */}
+              <div className="p-4 border-b border-zinc-850 bg-black/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={countrySearch}
+                    onChange={(e) => setCountrySearch(e.target.value)}
+                    placeholder="Search country or capital…"
+                    autoFocus
+                    className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-zinc-800 text-xs font-sans text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 rounded-lg transition"
+                  />
+                  {countrySearch && (
+                    <button
+                      onClick={() => setCountrySearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Region Filter Tabs */}
+                <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none">
+                  {["All", "Americas", "Europe", "Asia", "Africa", "Oceania"].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setSelectedRegion(r)}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
+                        selectedRegion === r
+                          ? "bg-cyan-500 text-black font-bold shadow-[0_0_12px_rgba(0,229,255,0.4)]"
+                          : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Country Cards Grid */}
+              <div className="p-5 overflow-y-auto max-h-[55vh] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 scrollbar-thin scrollbar-thumb-zinc-800">
+                {filteredCountries.map((c) => {
+                  const isActive =
+                    (observer.name && observer.name.includes(c.name)) ||
+                    (Math.abs(observer.lat - c.lat) < 0.05 && Math.abs(observer.lon - c.lon) < 0.05);
+
+                  return (
+                    <div
+                      key={c.code}
+                      onClick={() => handleCountrySelect(c)}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
+                        isActive
+                          ? "border-[#00e5ff] bg-cyan-950/40 shadow-[0_0_20px_rgba(0,229,255,0.2)] text-white"
+                          : "border-zinc-800/80 bg-zinc-950/80 hover:border-cyan-500/40 hover:bg-zinc-900/60 text-zinc-300"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{c.flag}</span>
+                          <div>
+                            <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                              <span>{c.name}</span>
+                              {isActive && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500 text-black font-black uppercase">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-zinc-400 font-sans">{c.capital}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-zinc-900 flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                        <span>{c.lat.toFixed(2)}°, {c.lon.toFixed(2)}°</span>
+                        <span className="text-cyan-400 font-semibold">{c.region}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredCountries.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-zinc-500 text-xs uppercase tracking-widest font-sans">
+                    No countries matching &ldquo;{countrySearch}&rdquo; in {selectedRegion}.
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3 border-t border-zinc-900 bg-zinc-950 flex items-center justify-between text-xs text-zinc-500 font-mono px-5">
+                <span>Total Global Observatories: {WORLD_COUNTRIES.length} Countries</span>
+                <span>Select any country to recalibrate live satellite field</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ROW 2: Temporal Simulation & Propagation Controls */}
         <div className="p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6">
