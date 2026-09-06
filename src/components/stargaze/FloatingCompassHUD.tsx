@@ -40,15 +40,14 @@ export function FloatingCompassHUD({
     <div
       className={`pointer-events-none select-none flex flex-col items-center gap-1.5 ${className}`}
     >
-      <GlassPanel
-        level={1}
-        className="p-2.5 flex flex-col items-center shadow-2xl relative w-32 h-32 rounded-full border border-white/[0.14]"
+      <div
+        className="p-2.5 flex flex-col items-center shadow-2xl relative w-32 h-32 rounded-full border border-zinc-800 bg-black/90 backdrop-blur-md"
       >
         {/* Dial ring with subtle ticks */}
-        <div className="absolute inset-2 rounded-full border border-white/[0.08] flex items-center justify-center">
+        <div className="absolute inset-2 rounded-full border border-zinc-800 flex items-center justify-center">
           {/* Subtle crosshairs */}
-          <div className="absolute inset-x-0 h-px bg-white/[0.06]" />
-          <div className="absolute inset-y-0 w-px bg-white/[0.06]" />
+          <div className="absolute inset-x-0 h-px bg-zinc-800/80" />
+          <div className="absolute inset-y-0 w-px bg-zinc-800/80" />
 
           {/* Rotating Compass Ring */}
           <div
@@ -67,7 +66,7 @@ export function FloatingCompassHUD({
                 <span
                   key={c.label}
                   className={`absolute text-[8px] font-mono font-black transform -translate-x-1/2 -translate-y-1/2 ${
-                    isNorth ? "text-cyan-400 font-extrabold" : "text-slate-400"
+                    isNorth ? "text-cyan-400 font-extrabold" : "text-zinc-500"
                   }`}
                   style={{
                     left: `calc(50% + ${x}px)`,
@@ -94,16 +93,16 @@ export function FloatingCompassHUD({
           )}
 
           {/* Center Observer Sight Reticle */}
-          <div className="relative z-10 flex flex-col items-center justify-center p-1.5 rounded-full bg-slate-950/80 border border-white/20 text-cyan-300 shadow-inner">
+          <div className="relative z-10 flex flex-col items-center justify-center p-1.5 rounded-full bg-black border border-zinc-700 text-cyan-400 shadow-inner">
             <Navigation className="h-3.5 w-3.5 text-cyan-400 rotate-45" />
           </div>
         </div>
 
         {/* Bottom Bearing Numeric Badge */}
-        <div className="absolute -bottom-2 px-2 py-0.5 rounded-full bg-slate-950/90 border border-cyan-400/40 text-cyan-300 font-mono text-[9px] font-extrabold shadow-md">
+        <div className="absolute -bottom-2 px-2 py-0.5 rounded-none bg-black border border-zinc-700 text-cyan-300 font-mono text-[9px] font-bold shadow-md">
           {Math.round(headingAzimuth)}° AZ
         </div>
-      </GlassPanel>
+      </div>
     </div>
   );
 }
