@@ -111,17 +111,21 @@ function getCardinalText(azDeg: number): string {
 // SCIENTIFIC PRECISION OBSERVER GROUND STATION (EXACT QUATERNION SLERP)
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// GOLDEN RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT)
 // ─────────────────────────────────────────────────────────────────────────────
-// The golden rectangle curvature is symmetrically anchored at ±10° (+10° upward,
-// -10° downward) directly centered on and fixed to the bot's blue line of sight.
-// Color: Glowing Golden/Amber (#ffd700 / #fbbf24 / #f59e0b) with bright cyan-blue anchor.
+// HIGH-CONTRAST RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT)
+// ─────────────────────────────────────────────────────────────────────────────
+// Symmetrically anchored at ±10° (+10° upward, -10° downward) directly centered
+// on and fixed to the bot's blue line of sight.
+// Color: Vivid High-Contrast Electric Neon Cyan (#00f0ff) with crisp white crosshairs,
+// engineered to contrast sharply against the warm amber/golden celestial dome.
 function HumanPrimaryGazeField({
   radius = 236,
   opacity = 0.36,
+  color = "#00f0ff",
 }: {
   radius?: number;
   opacity?: number;
+  color?: string;
 }) {
   const upDeg = 10; // +10° Upward angle
   const downDeg = 10; // -10° Downward angle
@@ -277,12 +281,16 @@ function HumanPrimaryGazeField({
     };
   }, [radius, upRad, downRad, hHalfRad]);
 
+  const rectColor = color || "#00f0ff";
+  const borderColor = color || "#00f0ff";
+  const crosshairColor = color === "#00f0ff" ? "#ffffff" : "#ffffff";
+
   return (
     <group>
-      {/* Volumetric Frustum Walls (Subtle Translucent Gold/Amber) */}
+      {/* Volumetric Frustum Walls (Subtle Translucent High-Contrast Surface) */}
       <mesh geometry={frustumWallGeo}>
         <meshBasicMaterial
-          color="#f59e0b"
+          color={rectColor}
           transparent
           opacity={opacity * 0.22}
           side={THREE.DoubleSide}
@@ -290,10 +298,10 @@ function HumanPrimaryGazeField({
         />
       </mesh>
 
-      {/* Main Curved Visor Canopy (Luminous Golden Amber Surface) */}
+      {/* Main Curved Visor Canopy (Luminous High-Contrast Surface) */}
       <mesh geometry={visorGeometry}>
         <meshBasicMaterial
-          color="#fbbf24"
+          color={rectColor}
           transparent
           opacity={opacity}
           side={THREE.DoubleSide}
@@ -304,7 +312,7 @@ function HumanPrimaryGazeField({
       {/* Top Arc Boundary (+10° Upward) */}
       <Line
         points={topArc}
-        color="#ffd700"
+        color={borderColor}
         lineWidth={3.6}
         transparent
         opacity={0.98}
@@ -313,7 +321,7 @@ function HumanPrimaryGazeField({
       {/* Bottom Arc Boundary (-10° Downward) */}
       <Line
         points={bottomArc}
-        color="#ffd700"
+        color={borderColor}
         lineWidth={3.6}
         transparent
         opacity={0.98}
@@ -322,41 +330,41 @@ function HumanPrimaryGazeField({
       {/* Left & Right Outer Edges */}
       <Line
         points={leftBorder}
-        color="#fbbf24"
+        color={borderColor}
         lineWidth={2.8}
         transparent
         opacity={0.9}
       />
       <Line
         points={rightBorder}
-        color="#fbbf24"
+        color={borderColor}
         lineWidth={2.8}
         transparent
         opacity={0.9}
       />
 
-      {/* Eye Level 0° Horizon Arc (Golden Center Meridian) */}
+      {/* Eye Level 0° Horizon Arc (Crisp White Crosshair Center Meridian) */}
       <Line
         points={horizonArc}
-        color="#fef08a"
+        color={crosshairColor}
         lineWidth={2.6}
         transparent
-        opacity={0.9}
+        opacity={0.92}
       />
 
       {/* Central Vertical Sight Line (Prime Meridian) */}
       <Line
         points={vertGazeMeridian}
-        color="#fef08a"
+        color={crosshairColor}
         lineWidth={2.6}
         transparent
-        opacity={0.9}
+        opacity={0.92}
       />
 
-      {/* Reticle Node Anchoring Golden Rectangle Curvature to Blue Line of Sight */}
+      {/* Reticle Node Anchoring Rectangle Curvature to Blue Line of Sight */}
       <mesh position={[0, 2.2, radius]}>
         <ringGeometry args={[1.5, 2.6, 32]} />
-        <meshBasicMaterial color="#00f0ff" side={THREE.DoubleSide} transparent opacity={0.95} />
+        <meshBasicMaterial color={borderColor} side={THREE.DoubleSide} transparent opacity={0.95} />
       </mesh>
       <mesh position={[0, 2.2, radius]}>
         <ringGeometry args={[0.3, 0.9, 16]} />
@@ -752,10 +760,11 @@ function ObserverGroundStation({
           opacity={0.92}
         />
 
-        {/* 1. GOLDEN RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT) */}
+        {/* 1. HIGH-CONTRAST RECTANGLE CURVED FIELD VIEW (±10° UPWARD & DOWNWARD, FIXED TO BLUE SIGHT) */}
         <HumanPrimaryGazeField
           radius={236}
-          opacity={targetSat ? 0.42 : 0.34}
+          opacity={targetSat ? 0.45 : 0.35}
+          color={sightColor === "#06b6d4" ? "#f59e0b" : "#00f0ff"}
         />
 
         {/* 2. HUMAN EYE PERIPHERAL BINOCULAR FIELD (210°H × 140°V ENVELOPE) */}
