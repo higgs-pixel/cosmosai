@@ -139,7 +139,7 @@ export function BottomSpacecraftHUD({
       </div>
 
       {/* RIGHT: Engine & Synchronization Status */}
-      <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 border border-zinc-800 bg-black/90 text-white pointer-events-auto ml-auto shadow-xl">
+      <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 border border-zinc-800 bg-black/90 text-white pointer-events-auto ml-auto sm:mr-36 md:mr-40 shadow-xl">
         <div className="flex items-center gap-1 text-[10px] text-zinc-400">
           <Zap className="h-3 w-3 text-emerald-400" />
           <span>SGP4 KERNEL</span>

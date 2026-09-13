@@ -72,9 +72,9 @@ export function RightTelemetryDock({
         animate={{ opacity: 1, x: 0, scale: 1 }}
         exit={{ opacity: 0, x: 50, scale: 0.98 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className={`fixed z-50 pointer-events-auto flex flex-col font-sans transition-all duration-300
+        className={`fixed z-40 pointer-events-auto flex flex-col font-sans transition-all duration-300
           /* Desktop & Tablet: Floating Right Dock */
-          top-16 sm:top-20 right-3 sm:right-6 bottom-4 sm:bottom-6 w-[calc(100vw-1.5rem)] sm:w-[390px] md:w-[420px] max-w-full
+          top-[90px] sm:top-[96px] right-3 sm:right-6 bottom-16 sm:bottom-20 w-[calc(100vw-1.5rem)] sm:w-[390px] md:w-[420px] max-w-full
         `}
       >
         <GlassPanel

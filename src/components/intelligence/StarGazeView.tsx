@@ -3069,7 +3069,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
       {/* ── 3. UPPER LEFT: MERGED PASS ELEVATION & MAGNITUDE GRAPH (IMAGE 2) ── */}
       {(isAimLocked || showUpperGraph) && activeLabelSat && (
-        <div className="absolute top-16 left-4 sm:left-8 z-30 w-[350px] sm:w-[430px] max-w-[calc(100vw-2rem)]">
+        <div className="absolute top-[90px] sm:top-[96px] left-4 sm:left-8 z-30 w-[350px] sm:w-[430px] max-w-[calc(100vw-2rem)]">
           <MergedPassElevationMagGraph
             sat={activeLabelSat}
             observer={currentObserver}
@@ -3080,8 +3080,8 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
       )}
 
       {/* ── 4. UPPER RIGHT: LIVE SATELLITE TELEMETRY DOSSIER ── */}
-      {(isAimLocked || showUpperTelemetry) && activeLabelSat && (
-        <div className="absolute top-16 right-4 sm:right-8 z-30 w-[340px] sm:w-[400px] max-w-[calc(100vw-2rem)]">
+      {!isTelemetryPanelOpen && (isAimLocked || showUpperTelemetry) && activeLabelSat && (
+        <div className="absolute top-[90px] sm:top-[96px] right-4 sm:right-8 z-30 w-[340px] sm:w-[400px] max-w-[calc(100vw-2rem)]">
           <LockedTelemetryCard
             sat={activeLabelSat}
             observer={currentObserver}
@@ -3102,7 +3102,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
       {/* ── 5. BOTTOM-LEFT: SATELLITE EDITORIAL LABEL CARD WITH SIGHT UNLOCK/LOCK ── */}
       {activeLabelSat && (
-        <div className="absolute bottom-8 sm:bottom-10 left-4 sm:left-8 z-30 pointer-events-auto max-w-sm sm:max-w-md bg-black/90 border border-zinc-800 p-4 shadow-2xl backdrop-blur-md space-y-2.5">
+        <div className="absolute bottom-16 sm:bottom-20 left-4 sm:left-8 z-30 pointer-events-auto max-w-sm sm:max-w-md bg-black/90 border border-zinc-800 p-4 shadow-2xl backdrop-blur-md space-y-2.5">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-black/90 border border-zinc-700 text-[10px] font-mono uppercase tracking-wider text-zinc-300">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             <span>
@@ -3186,7 +3186,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
           satellites={allSatellites}
           selectedSat={activeLabelSat}
           onSelectSat={(sat) => handleTrackSatellite(sat)}
-          className="absolute bottom-40 right-4 sm:right-8 z-20"
+          className="absolute bottom-44 sm:bottom-48 right-4 sm:right-8 z-20"
         />
       )}
 
@@ -3226,7 +3226,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
       {/* ── 9. FLOATING COMPASS SIGHT ALIGNMENT GUIDANCE HUD OVERLAY ── */}
       {isGuideActive && detailedSelectedSat && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 w-[340px] sm:w-[440px] bg-black/95 border border-pink-500/50 p-4 font-sans pointer-events-auto shadow-2xl backdrop-blur-md">
+        <div className="absolute top-[90px] sm:top-[96px] left-1/2 -translate-x-1/2 z-40 w-[340px] sm:w-[440px] bg-black/95 border border-pink-500/50 p-4 font-sans pointer-events-auto shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2.5">
             <div className="flex items-center gap-2">
               <Navigation className="h-4 w-4 text-pink-400 animate-spin-slow" />
@@ -3291,7 +3291,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="absolute top-16 right-4 z-50 bg-zinc-950 border border-emerald-400/40 text-emerald-300 font-mono text-xs font-bold px-3.5 py-2 shadow-2xl flex items-center gap-2 pointer-events-none">
+        <div className="absolute top-[90px] sm:top-[96px] right-4 z-50 bg-zinc-950 border border-emerald-400/40 text-emerald-300 font-mono text-xs font-bold px-3.5 py-2 shadow-2xl flex items-center gap-2 pointer-events-none">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -3362,7 +3362,7 @@ export default function StarGazeView({ observer: initialObserver }: StarGazeView
 
       {/* 24-Hour Simulation Timeline Scrubber Dock */}
       {showSimDock && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[360px] sm:w-[460px] p-4 bg-zinc-950 border border-zinc-800 shadow-2xl space-y-3 font-mono text-xs">
+        <div className="fixed bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-40 w-[360px] sm:w-[460px] p-4 bg-zinc-950 border border-zinc-800 shadow-2xl space-y-3 font-mono text-xs">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
             <span className="font-bold text-white uppercase tracking-wider">24-Hour Orbit Simulator</span>
             <button
