@@ -279,12 +279,72 @@ async function fetchCombinedGroups(format: string): Promise<string | any[]> {
   }
 }
 
+// Helper to slice raw TLE text by satellite count
+function sliceTleText(
+  tleText: string,
+  sessionIndex: number,
+  limit: number
+): { slicedText: string; totalSats: number; totalSessions: number; currentSession: number } {
+  const lines = (tleText || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const records: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].startsWith("1 ") && i + 1 < lines.length && lines[i + 1].startsWith("2 ")) {
+      records.push(`${lines[i]}\n${lines[i + 1]}`);
+      i += 2;
+    } else if (i + 2 < lines.length && lines[i + 1].startsWith("1 ") && lines[i + 2].startsWith("2 ")) {
+      records.push(`${lines[i]}\n${lines[i + 1]}\n${lines[i + 2]}`);
+      i += 3;
+    } else {
+      i++;
+    }
+  }
+
+  const totalSats = records.length;
+  const totalSessions = Math.max(1, Math.ceil(totalSats / limit));
+  const safeSession = sessionIndex % totalSessions;
+  const start = safeSession * limit;
+  const end = Math.min(start + limit, totalSats);
+  const slicedRecords = records.slice(start, end);
+
+  return {
+    slicedText: slicedRecords.join("\n"),
+    totalSats,
+    totalSessions,
+    currentSession: safeSession,
+  };
+}
+
+function sliceJsonList(
+  list: any[],
+  sessionIndex: number,
+  limit: number
+): { slicedList: any[]; totalSats: number; totalSessions: number; currentSession: number } {
+  const totalSats = (list || []).length;
+  const totalSessions = Math.max(1, Math.ceil(totalSats / limit));
+  const safeSession = sessionIndex % totalSessions;
+  const start = safeSession * limit;
+  const end = Math.min(start + limit, totalSats);
+  return {
+    slicedList: list.slice(start, end),
+    totalSats,
+    totalSessions,
+    currentSession: safeSession,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const group = searchParams.get("group") || "";
   const catnr = searchParams.get("catnr") || "";
   const name = searchParams.get("name") || "";
   const format = searchParams.get("format") || "json";
+
+  const sessionParam = searchParams.get("session");
+  const limitParam = searchParams.get("limit");
+  const hasPagination = sessionParam !== null || limitParam !== null;
+  const sessionIndex = sessionParam !== null ? Math.max(0, parseInt(sessionParam, 10) || 0) : 0;
+  const limit = limitParam !== null ? Math.max(1, parseInt(limitParam, 10) || 200) : 200;
 
   let queryParams = "";
   let cacheKey = "default";
@@ -296,7 +356,7 @@ export async function GET(request: NextRequest) {
     queryParams = `NAME=${encodeURIComponent(name)}`;
     cacheKey = `name_${name}`;
   } else {
-    let selectedGroup = group || "stations";
+    let selectedGroup = group || "active";
     if (selectedGroup === "gps") selectedGroup = "gnss";
     queryParams = `GROUP=${encodeURIComponent(selectedGroup)}`;
     cacheKey = `group_${selectedGroup}`;
@@ -306,24 +366,52 @@ export async function GET(request: NextRequest) {
   const isTle = format === "tle";
   const ext = isTle ? "txt" : "json";
 
+  // Formatter and pagination responder helper
+  const createResponse = (rawData: any, cacheHeader: string) => {
+    if (isTle) {
+      let outputText = typeof rawData === "string" ? rawData : "";
+      const headers: Record<string, string> = {
+        "Content-Type": "text/plain; charset=utf-8",
+        "x-cosmos-cache": cacheHeader,
+        "Cache-Control": "public, max-age=7200",
+      };
+
+      if (hasPagination) {
+        const sliced = sliceTleText(outputText, sessionIndex, limit);
+        headers["x-cosmos-session"] = String(sliced.currentSession);
+        headers["x-cosmos-total-sessions"] = String(sliced.totalSessions);
+        headers["x-cosmos-total-count"] = String(sliced.totalSats);
+        headers["x-cosmos-session-count"] = String(
+          sliced.slicedText ? sliced.slicedText.split("\n").filter((l) => l.startsWith("1 ")).length : 0
+        );
+        outputText = sliced.slicedText;
+      }
+
+      return new NextResponse(outputText, { headers });
+    } else {
+      let outputJson = Array.isArray(rawData) ? rawData : [rawData];
+      const headers: Record<string, string> = {
+        "x-cosmos-cache": cacheHeader,
+        "Cache-Control": "public, max-age=7200",
+      };
+
+      if (hasPagination) {
+        const sliced = sliceJsonList(outputJson, sessionIndex, limit);
+        headers["x-cosmos-session"] = String(sliced.currentSession);
+        headers["x-cosmos-total-sessions"] = String(sliced.totalSessions);
+        headers["x-cosmos-total-count"] = String(sliced.totalSats);
+        headers["x-cosmos-session-count"] = String(sliced.slicedList.length);
+        outputJson = sliced.slicedList;
+      }
+
+      return NextResponse.json(outputJson, { headers });
+    }
+  };
+
   // 1. Check in-memory cache
   const cached = memoryCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    if (isTle) {
-      return new NextResponse(cached.data, {
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "x-cosmos-cache": "memory-hit",
-          "Cache-Control": "public, max-age=7200",
-        },
-      });
-    }
-    return NextResponse.json(cached.data, {
-      headers: {
-        "x-cosmos-cache": "memory-hit",
-        "Cache-Control": "public, max-age=7200",
-      },
-    });
+    return createResponse(cached.data, "memory-hit");
   }
 
   // 2. Check disk cache
@@ -331,23 +419,12 @@ export async function GET(request: NextRequest) {
   if (diskData) {
     if (isTle) {
       memoryCache.set(cacheKey, { data: diskData, timestamp: Date.now() });
-      return new NextResponse(diskData, {
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "x-cosmos-cache": "disk-hit",
-          "Cache-Control": "public, max-age=7200",
-        },
-      });
+      return createResponse(diskData, "disk-hit");
     } else {
       try {
         const parsedJson = JSON.parse(diskData);
         memoryCache.set(cacheKey, { data: parsedJson, timestamp: Date.now() });
-        return NextResponse.json(parsedJson, {
-          headers: {
-            "x-cosmos-cache": "disk-hit",
-            "Cache-Control": "public, max-age=7200",
-          },
-        });
+        return createResponse(parsedJson, "disk-hit");
       } catch (e) {
         // invalid disk cache, proceed to fetch
       }
@@ -375,16 +452,10 @@ export async function GET(request: NextRequest) {
     if (response.ok) {
       if (isTle) {
         const text = await response.text();
-        if (text && !text.includes("GP data has not updated") && text.length > 50) {
+        if (text && !text.includes("GP data has not updated") && !text.includes("No GP data found") && text.length > 50) {
           memoryCache.set(cacheKey, { data: text, timestamp: Date.now() });
           writeDiskCache(cacheKey, "txt", text);
-          return new NextResponse(text, {
-            headers: {
-              "Content-Type": "text/plain; charset=utf-8",
-              "x-cosmos-cache": "miss",
-              "Cache-Control": "public, max-age=7200",
-            },
-          });
+          return createResponse(text, "miss");
         }
       } else {
         const rawData = await response.json();
@@ -396,17 +467,31 @@ export async function GET(request: NextRequest) {
         if (dataList.length > 0) {
           memoryCache.set(cacheKey, { data: dataList, timestamp: Date.now() });
           writeDiskCache(cacheKey, "json", JSON.stringify(dataList));
-          return NextResponse.json(dataList, {
-            headers: {
-              "x-cosmos-cache": "miss",
-              "Cache-Control": "public, max-age=7200",
-            },
-          });
+          return createResponse(dataList, "miss");
         }
       }
     }
   } catch (error) {
     console.error("[CelesTrak Proxy Error]", error);
+  }
+
+  // If this was a specific query for CATNR or NAME and wasn't found, do NOT return active group fallback!
+  if (catnr || name) {
+    if (isTle) {
+      return new NextResponse("", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "x-cosmos-not-found": "true",
+        },
+      });
+    }
+    return NextResponse.json([], {
+      status: 404,
+      headers: {
+        "x-cosmos-not-found": "true",
+      },
+    });
   }
 
   // 4. Fallback handler: Fetch multiple active groups in parallel
@@ -416,42 +501,20 @@ export async function GET(request: NextRequest) {
   if (isTle && typeof combinedData === "string" && combinedData.length > 50) {
     memoryCache.set(cacheKey, { data: combinedData, timestamp: Date.now() });
     writeDiskCache(cacheKey, "txt", combinedData);
-    return new NextResponse(combinedData, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "x-cosmos-cache": "multi-fallback",
-        "Cache-Control": "public, max-age=7200",
-      },
-    });
+    return createResponse(combinedData, "multi-fallback");
   } else if (!isTle && Array.isArray(combinedData) && combinedData.length > 0) {
     memoryCache.set(cacheKey, { data: combinedData, timestamp: Date.now() });
     writeDiskCache(cacheKey, "json", JSON.stringify(combinedData));
-    return NextResponse.json(combinedData, {
-      headers: {
-        "x-cosmos-cache": "multi-fallback",
-        "Cache-Control": "public, max-age=7200",
-      },
-    });
+    return createResponse(combinedData, "multi-fallback");
   }
 
   // 5. Ultimate fallback if offline
   const fallbackGroup = group || "stations";
   if (isTle) {
     const tleFallback = OFFLINE_TLE_FALLBACKS[fallbackGroup] || OFFLINE_TLE_FALLBACKS.active || OFFLINE_TLE_FALLBACKS.stations;
-    return new NextResponse(tleFallback, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "x-cosmos-cache": "offline-tle-fallback",
-        "Cache-Control": "no-store",
-      },
-    });
+    return createResponse(tleFallback, "offline-tle-fallback");
   }
 
   const fallback = OFFLINE_FALLBACKS[fallbackGroup] || OFFLINE_FALLBACKS.stations;
-  return NextResponse.json(fallback, {
-    headers: {
-      "x-cosmos-cache": "offline-fallback",
-      "Cache-Control": "no-store",
-    },
-  });
+  return createResponse(fallback, "offline-fallback");
 }

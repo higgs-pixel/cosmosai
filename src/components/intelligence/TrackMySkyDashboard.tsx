@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   MapPin, Compass, Navigation, Eye, Sparkles, Clock, Globe,
-  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon, Crosshair, ArrowRight, BookOpen
+  Search, RefreshCw, Layers, ShieldAlert, CheckCircle2, ChevronRight, Activity, Smartphone, QrCode, ArrowLeft, Sun, Moon, Info, ExternalLink, Play, Pause, RotateCcw, Filter, Map as MapIcon, Crosshair, ArrowRight, BookOpen,
+  ShoppingCart, Check, Loader2, SkipForward, SkipBack, AlertCircle
 } from "lucide-react";
 import * as satellite from "satellite.js";
 import { useOrbitalStore, SatelliteData } from "./store";
@@ -24,6 +25,7 @@ import { TrackMySkyNav } from "@/components/track-my-sky/TrackMySkyNav";
 import { TrackMySkyHero } from "@/components/track-my-sky/TrackMySkyHero";
 import { ObservatoryCommandConsole } from "@/components/track-my-sky/ObservatoryCommandConsole";
 import { UpcomingPassesTimeline } from "@/components/track-my-sky/UpcomingPassesTimeline";
+import { SatelliteCartDrawer } from "@/components/track-my-sky/SatelliteCartDrawer";
 import { createSgp4Worker } from "./worker-code";
 import { parseTleText } from "@/lib/astronomy/satellite-sky-math";
 
@@ -295,20 +297,75 @@ export default function TrackMySkyDashboard() {
   const storeSatellitesList = useOrbitalStore((s) => s.satellitesList);
 
   const [satellitesList, setSatellitesList] = useState<SatelliteData[]>(() => {
+    return DEFAULT_SATELLITE_CATALOG.slice(0, 200);
+  });
+  const [loadingSats, setLoadingSats] = useState(false);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // A. ORBITAL WATCHLIST / CART STATE & CONTINUOUS PROPAGATION
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<SatelliteData[]>(() => {
     if (typeof window !== "undefined") {
       try {
-        const cached = sessionStorage.getItem("cosmos_sky_catalog_active");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 50) return parsed;
+        const saved = localStorage.getItem("cosmos_sky_cart");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
         }
       } catch {
         /* skip */
       }
     }
-    return DEFAULT_SATELLITE_CATALOG;
+    return [];
   });
-  const [loadingSats, setLoadingSats] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("cosmos_sky_cart", JSON.stringify(cartItems));
+      } catch {
+        /* skip */
+      }
+    }
+  }, [cartItems]);
+
+  const handleAddToCart = useCallback((sat: SatelliteData) => {
+    setCartItems((prev) => {
+      if (prev.some((s) => s.id === sat.id)) return prev;
+      return [...prev, sat];
+    });
+  }, []);
+
+  const handleRemoveFromCart = useCallback((satId: number) => {
+    setCartItems((prev) => prev.filter((s) => s.id !== satId));
+  }, []);
+
+  const handleClearCart = useCallback(() => {
+    setCartItems([]);
+  }, []);
+
+  const isInCart = useCallback(
+    (satId: number) => {
+      return cartItems.some((s) => s.id === satId);
+    },
+    [cartItems]
+  );
+
+  // CRITICAL REQUIREMENT: Satellites in the Cart MUST continue live telemetry
+  // updates even across 5-minute session rotations. We combine current 200 session
+  // satellites with any missing Cart satellites for the Web Worker propagation engine.
+  const combinedPropagateSats = useMemo(() => {
+    const list = [...satellitesList];
+    const existingIds = new Set(list.map((s) => s.id));
+    for (const cartSat of cartItems) {
+      if (!existingIds.has(cartSat.id)) {
+        list.push(cartSat);
+        existingIds.add(cartSat.id);
+      }
+    }
+    return list;
+  }, [satellitesList, cartItems]);
 
   const [sliderBaseTime, setSliderBaseTime] = useState(() => Date.now());
 
@@ -321,12 +378,12 @@ export default function TrackMySkyDashboard() {
   const [workerSelectedTelemetry, setWorkerSelectedTelemetry] = useState<any>(null);
   const lastWorkerInitCountRef = useRef(0);
 
-  // Sync satellitesList into orbital store for 3D trajectory calculation
+  // Sync combinedPropagateSats into orbital store for 3D trajectory calculation
   useEffect(() => {
-    if (satellitesList.length > 0) {
-      setStoreSatellitesList(satellitesList);
+    if (combinedPropagateSats.length > 0) {
+      setStoreSatellitesList(combinedPropagateSats);
     }
-  }, [satellitesList, setStoreSatellitesList]);
+  }, [combinedPropagateSats, setStoreSatellitesList]);
 
   // Persistent SGP4 Web Worker lifecycle (created once on mount)
   useEffect(() => {
@@ -361,18 +418,8 @@ export default function TrackMySkyDashboard() {
           startTransition(() => {
             setUpcomingPasses(onlyVisibleRef.current ? passes.filter((p: SatellitePass) => p.isVisibleToEye) : passes);
           });
-        } else if (type === "catalog_loaded" && Array.isArray(loadedSats)) {
-          startTransition(() => {
-            setSatellitesList((current) => {
-              // Never downgrade full fleet back to a smaller fallback!
-              if (current && current.length > loadedSats.length) {
-                return current;
-              }
-              return loadedSats;
-            });
-            setLoadingSats(false);
-          });
-          useOrbitalStore.getState().setSatellitesList(loadedSats);
+        } else if (type === "catalog_loaded") {
+          setLoadingSats(false);
         }
       };
     } catch (err) {
@@ -385,7 +432,7 @@ export default function TrackMySkyDashboard() {
     };
   }, []);
 
-  // Instant in-memory filter when onlyVisible is toggled (no worker recreation or reload)
+  // Instant in-memory filter when onlyVisible is toggled
   useEffect(() => {
     onlyVisibleRef.current = onlyVisible;
     if (rawPassesRef.current.length > 0) {
@@ -393,21 +440,19 @@ export default function TrackMySkyDashboard() {
     }
   }, [onlyVisible]);
 
-  // Synchronize satellitesList with Web Worker once per distinct count
+  // Synchronize combinedPropagateSats with Web Worker once per distinct count
   useEffect(() => {
-    if (workerRef.current && satellitesList.length > 0) {
-      if (lastWorkerInitCountRef.current !== satellitesList.length) {
-        lastWorkerInitCountRef.current = satellitesList.length;
-        workerRef.current.postMessage({ type: "init", data: satellitesList });
+    if (workerRef.current && combinedPropagateSats.length > 0) {
+      if (lastWorkerInitCountRef.current !== combinedPropagateSats.length) {
+        lastWorkerInitCountRef.current = combinedPropagateSats.length;
+        workerRef.current.postMessage({ type: "init", data: combinedPropagateSats });
       }
     }
-  }, [satellitesList]);
+  }, [combinedPropagateSats]);
 
-  // High-performance background Web Worker evaluation for ALL satellites + live telemetry
-  // Unifies 3D positions buffer propagation and observer topocentric visibility in a single background worker pass
-  // Offloads 100% of SGP4 calculations from main thread, ensuring rock-solid 60 FPS animation
+  // High-performance background Web Worker evaluation for session + cart satellites
   useEffect(() => {
-    if (!workerRef.current || satellitesList.length === 0) return;
+    if (!workerRef.current || combinedPropagateSats.length === 0) return;
 
     let timer: NodeJS.Timeout;
     const runWorkerTick = () => {
@@ -431,7 +476,7 @@ export default function TrackMySkyDashboard() {
     timer = setInterval(runWorkerTick, 600);
 
     return () => clearInterval(timer);
-  }, [satellitesList, selectedSatId, observer.lat, observer.lon, observer.altMeters]);
+  }, [combinedPropagateSats, selectedSatId, observer.lat, observer.lon, observer.altMeters]);
 
   // Synchronize selected satellite with store
   useEffect(() => {
@@ -488,76 +533,89 @@ export default function TrackMySkyDashboard() {
     }
   }, [isPaused]);
 
-  // Satellite Group Selection & Live TLE Fetching (Loads full 900+ active constellation targets)
-  const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
+  // ─────────────────────────────────────────────────────────────────────────────
+  // B. 200-SATELLITE SESSION ENGINE (5-MINUTE ROTATION CYCLE)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [totalSessions, setTotalSessions] = useState(80);
+  const [totalFleetCount, setTotalFleetCount] = useState(15994);
+  const [sessionCountdown, setSessionCountdown] = useState(300); // 5:00 minutes in seconds
+  const [isSessionAutoRotate, setIsSessionAutoRotate] = useState(true);
+  const [sessionFeedbackNotice, setSessionFeedbackNotice] = useState<string | null>(null);
+
+  // 5-minute countdown interval (resets to 300 and increments sessionIndex)
+  useEffect(() => {
+    if (!isSessionAutoRotate) return;
+    const interval = setInterval(() => {
+      setSessionCountdown((prev) => {
+        if (prev <= 1) {
+          setSessionIndex((curr) => (curr + 1) % (totalSessions || 80));
+          return 300;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSessionAutoRotate, totalSessions]);
+
+  // Fetch session satellites (loads exactly 200 satellites per session)
+  const loadSessionCatalog = useCallback(async (sessionIdx: number) => {
+    setLoadingSats(true);
+    try {
+      const queryUrl = `/api/orbital?group=active&format=tle&session=${sessionIdx}&limit=200`;
+      const res = await fetch(queryUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const totSessions = parseInt(res.headers.get("x-cosmos-total-sessions") || "80", 10);
+      const totCount = parseInt(res.headers.get("x-cosmos-total-count") || "15994", 10);
+      if (totSessions > 0) setTotalSessions(totSessions);
+      if (totCount > 0) setTotalFleetCount(totCount);
+
+      const text = await res.text();
+      const parsed = parseTleText(text);
+
+      if (parsed && parsed.length > 0) {
+        let finalList = parsed;
+        // In session 0, guarantee flagship stations ISS, Tiangong, Hubble are present
+        if (sessionIdx === 0) {
+          const idMap = new Map<number, SatelliteData>();
+          for (const s of DEFAULT_SATELLITE_CATALOG.slice(0, 3)) idMap.set(s.id, s);
+          for (const s of parsed) idMap.set(s.id, s);
+          finalList = Array.from(idMap.values()).slice(0, 200);
+        }
+
+        setSatellitesList(finalList);
+        setSessionFeedbackNotice(`Session ${sessionIdx + 1} of ${totSessions} loaded: ${finalList.length} targets.`);
+        setTimeout(() => setSessionFeedbackNotice(null), 4000);
+        return;
+      }
+    } catch (err) {
+      console.warn("[TrackMySky] Session fetch error, using fallback catalog:", err);
+      setSatellitesList(DEFAULT_SATELLITE_CATALOG);
+    } finally {
+      setLoadingSats(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoadingSats(true);
+    loadSessionCatalog(sessionIndex);
+  }, [sessionIndex, loadSessionCatalog]);
 
-    const loadLiveCatalog = async () => {
-      try {
-        const queryUrl = `/api/orbital?group=${skyCatalogGroup}&format=tle`;
-        const res = await fetch(queryUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = await res.text();
-        if (cancelled) return;
+  const handleNextSession = useCallback(() => {
+    setSessionIndex((curr) => (curr + 1) % (totalSessions || 80));
+    setSessionCountdown(300);
+  }, [totalSessions]);
 
-        const parsed = parseTleText(text);
-        if (parsed && parsed.length > 0) {
-          // Merge with built-in default targets so key stations (ISS, Tiangong, Hubble) are guaranteed present
-          const idMap = new Map<number, SatelliteData>();
-          for (const s of DEFAULT_SATELLITE_CATALOG) idMap.set(s.id, s);
-          for (const s of parsed) idMap.set(s.id, s);
-          const fullList = Array.from(idMap.values());
+  const handlePrevSession = useCallback(() => {
+    setSessionIndex((curr) => (curr > 0 ? curr - 1 : (totalSessions || 80) - 1));
+    setSessionCountdown(300);
+  }, [totalSessions]);
 
-          try {
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem("cosmos_sky_catalog_active", JSON.stringify(fullList));
-            }
-          } catch {
-            /* skip */
-          }
-
-          lastWorkerInitCountRef.current = fullList.length;
-          startTransition(() => {
-            setSatellitesList(fullList);
-            setLoadingSats(false);
-          });
-          useOrbitalStore.getState().setSatellitesList(fullList);
-
-          // Update worker immediately with full 1,200+ catalog
-          if (workerRef.current) {
-            workerRef.current.postMessage({ type: "init", data: fullList });
-            workerRef.current.postMessage({
-              type: "evaluate_visibility",
-              timeMs: useOrbitalStore.getState().timeMs,
-              selectedSatId: selectedSatIdRef.current ?? 25544,
-              observer: {
-                lat: observerRef.current.lat,
-                lon: observerRef.current.lon,
-                altMeters: observerRef.current.altMeters || 180,
-              },
-            });
-          }
-          return;
-        }
-      } catch (err) {
-        console.warn("[TrackMySky] Live catalog fetch error, keeping existing catalog:", err);
-      }
-
-      if (!cancelled) {
-        setLoadingSats(false);
-        setSatellitesList((prev) => (prev && prev.length > 50 ? prev : DEFAULT_SATELLITE_CATALOG));
-      }
-    };
-
-    loadLiveCatalog();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [skyCatalogGroup]);
+  const handleResetSessionTimer = useCallback(() => {
+    loadSessionCatalog(sessionIndex);
+    setSessionCountdown(300);
+  }, [loadSessionCatalog, sessionIndex]);
 
   // Geolocation Tier 1: Companion Mobile Polling
   useEffect(() => {
@@ -743,6 +801,115 @@ export default function TrackMySkyDashboard() {
     return results.sort((a, b) => b.elevationDeg - a.elevationDeg);
   }, [workerVisibilityResults, satrecCatalog, observer, catalogDate, selectedSatId]);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // C. TWO-TIER FLEET CATALOGUE SEARCH (SESSION FIRST -> CELESTRAK API ON-DEMAND)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [celestrakSearchResult, setCelestrakSearchResult] = useState<SatelliteData | null>(null);
+  const [isQueryingCelesTrak, setIsQueryingCelesTrak] = useState(false);
+  const [celestrakSearchError, setCelestrakSearchError] = useState<string | null>(null);
+
+  // 1. Session search: Filter within the current 200 satellites
+  const sessionSearchResults = useMemo(() => {
+    if (!tableSearch.trim()) return satellitesList;
+    const q = tableSearch.toLowerCase().trim();
+    return satellitesList.filter(
+      (s) => s.name.toLowerCase().includes(q) || String(s.id).includes(q)
+    );
+  }, [satellitesList, tableSearch]);
+
+  // 2. CelesTrak Query Fallback: If not found in current session and query length >= 2
+  useEffect(() => {
+    const q = tableSearch.trim();
+    if (!q || sessionSearchResults.length > 0 || q.length < 2) {
+      setCelestrakSearchResult(null);
+      setIsQueryingCelesTrak(false);
+      setCelestrakSearchError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsQueryingCelesTrak(true);
+    setCelestrakSearchError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const isNumeric = /^\d+$/.test(q);
+        const queryParam = isNumeric ? `catnr=${encodeURIComponent(q)}` : `name=${encodeURIComponent(q)}`;
+        const res = await fetch(`/api/orbital?${queryParam}&format=tle`);
+        if (cancelled) return;
+
+        if (!res.ok) {
+          setCelestrakSearchResult(null);
+          setCelestrakSearchError(`No satellite matching "${q}" found in CelesTrak NORAD catalog.`);
+          setIsQueryingCelesTrak(false);
+          return;
+        }
+
+        const text = await res.text();
+        if (cancelled) return;
+
+        const parsed = parseTleText(text);
+        if (parsed && parsed.length > 0) {
+          setCelestrakSearchResult(parsed[0]);
+          setCelestrakSearchError(null);
+        } else {
+          setCelestrakSearchResult(null);
+          setCelestrakSearchError(`No satellite matching "${q}" found in CelesTrak NORAD catalog.`);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCelestrakSearchResult(null);
+          setCelestrakSearchError(`Error querying CelesTrak live API: ${String(err)}`);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsQueryingCelesTrak(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [tableSearch, sessionSearchResults.length]);
+
+  // Live topocentric evaluation of CelesTrak on-demand result
+  const celestrakLiveVis = useMemo(() => {
+    if (!celestrakSearchResult) return null;
+    try {
+      return evaluateSatelliteVisibility(celestrakSearchResult, observer, date);
+    } catch {
+      return null;
+    }
+  }, [celestrakSearchResult, observer, date]);
+
+  // Fast worker visibility lookup map
+  const workerVisMap = useMemo(() => {
+    const map = new Map<number, SatelliteVisibilityResult>();
+    for (const r of workerVisibilityResults) {
+      map.set(r.satId, r);
+    }
+    return map;
+  }, [workerVisibilityResults]);
+
+  // Fleet table evaluation for all satellites in the current session
+  const sessionEvaluatedSats = useMemo(() => {
+    return sessionSearchResults.map((sat) => {
+      const vis = workerVisMap.get(sat.id) || evaluateSatelliteVisibility(sat, observer, catalogDate);
+      return { sat, vis };
+    });
+  }, [sessionSearchResults, workerVisMap, observer, catalogDate]);
+
+  const filteredSessionSats = useMemo(() => {
+    return sessionEvaluatedSats.filter(({ vis }) => {
+      if (!vis) return tableFilter === "all";
+      if (tableFilter === "visible") return vis.isNakedEyeVisible;
+      if (tableFilter === "sunlit") return vis.isSunlit;
+      return true;
+    });
+  }, [sessionEvaluatedSats, tableFilter]);
+
   const visibilityResults = useMemo(() => {
     return allEvaluatedSats.filter((s) => s.isAboveHorizon).sort((a, b) => {
       if (a.isNakedEyeVisible && !b.isNakedEyeVisible) return -1;
@@ -751,18 +918,7 @@ export default function TrackMySkyDashboard() {
     });
   }, [allEvaluatedSats]);
 
-  const filteredVisibleSats = useMemo(() => {
-    return visibilityResults.filter((sat) => {
-      if (tableFilter === "visible" && !sat.isNakedEyeVisible) return false;
-      if (tableFilter === "sunlit" && !sat.isSunlit) return false;
-      if (!tableSearch.trim()) return true;
-      const q = tableSearch.toLowerCase().trim();
-      return (
-        sat.satName.toLowerCase().includes(q) ||
-        String(sat.satId).includes(q)
-      );
-    });
-  }, [visibilityResults, tableFilter, tableSearch]);
+  const [skyCatalogGroup, setSkyCatalogGroup] = useState<"active" | "visual" | "weather" | "gnss" | "stations">("active");
 
   const candidateSatellites = useMemo(() => {
     if (!satellitesList || satellitesList.length === 0) return [];
@@ -873,6 +1029,8 @@ export default function TrackMySkyDashboard() {
       <TrackMySkyNav
         observer={observer}
         formattedTime={formatClockTime(uiTimeMs, selectedTz)}
+        cartCount={cartItems.length}
+        onOpenCart={() => setIsCartOpen(true)}
         onOpenPairModal={() => setShowPairModal(true)}
         onScrollToSection={scrollToSection}
         activeSection={activeSection}
@@ -1383,21 +1541,24 @@ export default function TrackMySkyDashboard() {
 
       {/* ─────────────────────────────────────────────────────────────────────────────
           8. SCIENTIFIC FLEET DIRECTORY INDEX & CATALOG (Section 06)
-          Searchable editorial directory with query filters and Aim Reticle tracking
+          200-Satellite Session Batches, Live Telemetry Cart & CelesTrak Query
           ───────────────────────────────────────────────────────────────────────────── */}
       <section id="fleet-table-section" className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 border-b border-zinc-900">
         <div className="border border-zinc-850 bg-black p-6 sm:p-8 space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-900 pb-4">
+          {/* Header Row */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-zinc-900 pb-4">
             <div>
               <div className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-[#00e5ff] mb-1">
                 Section 06 // Scientific Fleet Directory
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white uppercase font-sans flex items-center gap-3">
-                <span>Overhead Fleet Telemetry Directory</span>
-                <span className="text-xs text-zinc-400 font-normal">({visibilityResults.length} ASSETS OVERHEAD)</span>
+                <span>Fleet Telemetry Directory</span>
+                <span className="text-xs text-cyan-400 font-mono font-normal">
+                  ({satellitesList.length} ASSETS IN ACTIVE SESSION)
+                </span>
               </h2>
               <p className="text-xs sm:text-sm text-zinc-400 font-sans mt-1">
-                Topocentric azimuth, elevation, slant range and visual magnitude computed via SGP4 propagation.
+                Displaying 200 satellites per session. Automatically rotates to next 200 satellites every 5 minutes.
               </p>
             </div>
 
@@ -1407,10 +1568,10 @@ export default function TrackMySkyDashboard() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
                 <input
                   type="text"
-                  placeholder="SEARCH FLEET (NAME / NORAD)…"
+                  placeholder="SEARCH SESSION / CELESTRAK (NAME / NORAD)…"
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
-                  className="h-8 w-56 sm:w-64 pl-9 pr-3 bg-zinc-950 border border-zinc-800 text-xs font-sans text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"
+                  className="h-8 w-64 sm:w-72 pl-9 pr-3 bg-zinc-950 border border-zinc-800 text-xs font-sans text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"
                 />
               </div>
 
@@ -1422,7 +1583,7 @@ export default function TrackMySkyDashboard() {
                     tableFilter === "all" ? "bg-white text-black font-bold" : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  ALL ({visibilityResults.length})
+                  ALL SESSION ({sessionSearchResults.length})
                 </button>
                 <button
                   onClick={() => setTableFilter("visible")}
@@ -1444,6 +1605,191 @@ export default function TrackMySkyDashboard() {
             </div>
           </div>
 
+          {/* Session Command & 5-Minute Rotation HUD Bar */}
+          <div className="p-3 bg-zinc-950/90 border border-zinc-800/80 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-sans">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 rounded">
+                SESSION {String(sessionIndex + 1).padStart(2, "0")} / {totalSessions}
+              </span>
+              <span className="text-zinc-300 font-mono text-[11px]">
+                Showing Sats {sessionIndex * 200 + 1}–{Math.min((sessionIndex + 1) * 200, totalFleetCount)} of {totalFleetCount.toLocaleString()}
+              </span>
+              {loadingSats && (
+                <span className="inline-flex items-center gap-1.5 text-cyan-400 text-[11px]">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Fetching Session {sessionIndex + 1}…
+                </span>
+              )}
+              {sessionFeedbackNotice && (
+                <span className="text-emerald-400 text-[11px] font-medium">
+                  {sessionFeedbackNotice}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* 5-minute countdown clock */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-black border border-zinc-800 text-[11px] font-mono">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-zinc-400">Next Rotation:</span>
+                <span className="text-white font-bold">
+                  {Math.floor(sessionCountdown / 60)}:{String(sessionCountdown % 60).padStart(2, "0")}
+                </span>
+              </div>
+
+              {/* Pause / Resume Auto-Rotation */}
+              <button
+                onClick={() => setIsSessionAutoRotate((prev) => !prev)}
+                className={`p-1.5 rounded border text-[10px] transition-colors cursor-pointer ${
+                  isSessionAutoRotate
+                    ? "border-zinc-800 hover:border-zinc-700 bg-zinc-900 text-zinc-300"
+                    : "border-amber-500/50 bg-amber-950/30 text-amber-300"
+                }`}
+                title={isSessionAutoRotate ? "Pause 5-minute auto-rotation" : "Resume 5-minute auto-rotation"}
+              >
+                {isSessionAutoRotate ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* Navigation Controls */}
+              <button
+                onClick={handlePrevSession}
+                className="p-1.5 rounded border border-zinc-800 hover:border-zinc-600 bg-zinc-900 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Previous 200 satellites session"
+              >
+                <SkipBack className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={handleNextSession}
+                className="p-1.5 rounded border border-zinc-800 hover:border-zinc-600 bg-zinc-900 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Next 200 satellites session"
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={handleResetSessionTimer}
+                className="p-1.5 rounded border border-zinc-800 hover:border-zinc-600 bg-zinc-900 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Refresh current session"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingSats ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* ───────────────────────────────────────────────────────────────────────
+              TWO-TIER SEARCH FEEDBACK & ON-DEMAND CELESTRAK RESULT CARD
+              ─────────────────────────────────────────────────────────────────────── */}
+          {isQueryingCelesTrak && (
+            <div className="p-4 rounded border border-cyan-500/30 bg-cyan-950/20 flex items-center gap-3 text-cyan-300 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-cyan-400 shrink-0" />
+              <div>
+                <span className="font-semibold">Not in current 200-satellite session.</span> Querying CelesTrak NORAD Live API for &ldquo;{tableSearch}&rdquo;…
+              </div>
+            </div>
+          )}
+
+          {celestrakSearchResult && (
+            <div className="p-5 rounded-lg border-2 border-cyan-500/60 bg-zinc-950 text-xs space-y-3 shadow-[0_0_25px_rgba(0,229,255,0.15)]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-850 pb-3">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-cyan-400 text-black rounded">
+                    CelesTrak Live Query Result
+                  </span>
+                  <span className="text-sm font-bold text-white tracking-wide">
+                    {celestrakSearchResult.name}
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded">
+                    NORAD {celestrakSearchResult.id}
+                  </span>
+                  <span className="text-[10px] uppercase font-semibold text-cyan-300">
+                    {celestrakSearchResult.category}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleAddToCart(celestrakSearchResult)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded transition flex items-center gap-1.5 cursor-pointer ${
+                      isInCart(celestrakSearchResult.id)
+                        ? "bg-emerald-500 text-black font-bold"
+                        : "bg-cyan-500 hover:bg-cyan-400 text-black font-bold"
+                    }`}
+                  >
+                    {isInCart(celestrakSearchResult.id) ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>In Watchlist Cart</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <span>Add to Cart (Live Telemetry)</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleSelectSat(celestrakSearchResult.id);
+                      document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-white text-zinc-200 hover:text-white rounded bg-zinc-900 transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Crosshair className="w-3.5 h-3.5" />
+                    <span>Track on 3D Globe</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Real-time Telemetry parameters computed live for this CelesTrak result */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-[11px] font-mono pt-1">
+                <div className="p-2 rounded bg-black border border-zinc-900">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-500">Elevation</div>
+                  <div className={`font-bold ${celestrakLiveVis && celestrakLiveVis.isAboveHorizon ? "text-emerald-400" : "text-zinc-400"}`}>
+                    {celestrakLiveVis ? `${Math.round(celestrakLiveVis.elevationDeg * 10) / 10}°` : "--"}
+                  </div>
+                </div>
+
+                <div className="p-2 rounded bg-black border border-zinc-900">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-500">Azimuth</div>
+                  <div className="text-zinc-300 font-bold">
+                    {celestrakLiveVis ? `${Math.round(celestrakLiveVis.azimuthDeg * 10) / 10}°` : "--"}
+                  </div>
+                </div>
+
+                <div className="p-2 rounded bg-black border border-zinc-900">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-500">Slant Range</div>
+                  <div className="text-cyan-300 font-bold truncate">
+                    {celestrakLiveVis ? `${celestrakLiveVis.slantRangeKm.toLocaleString()} km` : "--"}
+                  </div>
+                </div>
+
+                <div className="p-2 rounded bg-black border border-zinc-900">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-500">Altitude</div>
+                  <div className="text-zinc-300 font-bold truncate">
+                    {celestrakLiveVis ? `${Math.round(celestrakLiveVis.satAltKm)} km` : "--"}
+                  </div>
+                </div>
+
+                <div className="p-2 rounded bg-black border border-zinc-900 col-span-2">
+                  <div className="text-[9px] uppercase tracking-wider text-zinc-500">Sub-Satellite Lat / Lon</div>
+                  <div className="text-zinc-300 font-bold truncate">
+                    {celestrakLiveVis ? `${celestrakLiveVis.satLat.toFixed(2)}°, ${celestrakLiveVis.satLon.toFixed(2)}°` : "--"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {celestrakSearchError && (
+            <div className="p-3 rounded border border-zinc-800 bg-zinc-950 flex items-center gap-2 text-zinc-400 text-xs">
+              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>{celestrakSearchError}</span>
+            </div>
+          )}
+
+          {/* Main 200-Satellite Fleet Directory Table */}
           <div className="overflow-x-auto border border-zinc-900 bg-zinc-950">
             <table className="w-full text-left text-xs font-sans">
               <thead className="bg-black text-zinc-400 border-b border-zinc-850 uppercase text-[10px] tracking-wider">
@@ -1460,12 +1806,20 @@ export default function TrackMySkyDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-900">
-                {filteredVisibleSats.map((sat) => {
-                  const isSelected = selectedSatId === sat.satId;
+                {filteredSessionSats.map(({ sat, vis }) => {
+                  const isSelected = selectedSatId === sat.id;
+                  const isOverhead = vis ? vis.isAboveHorizon : false;
+                  const isNakedEye = vis ? vis.isNakedEyeVisible : false;
+                  const isSunlit = vis ? vis.isSunlit : false;
+                  const elDeg = vis ? Math.round(vis.elevationDeg * 10) / 10 : null;
+                  const azDeg = vis ? Math.round(vis.azimuthDeg * 10) / 10 : null;
+                  const slantKm = vis ? vis.slantRangeKm : null;
+                  const inCart = isInCart(sat.id);
+
                   return (
                     <tr
-                      key={`fleet-${sat.satId}`}
-                      onClick={() => handleSelectSat(sat.satId)}
+                      key={`fleet-${sat.id}`}
+                      onClick={() => handleSelectSat(sat.id)}
                       className={`cursor-pointer transition-colors duration-150 ${
                         isSelected
                           ? "bg-zinc-900 text-white font-medium"
@@ -1473,55 +1827,96 @@ export default function TrackMySkyDashboard() {
                       }`}
                     >
                       <td className="p-3.5 font-bold text-white flex items-center gap-2">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sat.isNakedEyeVisible ? "bg-emerald-400" : sat.isSunlit ? "bg-amber-400" : "bg-zinc-600"}`} />
-                        <span className="truncate max-w-[180px] sm:max-w-none">{sat.satName}</span>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isNakedEye ? "bg-emerald-400" : isSunlit ? "bg-amber-400" : isOverhead ? "bg-cyan-400" : "bg-zinc-600"}`} />
+                        <span className="truncate max-w-[180px] sm:max-w-none">{sat.name}</span>
                       </td>
-                      <td className="p-3.5 text-zinc-400 font-mono">{sat.satId}</td>
+                      <td className="p-3.5 text-zinc-400 font-mono">{sat.id}</td>
                       <td className="p-3.5">
                         <span className={`text-[10px] px-2 py-0.5 border font-semibold ${
-                          sat.isNakedEyeVisible
+                          isNakedEye
                             ? "border-emerald-500/40 text-emerald-400 bg-emerald-950/20"
-                            : sat.isSunlit
+                            : isSunlit
                             ? "border-amber-500/40 text-amber-400 bg-amber-950/20"
-                            : "border-zinc-800 text-zinc-400 bg-black"
+                            : isOverhead
+                            ? "border-cyan-800/40 text-cyan-300 bg-cyan-950/20"
+                            : "border-zinc-800 text-zinc-500 bg-black"
                         }`}>
-                          {sat.statusLabel}
+                          {isNakedEye ? "Naked Eye" : isSunlit ? "Sunlit" : isOverhead ? "Overhead" : "Below Horizon"}
                         </span>
                       </td>
                       <td className="p-3.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">{sat.elevationDeg}°</span>
-                          <div className="w-12 h-1 bg-zinc-800 overflow-hidden shrink-0 hidden sm:block">
-                            <div
-                              className={`h-full ${sat.elevationDeg > 45 ? "bg-emerald-400" : "bg-white"}`}
-                              style={{ width: `${Math.min(100, Math.max(5, Math.round((sat.elevationDeg / 90) * 100)))}%` }}
-                            />
-                          </div>
+                          <span className={`font-bold ${isOverhead ? "text-white" : "text-zinc-500"}`}>
+                            {elDeg !== null ? `${elDeg}°` : "--"}
+                          </span>
+                          {elDeg !== null && elDeg > 0 && (
+                            <div className="w-12 h-1 bg-zinc-800 overflow-hidden shrink-0 hidden sm:block">
+                              <div
+                                className={`h-full ${elDeg > 45 ? "bg-emerald-400" : "bg-white"}`}
+                                style={{ width: `${Math.min(100, Math.max(5, Math.round((elDeg / 90) * 100)))}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
                       </td>
-                      <td className="p-3.5 text-zinc-300">{sat.azimuthDeg}°</td>
+                      <td className="p-3.5 text-zinc-300">{azDeg !== null ? `${azDeg}°` : "--"}</td>
                       <td className="p-3.5 font-bold text-[#00e5ff]">
-                        {sat.estimatedMagnitude > 0 ? `+${sat.estimatedMagnitude}` : sat.estimatedMagnitude} mᵥ
+                        {vis?.estimatedMagnitude ? `${vis.estimatedMagnitude > 0 ? "+" : ""}${vis.estimatedMagnitude} mᵥ` : "--"}
                       </td>
                       <td className="p-3.5 text-zinc-300 font-mono">
-                        {sat.slantRangeKm} km
+                        {slantKm ? `${slantKm.toLocaleString()} km` : "--"}
                       </td>
-                      <td className="p-3.5 text-zinc-400">{sat.isSunlit ? "Sunlit" : "Umbra"}</td>
+                      <td className="p-3.5 text-zinc-400">
+                        {isSunlit ? "Sunlit" : isOverhead ? "Umbra" : "Earth Occluded"}
+                      </td>
                       <td className="p-3.5 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectSat(sat.satId);
-                            document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
-                          }}
-                          className={`px-3 py-1 text-[10px] uppercase font-semibold tracking-wider transition ml-auto border ${
-                            isSelected
-                              ? "bg-white text-black border-white font-bold"
-                              : "bg-black text-zinc-300 hover:text-white border-zinc-800 hover:border-zinc-600"
-                          }`}
-                        >
-                          {isSelected ? "Tracking" : "Track"}
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Add to Cart Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (inCart) {
+                                handleRemoveFromCart(sat.id);
+                              } else {
+                                handleAddToCart(sat);
+                              }
+                            }}
+                            className={`px-2.5 py-1 text-[10px] uppercase font-semibold tracking-wider transition rounded border flex items-center gap-1 cursor-pointer ${
+                              inCart
+                                ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 hover:bg-red-950/40 hover:text-red-300 hover:border-red-800"
+                                : "bg-zinc-900 text-zinc-400 hover:text-white border-zinc-800 hover:border-cyan-500/40"
+                            }`}
+                            title={inCart ? "In Cart (Click to remove)" : "Add to Cart (Continuous Live Telemetry)"}
+                          >
+                            {inCart ? (
+                              <>
+                                <Check className="w-3 h-3 text-cyan-400" />
+                                <span>In Cart</span>
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingCart className="w-3 h-3" />
+                                <span>Cart</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Track Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectSat(sat.id);
+                              document.getElementById("hero")?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                            className={`px-3 py-1 text-[10px] uppercase font-semibold tracking-wider transition border cursor-pointer ${
+                              isSelected
+                                ? "bg-white text-black border-white font-bold"
+                                : "bg-black text-zinc-300 hover:text-white border-zinc-800 hover:border-zinc-600"
+                            }`}
+                          >
+                            {isSelected ? "Tracking" : "Track"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1580,6 +1975,19 @@ export default function TrackMySkyDashboard() {
         onClose={() => setIsKnowledgeModalOpen(false)}
         activeTab={knowledgeActiveTab}
         onTabChange={setKnowledgeActiveTab}
+      />
+
+      {/* Orbital Watchlist Cart Drawer (Continuous Live Telemetry) */}
+      <SatelliteCartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onRemoveItem={handleRemoveFromCart}
+        onClearCart={handleClearCart}
+        onSelectSat={handleSelectSat}
+        selectedSatId={selectedSatId}
+        observer={observer}
+        timeMs={uiTimeMs}
       />
     </div>
   );

@@ -11,12 +11,15 @@ import {
   ChevronDown,
   BookOpen,
   FileText,
+  ShoppingCart,
 } from "lucide-react";
 import { ObserverCoords } from "@/components/intelligence/PassPredictor";
 
 interface TrackMySkyNavProps {
   observer: ObserverCoords;
   formattedTime: string;
+  cartCount?: number;
+  onOpenCart?: () => void;
   onOpenPairModal?: () => void;
   onOpenManual?: () => void;
   onOpenKnowledge?: (tab: "glossary" | "docs") => void;
@@ -30,6 +33,8 @@ interface TrackMySkyNavProps {
 export function TrackMySkyNav({
   observer,
   formattedTime,
+  cartCount = 0,
+  onOpenCart,
   onOpenPairModal,
   onOpenManual,
   onOpenKnowledge,
@@ -130,6 +135,21 @@ export function TrackMySkyNav({
               >
                 <Smartphone className="h-3.5 w-3.5 text-zinc-500" />
                 <span className="hidden xl:inline">Companion GPS</span>
+              </button>
+            )}
+
+            {/* Orbital Watchlist Cart Button */}
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-900/90 border border-zinc-800 hover:border-cyan-500/50 text-zinc-300 hover:text-white transition uppercase text-[11px] tracking-wider font-semibold cursor-pointer group shadow-[0_0_12px_rgba(0,229,255,0.06)]"
+                title="Open Orbital Watchlist Cart (Live Telemetry)"
+              >
+                <ShoppingCart className="h-3.5 w-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Cart</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/40">
+                  {cartCount}
+                </span>
               </button>
             )}
 
