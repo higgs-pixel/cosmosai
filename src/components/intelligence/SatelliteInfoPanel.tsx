@@ -36,7 +36,25 @@ export interface SatelliteInfo {
 }
 
 const WIKI_IMG = (url: string) => `/api/image-proxy?url=${encodeURIComponent(url)}`;
-const LOCAL_FALLBACK_IMG = "/images/satellites/hubble.svg";
+const REAL_SATELLITE_IMG = "/images/satellites/satellite_orbit_real.jpg";
+const REAL_DEBRIS_IMG = "/images/satellites/rocket_debris_real.jpg";
+const REAL_STATION_IMG = "/images/satellites/space_station_real.jpg";
+const REAL_HUBBLE_IMG = "/images/satellites/hubble_real.jpg";
+
+export function getRealFallbackImage(satName: string = "", category: string = ""): string {
+  const n = satName.toUpperCase();
+  const cat = category.toUpperCase();
+  if (isDebrisOrRocketBody(satName) || n.includes("DEB") || n.includes("R/B") || n.includes("STAGE") || n.includes("FREGAT") || n.includes("CENTAUR") || cat.includes("DEBRIS")) {
+    return REAL_DEBRIS_IMG;
+  }
+  if (n.includes("ISS") || n.includes("STATION") || n.includes("TIANGONG") || cat.includes("STATION")) {
+    return REAL_STATION_IMG;
+  }
+  if (n.includes("HST") || n.includes("HUBBLE")) {
+    return REAL_HUBBLE_IMG;
+  }
+  return REAL_SATELLITE_IMG;
+}
 
 const SATELLITE_DB: Record<number, SatelliteInfo> = {
   // ══════════════════════════════════════════════════════════════════════════
@@ -213,7 +231,7 @@ const SATELLITE_DB: Record<number, SatelliteInfo> = {
   // ── 20580: Hubble Space Telescope ─────────────────────────────────────────
   20580: {
     name: "Hubble Space Telescope (HST)",
-    imageUrl: WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Hubble_2009_close-up_2.jpg/800px-Hubble_2009_close-up_2.jpg"),
+    imageUrl: REAL_HUBBLE_IMG,
     wikipediaUrl: "https://en.wikipedia.org/wiki/Hubble_Space_Telescope",
     agency: "NASA / ESA",
     country: "United States / Europe",
@@ -757,56 +775,59 @@ function inferSatelliteInfo(name: string, category: string): Partial<SatelliteIn
     let stageAgency = "Space Launch Provider";
     let stageCountry = "International";
     let stageWiki = "https://en.wikipedia.org/wiki/Space_debris";
-    let stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+    let stageImg = REAL_DEBRIS_IMG;
     let stageTag = "Space Debris";
     let stagePurpose = `${name} is a tracked orbital debris object — a spent rocket upper stage, payload adapter, or fragmentation piece — remaining in Earth orbit following satellite launch operations. Continuously monitored by the US Space Surveillance Network (SSN) and catalogued in the SATCAT database for space domain awareness, conjunction analysis, and active satellite collision avoidance maneuver planning.`;
 
     if (n.includes("FREGAT")) {
       stageAgency = "NPO Lavochkin / Roscosmos"; stageCountry = "Russia";
       stageWiki = "https://en.wikipedia.org/wiki/Fregat"; stageTag = "Fregat Upper Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent Fregat restartable liquid-propellant upper stage (UDMH/NTO, 19.85 kN thrust) manufactured by NPO Lavochkin. Fregat stages deliver payloads to LEO, MEO, GEO, and interplanetary trajectories from Soyuz-2 and Zenit launch vehicles. After payload deployment the stage is passivated and remains as tracked debris.`;
     } else if (n.includes("CENTAUR")) {
       stageAgency = "ULA (United Launch Alliance)"; stageCountry = "United States";
       stageWiki = "https://en.wikipedia.org/wiki/Centaur_(rocket_stage)"; stageTag = "Centaur Upper Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Centaur_V_at_KSC.jpg/800px-Centaur_V_at_KSC.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent Centaur cryogenic upper stage (liquid hydrogen / liquid oxygen, dual RL-10 engines, 200 kN total thrust) developed by Convair/ULA. First cryogenic rocket stage to achieve orbit (1962), Centaur has supported Atlas, Titan, and Vulcan launch vehicles in delivering 300+ military, civil, and commercial payloads to GEO, GTO, and deep space.`;
     } else if (n.includes("SOYUZ") || n.includes("SL-4") || n.includes("SL-16")) {
       stageAgency = "Roscosmos / Samara Space Center"; stageCountry = "Russia";
       stageWiki = "https://en.wikipedia.org/wiki/Soyuz_(rocket_family)"; stageTag = "Soyuz Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from a Soyuz rocket family launch vehicle — the world's most-flown rocket series with over 1,900 launches since 1966. Soyuz has carried ISS crew and cargo, Earth observation, GNSS, and commercial satellites. Third stage (RD-0110) burns RG-1 kerosene/LOX and remains as tracked orbital debris.`;
     } else if (n.includes("DELTA")) {
       stageAgency = "Boeing / ULA"; stageCountry = "United States";
       stageWiki = "https://en.wikipedia.org/wiki/Delta_(rocket_family)"; stageTag = "Delta Upper Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent upper stage from the Delta rocket family (Delta II/III/IV). Delta II flew 155 missions (1989–2018) launching GPS, Mars rovers, Hubble servicing, and scientific payloads. Delta IV Heavy (RP-1/LOX, 3 CBC cores) retired in 2024 after launching NRO reconnaissance satellites and NASA Orion on its first unmanned test flight.`;
     } else if (n.includes("FALCON")) {
       stageAgency = "SpaceX"; stageCountry = "United States";
       stageWiki = "https://en.wikipedia.org/wiki/Falcon_9"; stageTag = "Falcon 9 Upper Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Starlink_Mission_%2847926144123%29.jpg/800px-Starlink_Mission_%2847926144123%29.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent Falcon 9 Block 5 upper stage (Merlin Vacuum engine, 934 kN thrust, LOX/RP-1). Unlike the reusable first stage booster, the Falcon 9 upper stage is currently expendable and remains as tracked orbital debris. Falcon 9 is the world's most launched rocket, supporting Starlink, Dragon ISS missions, and commercial GTO deliveries.`;
     } else if (n.includes("CZ-") || n.includes("LONG MARCH") || n.includes("CHANG ZHENG")) {
       stageAgency = "CALT / CASC (China)"; stageCountry = "China";
       stageWiki = "https://en.wikipedia.org/wiki/Long_March_(rocket_family)"; stageTag = "Long March Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from China's Long March (Chang Zheng) rocket family, the primary Chinese national launch vehicle series operated by CASC since 1970 with 500+ flights. Long March 5B upper stages caused international controversy by uncontrolled re-entries in 2020, 2021, and 2022. The family includes LM-2, 3, 4, 5, 6, 7, and 8 variants.`;
     } else if (n.includes("TITAN")) {
       stageAgency = "US Air Force / Martin Marietta"; stageCountry = "United States";
       stageWiki = "https://en.wikipedia.org/wiki/Titan_(rocket_family)"; stageTag = "Titan Stage";
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from the Titan ICBM-derived rocket family (1959–2005), which launched Voyager 1 & 2, Cassini, Viking Mars landers, DMSP weather satellites, and key NRO reconnaissance payloads. Titan IV-B was the heaviest US expendable rocket before Delta IV Heavy, lifting 21,640 kg to LEO.`;
     } else if (n.includes("ARIANE")) {
       stageAgency = "Arianespace / ArianeGroup"; stageCountry = "Europe";
       stageWiki = "https://en.wikipedia.org/wiki/Ariane_(rocket_family)"; stageTag = "Ariane Stage";
-      stageImg = WIKI_IMG("https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Fregat_upper_stage_at_Le_Bourget_2011.jpg/800px-Fregat_upper_stage_at_Le_Bourget_2011.jpg");
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from the Ariane rocket family (Ariane 5 / Ariane 6). Ariane 5 flew 116 missions (1997–2023) with 112 consecutive successes — the most reliable GTO launcher in history — and launched Rosetta, Herschel, Planck, ATV cargo ships, and JWST. Ariane 6 replaced it with a re-ignitable Vinci upper stage.`;
     } else if (n.includes("PSLV") || n.includes("GSLV")) {
       stageAgency = "ISRO"; stageCountry = "India";
       stageWiki = "https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle"; stageTag = "PSLV/GSLV Stage";
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from ISRO's PSLV or GSLV rocket. PSLV (Polar Satellite Launch Vehicle) has flown 60+ missions since 1993 and is ISRO's most reliable workhorse, launching Chandrayaan-1, Mars Orbiter Mission (Mangalyaan), Aditya-L1, and over 400 international cubesats. GSLV (Geosynchronous Launch Vehicle) uses an indigenous cryogenic upper stage.`;
     } else if (n.includes("H-2") || n.includes("H2") || n.includes("EPSILON") || n.includes("SS-520")) {
       stageAgency = "JAXA (Japan Aerospace Exploration Agency)"; stageCountry = "Japan";
       stageWiki = "https://en.wikipedia.org/wiki/H-IIA"; stageTag = "H-IIA/B Stage";
+      stageImg = REAL_DEBRIS_IMG;
       stagePurpose = `${name} is a spent stage from Japan's H-II rocket family (H-IIA / H-IIB) developed by JAXA and Mitsubishi Heavy Industries. H-IIA has 46 successful missions (2001–2023) launching weather, Earth observation, and scientific payloads. H3 replaced it in 2023 with the LE-9 LH2/LOX engine for lower-cost commercial launches.`;
     }
 
@@ -2165,7 +2186,7 @@ function inferSatelliteInfo(name: string, category: string): Partial<SatelliteIn
     purpose: `${cleanName} is an orbital satellite classified in the '${category}' category, operating in Earth orbit for scientific observation, communications, navigation, Earth resources monitoring, or space domain operations. Full technical dossier available via the Wikipedia article link.`,
     status: "Operational",
     orbit: "Earth Orbit (see TLE orbital elements for current parameters)",
-    imageUrl: LOCAL_FALLBACK_IMG,
+    imageUrl: getRealFallbackImage(name, category),
     wikipediaUrl: directWikiUrl,
     tags: [cleanName, category.toUpperCase(), "Earth Orbit"],
     links: [{ label: "Satellite Wikipedia", url: directWikiUrl }]
@@ -2291,19 +2312,24 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
   const fallbackWikiUrl = directWikiUrl || `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanName)}`;
 
   const hasSpecificInferred = inferred && inferred.name && !inferred.purpose?.includes("operating in Earth orbit for communications");
+  const isDebris = isDebrisOrRocketBody(satName);
+  const defaultRealImg = getRealFallbackImage(satName, category);
+
+  const isSvg = (url?: string | null) => Boolean(url && url.toLowerCase().includes(".svg"));
+  const rawCandidateImg = base?.imageUrl || (hasSpecificInferred && inferred.imageUrl && !isSvg(inferred.imageUrl) ? inferred.imageUrl : (dynamicWiki?.imageUrl || inferred.imageUrl || defaultRealImg));
+  const candidateImg = !rawCandidateImg || isSvg(rawCandidateImg) ? defaultRealImg : rawCandidateImg;
 
   const info: Partial<SatelliteInfo> & { name: string } = {
     ...inferred,
     ...base,
     name: base?.name || (hasSpecificInferred ? inferred.name : null) || satName,
-    imageUrl: base?.imageUrl || (hasSpecificInferred && inferred.imageUrl && inferred.imageUrl !== LOCAL_FALLBACK_IMG ? inferred.imageUrl : (dynamicWiki?.imageUrl || inferred.imageUrl || LOCAL_FALLBACK_IMG)),
+    imageUrl: candidateImg,
     wikipediaUrl: base?.wikipediaUrl || directWikiUrl || (hasSpecificInferred ? inferred.wikipediaUrl : null) || dynamicWiki?.wikiUrl || fallbackWikiUrl,
     purpose: base?.purpose || (hasSpecificInferred ? inferred.purpose : (dynamicWiki?.extract || inferred.purpose)) || `${satName} is an orbital spacecraft operating in Earth orbit for communications, navigation, science, or Earth observation operations.`,
     orbit: dynamicOrbit || base?.orbit || inferred.orbit || "Earth Orbit",
   };
 
   const tags = info.tags || [];
-  const isDebris = isDebrisOrRocketBody(satName);
 
   return (
     <div className="border border-zinc-850 bg-zinc-950 overflow-hidden mt-4">
@@ -2325,10 +2351,10 @@ export default function SatelliteInfoPanel({ noradId, satName, category, orbital
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-0">
         {/* Left: Satellite image + Technical specifications */}
         <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-850 bg-black">
-          {/* Image Container with SVG fallback */}
+          {/* Image Container with authentic space photograph */}
           <div className="relative h-56 lg:h-64 bg-black overflow-hidden flex items-center justify-center border-b border-zinc-850">
             <img
-              src={imgError ? LOCAL_FALLBACK_IMG : (info.imageUrl || LOCAL_FALLBACK_IMG)}
+              src={imgError || !info.imageUrl || isSvg(info.imageUrl) ? defaultRealImg : info.imageUrl}
               alt={info.name}
               referrerPolicy="no-referrer"
               onError={() => setImgError(true)}

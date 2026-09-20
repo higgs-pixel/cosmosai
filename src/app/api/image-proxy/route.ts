@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-function getFallbackSvgResponse(): NextResponse {
+function getFallbackImageResponse(): NextResponse {
   try {
-    const fallbackPath = path.join(process.cwd(), "public", "images", "satellites", "hubble.svg");
+    const fallbackPath = path.join(process.cwd(), "public", "images", "satellites", "satellite_orbit_real.jpg");
     if (fs.existsSync(fallbackPath)) {
-      const svgBuffer = fs.readFileSync(fallbackPath);
-      return new NextResponse(svgBuffer, {
+      const imgBuffer = fs.readFileSync(fallbackPath);
+      return new NextResponse(imgBuffer, {
         headers: {
-          "Content-Type": "image/svg+xml",
+          "Content-Type": "image/jpeg",
           "Cache-Control": "public, max-age=86400, s-maxage=86400",
         },
       });
@@ -18,14 +18,7 @@ function getFallbackSvgResponse(): NextResponse {
     // ignore
   }
 
-  // Basic inline SVG fallback if file read fails
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="#0b0f19"><rect width="800" height="600" fill="#0b0f19"/><path d="M400 250 L450 350 L350 350 Z" fill="#00e5ff" opacity="0.6"/><text x="400" y="420" font-family="sans-serif" font-size="20" fill="#00e5ff" text-anchor="middle">COSMOS AI Satellite Observatory</text></svg>`;
-  return new NextResponse(svg, {
-    headers: {
-      "Content-Type": "image/svg+xml",
-      "Cache-Control": "public, max-age=86400",
-    },
-  });
+  return new NextResponse(null, { status: 404 });
 }
 
 export async function GET(request: NextRequest) {
@@ -33,7 +26,7 @@ export async function GET(request: NextRequest) {
   const imageUrl = searchParams.get("url");
 
   if (!imageUrl || (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://"))) {
-    return getFallbackSvgResponse();
+    return getFallbackImageResponse();
   }
 
   try {
@@ -48,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (!res.ok) {
       console.warn(`[Image Proxy Warning] HTTP ${res.status} for ${imageUrl}`);
-      return getFallbackSvgResponse();
+      return getFallbackImageResponse();
     }
 
     const contentType = res.headers.get("content-type") || "image/jpeg";
@@ -62,6 +55,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.warn(`[Image Proxy Exception] ${err.message || err} for ${imageUrl}`);
-    return getFallbackSvgResponse();
+    return getFallbackImageResponse();
   }
 }
